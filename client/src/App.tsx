@@ -10,9 +10,11 @@ import AdminDashboardPage from "@/pages/admin-dashboard";
 import BrowseFreelancers from "@/pages/browse-freelancers";
 import ProjectsPage from "@/pages/projects-page";
 import CategoriesPage from "@/pages/categories-page";
+import ChatPage from "@/pages/chat-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { NotificationsProvider } from "./hooks/use-notifications";
+import { ChatProvider } from "./hooks/use-chat";
 import { ThemeProvider } from "@/components/theme-provider";
 
 function Router() {
@@ -32,6 +34,11 @@ function Router() {
       </Route>
       <Route path="/categories">
         <CategoriesPage />
+      </Route>
+      <Route path="/chat">
+        <ProtectedRoute>
+          <ChatPage />
+        </ProtectedRoute>
       </Route>
       <Route path="/dashboard">
         <ProtectedRoute>
@@ -56,8 +63,10 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NotificationsProvider>
-            <Router />
-            <Toaster />
+            <ChatProvider>
+              <Router />
+              <Toaster />
+            </ChatProvider>
           </NotificationsProvider>
         </AuthProvider>
       </QueryClientProvider>

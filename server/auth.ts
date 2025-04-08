@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { User, User as SelectUser } from "@shared/schema";
 
 declare global {
   namespace Express {
@@ -22,10 +22,21 @@ export async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    const [hashed, salt] = stored.split(".");
+    if (!hashed || !salt) {
+      console.error("Invalid stored password format");
+      return false;
+    }
+    
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error("Error comparing passwords:", error);
+    return false;
+  }
 }
 
 export function setupAuth(app: Express) {
@@ -52,12 +63,14 @@ export function setupAuth(app: Express) {
     new LocalStrategy(async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
+        
         if (!user || !(await comparePasswords(password, user.password))) {
           return done(null, false);
         } else {
           return done(null, user);
         }
       } catch (err) {
+        console.error("Error in LocalStrategy:", err);
         return done(err);
       }
     }),
@@ -75,43 +88,83 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, email } = req.body;
+      const { username, email, password, name } = req.body;
+      console.log(`Registration attempt for username: ${username}, email: ${email}`);
       
       // Check if username already exists
       const existingUserByUsername = await storage.getUserByUsername(username);
       if (existingUserByUsername) {
+        console.log(`Username already exists: ${username}`);
         return res.status(400).json({ message: "اسم المستخدم موجود بالفعل" });
       }
       
       // Check if email already exists
       const existingUserByEmail = await storage.getUserByEmail(email);
       if (existingUserByEmail) {
+        console.log(`Email already exists: ${email}`);
         return res.status(400).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
       }
       
       // Create the user
-      const user = await storage.createUser({
+      const hashedPassword = await hashPassword(password);
+      console.log(`Creating user with hashed password: ${hashedPassword.substring(0, 20)}...`);
+      
+      // Map name to fullName since the database expects fullName
+      const userData = {
         ...req.body,
-        password: await hashPassword(req.body.password),
-      });
+        fullName: name || username, // Use name if provided, otherwise use username
+        password: hashedPassword,
+      };
+      
+      // Remove name if it exists (since it's not in the schema)
+      if (userData.name) {
+        delete userData.name;
+      }
+      
+      console.log(`Creating user with data:`, JSON.stringify(userData, null, 2));
+      
+      const user = await storage.createUser(userData);
+      
+      console.log(`User created with ID: ${user.id}, username: ${user.username}`);
       
       // Remove password from response
-      const { password, ...userWithoutPassword } = user;
+      const { password: pwd, ...userWithoutPassword } = user;
 
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Login error after registration:", err);
+          return next(err);
+        }
+        console.log(`User logged in successfully after registration: ${user.username}`);
         res.status(201).json(userWithoutPassword);
       });
     } catch (err) {
+      console.error("Registration error:", err);
       next(err);
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    if (req.user) {
-      const { password, ...userWithoutPassword } = req.user;
-      res.status(200).json(userWithoutPassword);
-    }
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
+      if (err) {
+        console.error("Authentication error:", err);
+        return next(err);
+      }
+      
+      if (!user) {
+        return res.status(401).json({ message: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+      }
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("Login error:", loginErr);
+          return next(loginErr);
+        }
+        
+        const { password, ...userWithoutPassword } = user;
+        return res.status(200).json(userWithoutPassword);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {

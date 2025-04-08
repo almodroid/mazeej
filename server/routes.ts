@@ -554,6 +554,37 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Notification Routes
+  // Contacts API for the chat system
+  app.get('/api/contacts', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Get all users except the current user as potential contacts
+      const freelancers = await storage.getFreelancers();
+      const contacts = freelancers
+        .filter(user => user.id !== req.user?.id)
+        .map(({ password, ...rest }) => {
+          // Add some mock data for demo purposes
+          return {
+            ...rest,
+            isOnline: Math.random() > 0.5, // Random online status
+            lastSeen: new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000)), // Random last seen in last 24 hours
+            unreadCount: Math.floor(Math.random() * 5), // Random unread count between 0-4
+            lastMessage: Math.random() > 0.3 ? {
+              content: 'This is a sample message from the contact.',
+              timestamp: new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000))
+            } : null
+          };
+        });
+      
+      res.json(contacts);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch contacts' });
+    }
+  });
+
   app.get('/api/notifications', async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -647,6 +678,71 @@ export function registerRoutes(app: Express): Server {
       }
     } catch (error) {
       res.status(500).json({ message: 'Failed to delete notification' });
+    }
+  });
+
+  // Zoom video call routes
+  // Endpoint to check if required secrets are available
+  app.post('/api/check-secrets', async (req, res) => {
+    try {
+      const { secretKeys } = req.body;
+      
+      if (!Array.isArray(secretKeys) || secretKeys.length === 0) {
+        return res.status(400).json({ message: 'secretKeys must be a non-empty array' });
+      }
+      
+      // Check if all required secrets are available
+      const missingSecrets = secretKeys.filter(key => !process.env[key]);
+      const hasSecrets = missingSecrets.length === 0;
+      
+      res.json({ 
+        hasSecrets,
+        missingSecrets: hasSecrets ? [] : missingSecrets
+      });
+    } catch (error: any) {
+      console.error('Error checking secrets:', error);
+      res.status(500).json({ message: 'Failed to check secrets', error: error.message });
+    }
+  });
+  
+  app.post('/api/zoom/token', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const { receiverId } = req.body;
+      
+      if (!receiverId) {
+        return res.status(400).json({ message: 'Receiver ID is required' });
+      }
+      
+      // Check if ZOOM credentials are configured
+      if (!process.env.ZOOM_SDK_KEY || !process.env.ZOOM_SDK_SECRET) {
+        return res.status(503).json({ 
+          message: 'Zoom SDK is not configured', 
+          missingKeys: ['ZOOM_SDK_KEY', 'ZOOM_SDK_SECRET']
+        });
+      }
+      
+      // Import here to avoid errors if the ZOOM credentials are not set
+      const { generateZoomToken } = await import('./zoom');
+      
+      // Generate a token with the user's ID
+      const token = generateZoomToken(req.user.id.toString());
+      
+      res.json({ 
+        token,
+        sdkKey: process.env.ZOOM_SDK_KEY,
+        userId: req.user.id,
+        userName: req.user.fullName || req.user.username,
+        // For simplicity, we'll use a combination of both user IDs as the meeting ID
+        // In a real app, you might want to store meetings in the database
+        meetingId: `${Math.min(req.user.id, receiverId)}-${Math.max(req.user.id, receiverId)}`
+      });
+    } catch (error) {
+      console.error('Error generating Zoom token:', error);
+      res.status(500).json({ message: 'Failed to generate Zoom token', error: error.message });
     }
   });
 
