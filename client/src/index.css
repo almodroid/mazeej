@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -18,7 +18,7 @@
   }
 
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
     --foreground: 222.2 47.4% 11.2%;
 
     --card: 0 0% 100%;
@@ -27,14 +27,14 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    --primary: 217 75% 51%;
+    --primary: 195 85% 41%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 168 59% 40%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --accent: 35 100% 50%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 262 83% 58%;
+    --accent-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
@@ -44,26 +44,27 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 217 75% 51%;
+    --ring: 195 85% 41%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --chart-1: 217 75% 51%;
-    --chart-2: 168 59% 40%;
+    --chart-1: 195 85% 41%;
+    --chart-2: 262 83% 58%;
     --chart-3: 35 100% 50%;
     --chart-4: 0 84.2% 60.2%;
-    --chart-5: 262 83% 58%;
+    --chart-5: 222.2 47.4% 11.2%;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222.2 47.4% 11.2%;
-    --sidebar-primary: 217 75% 51%;
+    --sidebar-primary: 195 85% 41%;
     --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 35 100% 50%;
-    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-accent: 262 83% 58%;
+    --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 217 75% 51%;
+    --sidebar-ring: 195 85% 41%;
   }
 
+  /* RTL Support */
   [dir="rtl"] .flip-horizontal {
     transform: scaleX(-1);
   }
@@ -87,6 +88,26 @@
     margin-right: 0.25rem;
     margin-left: 0;
   }
+  
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--secondary));
+    border-radius: var(--radius);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.5);
+    border-radius: var(--radius);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.7);
+  }
 }
 
 .dark {
@@ -99,14 +120,14 @@
   --popover: 222.2 84% 4.9%;
   --popover-foreground: 210 40% 98%;
 
-  --primary: 217 75% 51%;
+  --primary: 195 85% 41%;
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 168 59% 40%;
+  --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
 
-  --accent: 35 100% 50%;
-  --accent-foreground: 0 0% 0%;
+  --accent: 262 83% 58%; 
+  --accent-foreground: 210 40% 98%;
 
   --muted: 217.2 32.6% 17.5%;
   --muted-foreground: 215 20.2% 65.1%;
@@ -116,20 +137,98 @@
 
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
+  --ring: 195 85% 41%;
 
-  --chart-1: 217 75% 51%;
-  --chart-2: 168 59% 40%;
+  --chart-1: 195 85% 41%;
+  --chart-2: 262 83% 58%;
   --chart-3: 35 100% 50%;
   --chart-4: 0 84.2% 60.2%;
-  --chart-5: 262 83% 58%;
+  --chart-5: 210 40% 98%;
 
   --sidebar-background: 222.2 84% 4.9%;
   --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 217 75% 51%;
+  --sidebar-primary: 195 85% 41%;
   --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 35 100% 50%;
-  --sidebar-accent-foreground: 0 0% 0%;
+  --sidebar-accent: 262 83% 58%;
+  --sidebar-accent-foreground: 210 40% 98%;
   --sidebar-border: 217.2 32.6% 17.5%;
-  --sidebar-ring: 212.7 26.8% 83.9%;
+  --sidebar-ring: 195 85% 41%;
+}
+
+/* Animations */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+  
+  .animate-slide-down {
+    animation: slideDown 0.5s ease-out;
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight 0.5s ease-out;
+  }
+  
+  .animate-slide-in-left {
+    animation: slideInLeft 0.5s ease-out;
+  }
+  
+  .animate-scale {
+    animation: scale 0.3s ease-in-out;
+  }
+  
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes scale {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Glass effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-effect {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }

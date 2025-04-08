@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,9 +30,14 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-export default function RegisterForm() {
-  const { t } = useTranslation();
+interface RegisterFormProps {
+  initialRole?: "client" | "freelancer";
+}
+
+export default function RegisterForm({ initialRole = "client" }: RegisterFormProps) {
+  const { t, i18n } = useTranslation();
   const { registerMutation } = useAuth();
+  const isRTL = i18n.language === "ar";
   
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -41,9 +47,14 @@ export default function RegisterForm() {
       fullName: "",
       password: "",
       confirmPassword: "",
-      role: "client",
+      role: initialRole,
     },
   });
+  
+  // Update the role field when initialRole prop changes
+  useEffect(() => {
+    form.setValue("role", initialRole);
+  }, [initialRole, form]);
 
   const onSubmit = (data: RegisterFormValues) => {
     registerMutation.mutate({
@@ -58,33 +69,44 @@ export default function RegisterForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="fullName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("auth.fullName")}</FormLabel>
-              <FormControl>
-                <Input placeholder={t("auth.fullName")} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="username"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("auth.username")}</FormLabel>
-              <FormControl>
-                <Input placeholder={t("auth.username")} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <FormField
+            control={form.control}
+            name="fullName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("auth.fullName")}</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder={t("auth.fullNamePlaceholder")} 
+                    className="rounded-lg h-11"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("auth.username")}</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder={t("auth.usernamePlaceholder")} 
+                    className="rounded-lg h-11"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
         <FormField
           control={form.control}
           name="email"
@@ -94,7 +116,8 @@ export default function RegisterForm() {
               <FormControl>
                 <Input
                   type="email"
-                  placeholder={t("auth.email")}
+                  placeholder={t("auth.emailPlaceholder")}
+                  className="rounded-lg h-11"
                   {...field}
                 />
               </FormControl>
@@ -102,40 +125,46 @@ export default function RegisterForm() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("auth.password")}</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder={t("auth.password")}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("auth.confirmPassword")}</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder={t("auth.confirmPassword")}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("auth.password")}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder={t("auth.passwordPlaceholder")}
+                    className="rounded-lg h-11"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("auth.confirmPassword")}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder={t("auth.confirmPasswordPlaceholder")}
+                    className="rounded-lg h-11"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
         <FormField
           control={form.control}
           name="role"
@@ -146,39 +175,60 @@ export default function RegisterForm() {
                 <RadioGroup
                   onValueChange={field.onChange}
                   defaultValue={field.value}
-                  className="flex flex-col space-y-1"
+                  value={field.value}
+                  className="flex flex-col space-y-2"
                 >
-                  <FormItem className="flex items-center space-x-3 space-x-reverse space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="client" />
-                    </FormControl>
-                    <FormLabel className="font-normal">
-                      {t("auth.client")}
-                    </FormLabel>
-                  </FormItem>
-                  <FormItem className="flex items-center space-x-3 space-x-reverse space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="freelancer" />
-                    </FormControl>
-                    <FormLabel className="font-normal">
-                      {t("auth.freelancer")}
-                    </FormLabel>
-                  </FormItem>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormItem className={`relative flex flex-col items-start space-y-0 rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${field.value === 'client' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                      <FormControl>
+                        <RadioGroupItem value="client" className="sr-only" />
+                      </FormControl>
+                      <FormLabel className="font-medium text-base cursor-pointer flex items-center w-full justify-between">
+                        {t("auth.client")}
+                        {field.value === 'client' && (
+                          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-white text-xs">
+                            ✓
+                          </span>
+                        )}
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        {t("auth.clientDescription")}
+                      </p>
+                    </FormItem>
+                    
+                    <FormItem className={`relative flex flex-col items-start space-y-0 rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${field.value === 'freelancer' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                      <FormControl>
+                        <RadioGroupItem value="freelancer" className="sr-only" />
+                      </FormControl>
+                      <FormLabel className="font-medium text-base cursor-pointer flex items-center w-full justify-between">
+                        {t("auth.freelancer")}
+                        {field.value === 'freelancer' && (
+                          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-white text-xs">
+                            ✓
+                          </span>
+                        )}
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        {t("auth.freelancerDescription")}
+                      </p>
+                    </FormItem>
+                  </div>
                 </RadioGroup>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+        
         <Button
           type="submit"
-          className="w-full"
+          className="w-full h-11 rounded-lg mt-2"
           disabled={registerMutation.isPending}
         >
           {registerMutation.isPending ? (
-            <span className="flex items-center">
+            <span className="flex items-center justify-center">
               <svg
-                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                className={`animate-spin ${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4 text-white`}
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -200,7 +250,7 @@ export default function RegisterForm() {
               {t("common.loading")}
             </span>
           ) : (
-            t("auth.register")
+            t("auth.createAccount")
           )}
         </Button>
       </form>

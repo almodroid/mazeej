@@ -1,14 +1,27 @@
 import { useTranslation } from "react-i18next";
-import { Star, StarHalf } from "lucide-react";
+import { 
+  Star, 
+  StarHalf, 
+  MessageCircle, 
+  Clock, 
+  Award, 
+  CheckCircle, 
+  Briefcase,
+  Heart
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { User } from "@shared/schema";
+import { useState } from "react";
 
 type FreelancerCardProps = {
   freelancer: Omit<User, 'password'>;
 };
 
 export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
+  const [isFavorite, setIsFavorite] = useState(false);
   
   // Mock rating data (would come from reviews in a real implementation)
   const rating = 4.8;
@@ -19,6 +32,23 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
   
   // Format the hourly rate with the correct currency
   const hourlyRate = freelancer.hourlyRate || 40;
+  
+  // Function to get level label
+  const getLevelLabel = () => {
+    switch (freelancer.freelancerLevel) {
+      case 'beginner':
+        return t('profile.beginner');
+      case 'intermediate':
+        return t('profile.intermediate');
+      case 'advanced':
+        return t('profile.advanced');
+      default:
+        return t('profile.intermediate');
+    }
+  };
+  
+  // Projects completed (mock data)
+  const projectsCompleted = Math.floor(Math.random() * 50) + 5;
 
   // Function to render stars based on rating
   const renderStars = (rating: number) => {
@@ -37,11 +67,39 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
     return stars;
   };
 
+  const toggleFavorite = () => {
+    setIsFavorite(!isFavorite);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
-      <div className="p-6">
-        <div className="flex items-center">
-          <div className="h-16 w-16 rounded-full overflow-hidden bg-neutral-200">
+    <div className="bg-card rounded-xl border border-border overflow-hidden hover-lift transition-all duration-300 hover:border-primary/20 group">
+      {/* Card header with background cover */}
+      <div className="h-24 bg-gradient-to-r from-primary/20 to-accent/20 relative">
+        {/* Favorite button */}
+        <button 
+          onClick={toggleFavorite}
+          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center transition-colors hover:bg-background z-10"
+          aria-label={isFavorite ? t('common.removeFromFavorites') : t('common.addToFavorites')}
+        >
+          <Heart 
+            className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} 
+          />
+        </button>
+        
+        {/* Online status indicator */}
+        {Math.random() > 0.5 && (
+          <div className="absolute top-2 left-2 flex items-center bg-background/80 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs z-10">
+            <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
+            {t('common.online')}
+          </div>
+        )}
+      </div>
+      
+      {/* Profile content */}
+      <div className="p-5 pt-14 relative">
+        {/* Profile image overlapping the header */}
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <div className="h-20 w-20 rounded-full overflow-hidden border-4 border-background shadow-md">
             {freelancer.profileImage ? (
               <img 
                 src={freelancer.profileImage} 
@@ -54,44 +112,109 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
               </div>
             )}
           </div>
-          <div className="mr-4">
-            <h3 className="text-lg font-semibold text-neutral-900">
-              {freelancer.fullName || freelancer.username}
-            </h3>
-            <p className="text-sm text-neutral-500">
-              {freelancer.freelancerType === 'content_creator' 
-                ? t('profile.contentCreator') 
-                : t('profile.expert')}
-            </p>
-            <div className="flex items-center mt-1">
-              <div className="flex text-accent">
-                {renderStars(rating)}
-              </div>
-              <span className="text-sm text-neutral-500 mr-1">
-                {rating} ({reviewCount} {t('freelancers.ratings')})
-              </span>
+        </div>
+        
+        {/* User info */}
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-cairo font-semibold text-foreground mb-1">
+            {freelancer.fullName || freelancer.username}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {freelancer.freelancerType === 'content_creator' 
+              ? t('profile.contentCreator') 
+              : t('profile.expert')}
+          </p>
+          
+          {/* Verification Badge */}
+          {Math.random() > 0.3 && (
+            <div className="flex items-center justify-center mt-1 gap-1 text-xs">
+              <CheckCircle className="h-3 w-3 text-primary" />
+              <span className="text-primary font-medium">{t('profile.verified')}</span>
+            </div>
+          )}
+          
+          {/* Rating */}
+          <div className="flex items-center justify-center mt-2">
+            <div className="flex">
+              {renderStars(rating)}
+            </div>
+            <span className="text-sm text-muted-foreground ml-1">
+              {rating} ({reviewCount})
+            </span>
+          </div>
+        </div>
+        
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+          <div className="bg-muted/50 p-2 rounded-lg">
+            <div className="text-primary font-cairo font-semibold">
+              {projectsCompleted}+
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('profile.projects')}
+            </div>
+          </div>
+          <div className="bg-muted/50 p-2 rounded-lg">
+            <div className="text-accent font-cairo font-semibold">
+              {getLevelLabel()}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('profile.level')}
+            </div>
+          </div>
+          <div className="bg-muted/50 p-2 rounded-lg">
+            <div className="text-primary font-cairo font-semibold">
+              100%
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('profile.completion')}
             </div>
           </div>
         </div>
-        <div className="mt-4">
-          <p className="text-neutral-600 text-sm line-clamp-2">
-            {freelancer.bio || "متخصص في مجاله مع خبرة متنوعة"}
+        
+        {/* Bio */}
+        <div className="mb-4">
+          <p className="text-muted-foreground text-sm line-clamp-2 text-center">
+            {freelancer.bio || t('profile.defaultBio')}
           </p>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        
+        {/* Skills */}
+        <div className="flex flex-wrap justify-center gap-2 mb-4">
           {skills.map((skill, index) => (
-            <span key={index} className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
+            <Badge key={index} variant="outline" className="bg-primary/5 hover:bg-primary/10">
               {skill}
-            </span>
+            </Badge>
           ))}
         </div>
-        <div className="mt-4 pt-4 border-t border-neutral-200 flex justify-between items-center">
-          <span className="font-semibold text-neutral-900">
-            <span className="text-accent">${hourlyRate}</span> {t('common.perHour')}
-          </span>
-          <Button size="sm" className="bg-primary hover:bg-primary-dark text-white">
-            {t('common.contactMe')}
-          </Button>
+        
+        {/* Price and actions */}
+        <div className="pt-4 border-t border-border flex justify-between items-center">
+          <div className="flex items-center">
+            <Clock className="h-4 w-4 text-muted-foreground mr-1" />
+            <span className="text-muted-foreground text-sm mr-1">
+              {t('common.from')}
+            </span>
+            <span className="font-cairo font-bold text-foreground">
+              ${hourlyRate}
+              <span className="text-xs font-normal text-muted-foreground">/{t('common.hr')}</span>
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="rounded-full h-9 w-9 p-0"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </Button>
+            <Button 
+              size="sm" 
+              className="rounded-full"
+            >
+              {t('common.hireMe')}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
