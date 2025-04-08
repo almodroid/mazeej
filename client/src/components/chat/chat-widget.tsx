@@ -12,9 +12,10 @@ import { User } from "@shared/schema";
 type ChatWidgetProps = {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
+  className?: string;
 };
 
-export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
+export default function ChatWidget({ isOpen, setIsOpen, className }: ChatWidgetProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { messages, sendMessage, isConnected, isConnecting, selectedUser, selectUser } = useChat();
@@ -55,7 +56,7 @@ export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
     <>
       {/* Chat button */}
       <Button
-        className="fixed bottom-4 right-4 rounded-full w-14 h-14 shadow-lg"
+        className={`fixed bottom-4 right-4 rounded-full w-14 h-14 shadow-lg ${className || ''}`}
         onClick={() => setIsOpen(!isOpen)}
       >
         <MessageCircle size={24} />

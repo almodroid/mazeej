@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, json, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -20,6 +20,12 @@ export const proposalStatusEnum = pgEnum('proposal_status', ['pending', 'accepte
 
 // Verification status enum
 export const verificationStatusEnum = pgEnum('verification_status', ['pending', 'approved', 'rejected']);
+
+// Assessment status enum
+export const assessmentStatusEnum = pgEnum('assessment_status', ['in_progress', 'completed', 'failed']);
+
+// Assessment type enum
+export const assessmentTypeEnum = pgEnum('assessment_type', ['multiple_choice', 'coding', 'text_response']);
 
 // Users table
 export const users = pgTable("users", {
@@ -172,6 +178,66 @@ export const verificationRequests = pgTable("verification_requests", {
   reviewedAt: timestamp("reviewed_at"),
 });
 
+// Skill Assessments table
+export const skillAssessments = pgTable("skill_assessments", {
+  id: serial("id").primaryKey(),
+  skillId: integer("skill_id").notNull().references(() => skills.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  difficulty: text("difficulty").notNull(), // easy, medium, hard
+  durationMinutes: integer("duration_minutes").notNull(),
+  passingScore: integer("passing_score").notNull(), // percentage 0-100
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at"),
+  isActive: boolean("is_active").default(true),
+  aiModel: text("ai_model").notNull(), // AI model used for assessment
+});
+
+// Assessment Questions table
+export const assessmentQuestions = pgTable("assessment_questions", {
+  id: serial("id").primaryKey(),
+  assessmentId: integer("assessment_id").notNull().references(() => skillAssessments.id, { onDelete: "cascade" }),
+  question: text("question").notNull(),
+  type: assessmentTypeEnum("type").notNull(),
+  options: jsonb("options"), // For multiple choice questions - array of option objects
+  correctAnswer: text("correct_answer"), // For multiple choice or text response
+  scoreWeight: integer("score_weight").default(1), // Weight of this question in scoring
+  codeTemplate: text("code_template"), // For coding questions - starter code
+  testCases: jsonb("test_cases"), // For coding questions - test cases to run
+  evaluationCriteria: jsonb("evaluation_criteria"), // For AI evaluation
+  aiPrompt: text("ai_prompt"), // Prompt to send to AI for evaluation
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// User Assessment Attempts table
+export const userAssessments = pgTable("user_assessments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assessmentId: integer("assessment_id").notNull().references(() => skillAssessments.id, { onDelete: "cascade" }),
+  status: assessmentStatusEnum("status").default('in_progress'),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  score: integer("score"), // Final percentage score 0-100
+  timeSpentSeconds: integer("time_spent_seconds"), 
+  aiEvaluation: jsonb("ai_evaluation"), // AI-generated evaluation of performance
+  skillLevel: text("skill_level"), // Awarded skill level (beginner, intermediate, advanced)
+  certificateUrl: text("certificate_url"), // URL to certificate if passed
+});
+
+// User Question Responses table
+export const userResponses = pgTable("user_responses", {
+  id: serial("id").primaryKey(),
+  userAssessmentId: integer("user_assessment_id").notNull().references(() => userAssessments.id, { onDelete: "cascade" }),
+  questionId: integer("question_id").notNull().references(() => assessmentQuestions.id, { onDelete: "cascade" }),
+  response: text("response").notNull(), // User's response to the question
+  isCorrect: boolean("is_correct"), // Whether the response was correct
+  score: integer("score"), // Score for this response (considering weight)
+  aiEvaluation: text("ai_evaluation"), // AI evaluation of response
+  feedback: text("feedback"), // Feedback on response
+  responseTime: integer("response_time"), // Time taken to respond in seconds
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true, isVerified: true })
@@ -200,6 +266,39 @@ export const insertVerificationRequestSchema = createInsertSchema(verificationRe
   reviewerId: true,
   reviewNotes: true,
   reviewedAt: true
+});
+
+export const insertSkillAssessmentSchema = createInsertSchema(skillAssessments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  isActive: true
+});
+
+export const insertAssessmentQuestionSchema = createInsertSchema(assessmentQuestions).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertUserAssessmentSchema = createInsertSchema(userAssessments).omit({
+  id: true,
+  status: true,
+  startedAt: true,
+  completedAt: true,
+  score: true,
+  timeSpentSeconds: true,
+  aiEvaluation: true,
+  skillLevel: true,
+  certificateUrl: true
+});
+
+export const insertUserResponseSchema = createInsertSchema(userResponses).omit({
+  id: true,
+  isCorrect: true,
+  score: true,
+  aiEvaluation: true,
+  feedback: true,
+  submittedAt: true
 });
 
 // Types
@@ -236,6 +335,18 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type VerificationRequest = typeof verificationRequests.$inferSelect;
 export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
 
+export type SkillAssessment = typeof skillAssessments.$inferSelect;
+export type InsertSkillAssessment = z.infer<typeof insertSkillAssessmentSchema>;
+
+export type AssessmentQuestion = typeof assessmentQuestions.$inferSelect;
+export type InsertAssessmentQuestion = z.infer<typeof insertAssessmentQuestionSchema>;
+
+export type UserAssessment = typeof userAssessments.$inferSelect;
+export type InsertUserAssessment = z.infer<typeof insertUserAssessmentSchema>;
+
+export type UserResponse = typeof userResponses.$inferSelect;
+export type InsertUserResponse = z.infer<typeof insertUserResponseSchema>;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects, { relationName: "user_projects" }),
@@ -248,6 +359,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   notifications: many(notifications),
   verificationRequests: many(verificationRequests, { relationName: "user_verification_requests" }),
   reviewedVerifications: many(verificationRequests, { relationName: "reviewer_verification_requests" }),
+  assessments: many(userAssessments, { relationName: "user_assessments" }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -258,6 +370,7 @@ export const skillsRelations = relations(skills, ({ one, many }) => ({
   category: one(categories, { relationName: "category_skills", fields: [skills.categoryId], references: [categories.id] }),
   users: many(userSkills, { relationName: "skill_users" }),
   projects: many(projectSkills, { relationName: "skill_projects" }),
+  assessments: many(skillAssessments, { relationName: "skill_assessments" }),
 }));
 
 export const userSkillsRelations = relations(userSkills, ({ one }) => ({
@@ -324,4 +437,26 @@ export const verificationRequestsRelations = relations(verificationRequests, ({ 
     fields: [verificationRequests.reviewerId],
     references: [users.id],
   }),
+}));
+
+export const skillAssessmentsRelations = relations(skillAssessments, ({ one, many }) => ({
+  skill: one(skills, { relationName: "skill_assessments", fields: [skillAssessments.skillId], references: [skills.id] }),
+  questions: many(assessmentQuestions, { relationName: "assessment_questions" }),
+  userAttempts: many(userAssessments, { relationName: "assessment_attempts" }),
+}));
+
+export const assessmentQuestionsRelations = relations(assessmentQuestions, ({ one, many }) => ({
+  assessment: one(skillAssessments, { relationName: "assessment_questions", fields: [assessmentQuestions.assessmentId], references: [skillAssessments.id] }),
+  userResponses: many(userResponses, { relationName: "question_responses" }),
+}));
+
+export const userAssessmentsRelations = relations(userAssessments, ({ one, many }) => ({
+  user: one(users, { relationName: "user_assessments", fields: [userAssessments.userId], references: [users.id] }),
+  assessment: one(skillAssessments, { relationName: "assessment_attempts", fields: [userAssessments.assessmentId], references: [skillAssessments.id] }),
+  responses: many(userResponses, { relationName: "assessment_responses" }),
+}));
+
+export const userResponsesRelations = relations(userResponses, ({ one }) => ({
+  userAssessment: one(userAssessments, { relationName: "assessment_responses", fields: [userResponses.userAssessmentId], references: [userAssessments.id] }),
+  question: one(assessmentQuestions, { relationName: "question_responses", fields: [userResponses.questionId], references: [assessmentQuestions.id] }),
 }));

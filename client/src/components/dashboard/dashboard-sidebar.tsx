@@ -48,7 +48,11 @@ const SidebarLink = ({ href, icon, label, active, collapsed, isRTL }: SidebarLin
   );
 };
 
-export default function DashboardSidebar() {
+interface DashboardSidebarProps {
+  className?: string;
+}
+
+export default function DashboardSidebar({ className }: DashboardSidebarProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [location] = useLocation();
@@ -146,7 +150,8 @@ export default function DashboardSidebar() {
         "bg-white h-full transition-all duration-300 flex flex-col",
         isRTL ? "border-r" : "border-l", 
         "border-neutral-200",
-        collapsed ? "w-16" : "w-64"
+        collapsed ? "w-16" : "w-64",
+        className
       )}
     >
       <div className={cn("p-4 flex items-center justify-between", isRTL && "flex-row-reverse")}>
