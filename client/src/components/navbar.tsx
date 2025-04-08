@@ -36,6 +36,7 @@ export default function Navbar() {
   const { user, logoutMutation } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const isRTL = i18n.language === 'ar';
+  const isHomePage = location === '/';
 
   // Monitor scroll position to add effects on scroll
   useEffect(() => {
@@ -111,30 +112,34 @@ export default function Navbar() {
                   </Link>
                 ))}
               </div>
-              {/* Main CTA button */}
-              <div className="ml-4">
-                <Button 
-                  className="rounded-full font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary border-none shadow-md hover:shadow-lg transition-shadow"
-                  size="sm"
-                >
-                  <Sparkles className="h-4 w-4 mr-1.5" />
-                  {t("common.postProject")}
-                </Button>
-              </div>
             </div>
           </div>
           
           <div className="hidden lg:flex lg:items-center lg:gap-2">
-            <div className="relative mr-2">
-              <div className="flex items-center border border-input rounded-full px-3 py-1 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-200 bg-muted/50 hover:bg-muted">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <input 
-                  type="text" 
-                  placeholder={t("common.search")} 
-                  className={`bg-transparent border-none focus:outline-none text-sm px-2 py-1 w-40 ${isRTL ? 'text-right' : 'text-left'}`}
-                />
+            {/* Post Project CTA Button */}
+            <Button 
+              className="rounded-full font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary border-none shadow-md hover:shadow-lg transition-shadow mr-2"
+              size="sm"
+              asChild
+            >
+              <Link href="/projects/create">
+                <Sparkles className={`h-4 w-4 ${isRTL ? 'ml-1.5' : 'mr-1.5'}`} />
+                {t("common.postProject")}
+              </Link>
+            </Button>
+            
+            {!isHomePage && (
+              <div className="relative mr-2">
+                <div className="flex items-center border border-input rounded-full px-3 py-1 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-200 bg-muted/50 hover:bg-muted">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <input 
+                    type="text" 
+                    placeholder={t("common.search")} 
+                    className={`bg-transparent border-none focus:outline-none text-sm px-2 py-1 w-40 ${isRTL ? 'text-right' : 'text-left'}`}
+                  />
+                </div>
               </div>
-            </div>
+            )}
             
             <Button
               variant="ghost"
@@ -183,7 +188,7 @@ export default function Navbar() {
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard" className="cursor-pointer">
                         <div className="flex items-center w-full">
-                          <User className="mr-2 h-4 w-4" />
+                          <User className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                           <span>{t("common.dashboard")}</span>
                         </div>
                       </Link>
@@ -191,7 +196,7 @@ export default function Navbar() {
                     <DropdownMenuItem asChild>
                       <Link href="/settings" className="cursor-pointer">
                         <div className="flex items-center w-full">
-                          <Settings className="mr-2 h-4 w-4" />
+                          <Settings className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                           <span>{t("common.settings")}</span>
                         </div>
                       </Link>
@@ -201,7 +206,7 @@ export default function Navbar() {
                       onClick={handleLogout}
                       className="text-destructive focus:text-destructive cursor-pointer"
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogOut className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                       <span>{t("common.logout")}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -256,16 +261,18 @@ export default function Navbar() {
                       </span>
                     </div>
                     
-                    <div className="relative mb-6">
-                      <div className="flex items-center border border-input rounded-md px-3 py-2 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-200">
-                        <Search className="h-4 w-4 text-muted-foreground" />
-                        <input 
-                          type="text" 
-                          placeholder={t("common.search")} 
-                          className={`bg-transparent border-none focus:outline-none text-sm px-2 py-1 w-full ${isRTL ? 'text-right' : 'text-left'}`}
-                        />
+                    {!isHomePage && (
+                      <div className="relative mb-6">
+                        <div className="flex items-center border border-input rounded-md px-3 py-2 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-200">
+                          <Search className="h-4 w-4 text-muted-foreground" />
+                          <input 
+                            type="text" 
+                            placeholder={t("common.search")} 
+                            className={`bg-transparent border-none focus:outline-none text-sm px-2 py-1 w-full ${isRTL ? 'text-right' : 'text-left'}`}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
                     
                     <div className="flex flex-col space-y-2 mb-6">
                       {navLinks.map((link) => (
@@ -290,9 +297,12 @@ export default function Navbar() {
                     <Button 
                       className="w-full rounded-full font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary border-none shadow-md transition-shadow"
                       size="default"
+                      asChild
                     >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      {t("common.postProject")}
+                      <Link href="/projects/create">
+                        <Sparkles className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                        {t("common.postProject")}
+                      </Link>
                     </Button>
                   </div>
                   
