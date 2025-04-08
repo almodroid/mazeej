@@ -80,7 +80,7 @@ export default function CreateProjectPage() {
         description: formData.description,
         budget: formData.budget,
         category: Number(formData.category),
-        deadline: formData.deadlineDate ? formData.deadlineDate.toISOString() : undefined,
+        deadline: formData.deadlineDate ? new Date(formData.deadlineDate).toISOString() : undefined,
       };
       
       const response = await apiRequest("POST", "/api/projects", projectData);

@@ -32,9 +32,9 @@ interface SidebarLinkProps {
 const SidebarLink = ({ href, icon, label, active, collapsed, isRTL }: SidebarLinkProps) => {
   return (
     <Link href={href}>
-      <a
+      <div
         className={cn(
-          "flex items-center py-2 px-3 rounded-md text-sm font-medium transition-colors",
+          "flex items-center py-2 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer",
           active
             ? "bg-primary text-white"
             : "text-neutral-700 hover:bg-neutral-100 hover:text-primary",
@@ -43,7 +43,7 @@ const SidebarLink = ({ href, icon, label, active, collapsed, isRTL }: SidebarLin
       >
         <span className={isRTL ? "ml-2" : "mr-2"}>{icon}</span>
         {!collapsed && <span>{label}</span>}
-      </a>
+      </div>
     </Link>
   );
 };
