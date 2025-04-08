@@ -392,6 +392,79 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Verification operations
+  async getVerificationRequests(status?: string): Promise<VerificationRequest[]> {
+    let query = db.select().from(verificationRequests);
+    
+    if (status) {
+      query = query.where(eq(verificationRequests.status, status as any));
+    }
+    
+    // Sort by submission date, newest first
+    const requests = await query.orderBy(desc(verificationRequests.submittedAt));
+    return requests;
+  }
+
+  async getVerificationRequestsForUser(userId: number): Promise<VerificationRequest[]> {
+    const requests = await db
+      .select()
+      .from(verificationRequests)
+      .where(eq(verificationRequests.userId, userId))
+      .orderBy(desc(verificationRequests.submittedAt));
+    
+    return requests;
+  }
+
+  async getVerificationRequestById(id: number): Promise<VerificationRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(verificationRequests)
+      .where(eq(verificationRequests.id, id));
+    
+    return request || undefined;
+  }
+
+  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> {
+    const [newRequest] = await db
+      .insert(verificationRequests)
+      .values(request)
+      .returning();
+    
+    return newRequest;
+  }
+
+  async updateVerificationRequestStatus(
+    id: number, 
+    status: string, 
+    reviewerId: number, 
+    reviewNotes?: string
+  ): Promise<VerificationRequest | undefined> {
+    const now = new Date();
+    
+    const [updatedRequest] = await db
+      .update(verificationRequests)
+      .set({
+        status: status as any,
+        reviewerId,
+        reviewNotes: reviewNotes || null,
+        reviewedAt: now,
+      })
+      .where(eq(verificationRequests.id, id))
+      .returning();
+    
+    if (!updatedRequest) return undefined;
+    
+    // If approved, update the user's verification status
+    if (status === 'approved') {
+      await db
+        .update(users)
+        .set({ isVerified: true })
+        .where(eq(users.id, updatedRequest.userId));
+    }
+    
+    return updatedRequest;
+  }
+
   // Seed categories
   private async seedCategories() {
     const existingCategories = await this.getCategories();

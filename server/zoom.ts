@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-interface ZoomMeetingOptions {
+export interface ZoomMeetingOptions {
   topic: string;
   type: 1 | 2 | 3 | 8; // 1=instant, 2=scheduled, 3=recurring with no fixed time, 8=recurring with fixed time
   startTime?: string;

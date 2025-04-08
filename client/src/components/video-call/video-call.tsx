@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ZoomVideo } from '@zoom/videosdk';
+import ZoomVideo from '@zoom/videosdk';
 import { apiRequest } from '@/lib/queryClient';
 import { User } from '@shared/schema';
 import { useTranslation } from 'react-i18next';
@@ -21,8 +21,8 @@ export default function VideoCall({ user, participantId, participantName, onEndC
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [client, setClient] = useState<any>(null);
   
-  const videoContainerRef = useRef<HTMLDivElement>(null);
-  const selfVideoRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLVideoElement>(null);
+  const selfVideoRef = useRef<HTMLVideoElement>(null);
   
   useEffect(() => {
     const initializeVideoSDK = async () => {
@@ -32,7 +32,7 @@ export default function VideoCall({ user, participantId, participantName, onEndC
         // Fetch a Zoom token from our backend
         const response = await apiRequest('POST', '/api/video/token', {
           userId: user.id,
-          name: user.full_name || user.username,
+          name: user.fullName || user.username,
           targetUserId: participantId,
         });
         
@@ -48,7 +48,7 @@ export default function VideoCall({ user, participantId, participantName, onEndC
         });
         
         // Join the meeting
-        await zoomClient.join(meetingId, token, user.full_name || user.username);
+        await zoomClient.join(meetingId, token, user.fullName || user.username);
         
         // Create the video elements
         const stream = zoomClient.getMediaStream();
@@ -170,7 +170,11 @@ export default function VideoCall({ user, participantId, participantName, onEndC
     <div className="flex flex-col h-full">
       <div className="relative flex-1 bg-black rounded-lg overflow-hidden">
         {/* Main video container for remote participant */}
-        <div ref={videoContainerRef} className="w-full h-full">
+        <div className="w-full h-full">
+          <video 
+            ref={videoContainerRef} 
+            className="w-full h-full"
+          />
           {/* Placeholder when no remote video */}
           <div className="absolute inset-0 flex items-center justify-center">
             <p className="text-white">{t('videoCall.waitingForParticipant', { name: participantName })}</p>
@@ -178,10 +182,12 @@ export default function VideoCall({ user, participantId, participantName, onEndC
         </div>
         
         {/* Self video (picture-in-picture) */}
-        <div 
-          ref={selfVideoRef}
-          className="absolute bottom-4 right-4 w-44 h-24 bg-gray-800 rounded-lg overflow-hidden border-2 border-background"
-        />
+        <div className="absolute bottom-4 right-4 w-44 h-24 bg-gray-800 rounded-lg overflow-hidden border-2 border-background">
+          <video 
+            ref={selfVideoRef}
+            className="w-full h-full"
+          />
+        </div>
       </div>
       
       {/* Controls */}

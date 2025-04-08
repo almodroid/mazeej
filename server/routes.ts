@@ -7,8 +7,10 @@ import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./auth";
 import { setupWebSocketServer } from "./chat";
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
+import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./zoom";
 import { z } from "zod";
 import fs from "fs";
+import crypto from "crypto";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -996,6 +998,149 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: 'Failed to update verification request', error: error.message });
     }
   });
+
+  // Video Call Routes
+  // Store active meetings in memory
+  const activeVideoMeetings = new Map<string, {
+    meetingId: string;
+    hostId: number;
+    participants: number[];
+    createdAt: Date;
+  }>();
+
+  // Generate a video call token
+  app.post('/api/video/token', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const userId = req.user.id;
+      const targetUserId = req.body.targetUserId;
+      
+      if (!targetUserId) {
+        return res.status(400).json({ message: 'Target user ID is required' });
+      }
+      
+      // Generate a meeting ID (either new or existing)
+      let meetingId: string;
+      
+      // Check if these users already have an active meeting
+      const existingMeeting = Array.from(activeVideoMeetings.values()).find(meeting => 
+        (meeting.hostId === userId && meeting.participants.includes(targetUserId)) ||
+        (meeting.hostId === targetUserId && meeting.participants.includes(userId))
+      );
+      
+      if (existingMeeting) {
+        // Use existing meeting
+        meetingId = existingMeeting.meetingId;
+      } else {
+        // Create a new meeting ID
+        meetingId = crypto.randomUUID();
+        
+        // Store the new meeting
+        activeVideoMeetings.set(meetingId, {
+          meetingId,
+          hostId: userId,
+          participants: [targetUserId],
+          createdAt: new Date()
+        });
+        
+        // Create notification for target user
+        const targetUser = await storage.getUser(targetUserId);
+        if (targetUser) {
+          await storage.createNotification({
+            userId: targetUserId,
+            title: 'دعوة مكالمة فيديو',
+            content: `${req.user.fullName || req.user.username} يدعوك إلى مكالمة فيديو`,
+            type: 'message',
+            relatedId: userId
+          });
+        }
+      }
+      
+      // Generate a Zoom token
+      const token = generateZoomToken(userId.toString());
+      
+      res.json({ token, meetingId });
+    } catch (error: any) {
+      console.error('Error generating video token:', error);
+      res.status(500).json({ message: 'Failed to generate video token', error: error.message });
+    }
+  });
+  
+  // Create a Zoom meeting
+  app.post('/api/video/meetings', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const { topic, participantIds } = req.body;
+      
+      if (!topic || !participantIds || !Array.isArray(participantIds) || participantIds.length === 0) {
+        return res.status(400).json({ message: 'Topic and participant IDs are required' });
+      }
+      
+      // Create a Zoom meeting
+      const meetingOptions: ZoomMeetingOptions = {
+        topic,
+        type: 1, // Instant meeting (1=instant, 2=scheduled, 3=recurring no fixed time, 8=recurring fixed time)
+        duration: 60, // 60 minutes
+        timezone: 'UTC',
+        password: crypto.randomBytes(3).toString('hex').toUpperCase(),
+        agenda: `Meeting between ${req.user.fullName || req.user.username} and invited participants`
+      };
+      
+      // Create the meeting via Zoom API
+      const meeting = await createZoomMeeting(meetingOptions);
+      
+      // Store meeting information
+      const meetingId = meeting.id;
+      activeVideoMeetings.set(meetingId, {
+        meetingId,
+        hostId: req.user.id,
+        participants: participantIds,
+        createdAt: new Date()
+      });
+      
+      // Create notifications for all participants
+      for (const participantId of participantIds) {
+        const participant = await storage.getUser(participantId);
+        if (participant) {
+          await storage.createNotification({
+            userId: participantId,
+            title: 'دعوة مكالمة فيديو',
+            content: `${req.user.fullName || req.user.username} دعاك إلى مكالمة فيديو بعنوان: ${topic}`,
+            type: 'message',
+            relatedId: req.user.id
+          });
+        }
+      }
+      
+      res.json({
+        meetingId,
+        joinUrl: meeting.join_url,
+        hostUrl: meeting.start_url
+      });
+    } catch (error: any) {
+      console.error('Error creating Zoom meeting:', error);
+      res.status(500).json({ message: 'Failed to create meeting', error: error.message });
+    }
+  });
+
+  // Cleanup old meetings (run every hour)
+  setInterval(() => {
+    const now = new Date();
+    // Convert entries to array and then iterate
+    Array.from(activeVideoMeetings.entries()).forEach(([id, meeting]) => {
+      // Remove meetings older than 24 hours
+      const meetingAge = now.getTime() - meeting.createdAt.getTime();
+      if (meetingAge > 24 * 60 * 60 * 1000) {
+        activeVideoMeetings.delete(id);
+      }
+    });
+  }, 60 * 60 * 1000);
 
   return httpServer;
 }
