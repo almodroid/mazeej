@@ -21,12 +21,14 @@ import {
   Search,
   BriefcaseBusiness,
   Users,
-  List
+  List,
+  Sparkles
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { changeLanguage } from "@/lib/i18n";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 export default function Navbar() {
   const { t, i18n } = useTranslation();
@@ -80,36 +82,44 @@ export default function Navbar() {
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
               <Link href="/">
-                <a className="flex items-center gap-2 animate-fade-in">
+                <div className="flex items-center gap-2 animate-fade-in">
                   <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
                     <span className="text-lg font-cairo font-bold text-white">F</span>
                   </div>
                   <span className="text-xl font-cairo font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     {t("common.appName")}
                   </span>
-                </a>
+                </div>
               </Link>
             </div>
             
             <div className={`hidden lg:flex lg:ml-10 ${isRTL ? 'lg:mr-10 lg:ml-0' : ''}`}>
-              <div className={`flex ${isRTL ? 'space-x-0 space-x-reverse space-x-8' : 'space-x-8'}`}>
+              <div className="p-1 bg-muted/50 rounded-full flex gap-1">
                 {navLinks.map((link) => (
                   <Link 
                     key={link.href} 
                     href={link.href}
                   >
-                    <a className={`inline-flex items-center px-1 py-2 text-sm font-medium transition-colors duration-200 relative group ${
+                    <div className={cn(
+                      "inline-flex items-center px-4 py-2 text-sm font-medium rounded-full transition-all duration-200",
                       location === link.href
-                        ? "text-primary font-semibold"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}>
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                    )}>
                       {link.label}
-                      <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-primary transform scale-x-0 origin-left transition-transform duration-300 ${
-                        location === link.href ? 'scale-x-100' : 'group-hover:scale-x-100'
-                      }`}></span>
-                    </a>
+                    </div>
                   </Link>
                 ))}
+              </div>
+              {/* Main CTA button */}
+              <div className="ml-4">
+                <Button 
+                  className="rounded-full font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary border-none shadow-md hover:shadow-lg transition-shadow"
+                  size="sm"
+                >
+                  <Sparkles className="h-4 w-4 mr-1.5" />
+                  {t("common.postProject")}
+                </Button>
               </div>
             </div>
           </div>
@@ -172,18 +182,18 @@ export default function Navbar() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard" className="cursor-pointer">
-                        <a className="flex items-center w-full">
+                        <div className="flex items-center w-full">
                           <User className="mr-2 h-4 w-4" />
                           <span>{t("common.dashboard")}</span>
-                        </a>
+                        </div>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/settings" className="cursor-pointer">
-                        <a className="flex items-center w-full">
+                        <div className="flex items-center w-full">
                           <Settings className="mr-2 h-4 w-4" />
                           <span>{t("common.settings")}</span>
-                        </a>
+                        </div>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -257,23 +267,33 @@ export default function Navbar() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col space-y-1">
+                    <div className="flex flex-col space-y-2 mb-6">
                       {navLinks.map((link) => (
                         <Link 
                           key={link.href} 
                           href={link.href}
                         >
-                          <a className={`flex items-center py-3 px-2 text-base font-medium rounded-md transition-colors duration-200 ${
+                          <div className={cn(
+                            "flex items-center py-2.5 px-3 text-base font-medium rounded-full transition-all duration-200",
                             location === link.href
-                              ? "text-primary bg-primary/10"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                          }`}>
+                              ? "bg-primary/10 text-primary shadow-sm" 
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                          )}>
                             {link.icon}
                             <span className={`${isRTL ? 'mr-3' : 'ml-3'}`}>{link.label}</span>
-                          </a>
+                          </div>
                         </Link>
                       ))}
                     </div>
+
+                    {/* Mobile CTA */}
+                    <Button 
+                      className="w-full rounded-full font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary border-none shadow-md transition-shadow"
+                      size="default"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {t("common.postProject")}
+                    </Button>
                   </div>
                   
                   <div className="border-t border-border pt-4 mt-4">
@@ -293,17 +313,17 @@ export default function Navbar() {
                         </div>
                         
                         <Link href="/dashboard">
-                          <a className="flex items-center py-2 text-base font-medium text-muted-foreground hover:text-foreground">
+                          <div className="flex items-center py-2 text-base font-medium text-muted-foreground hover:text-foreground">
                             <User className={`h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'}`} />
                             <span>{t("common.dashboard")}</span>
-                          </a>
+                          </div>
                         </Link>
                         
                         <Link href="/settings">
-                          <a className="flex items-center py-2 text-base font-medium text-muted-foreground hover:text-foreground">
+                          <div className="flex items-center py-2 text-base font-medium text-muted-foreground hover:text-foreground">
                             <Settings className={`h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'}`} />
                             <span>{t("common.settings")}</span>
-                          </a>
+                          </div>
                         </Link>
                         
                         <button

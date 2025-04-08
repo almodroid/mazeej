@@ -36,7 +36,28 @@
     "toggleTheme": "Toggle Theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "add": "Add",
+    "actions": "Actions",
+    "status": "Status",
+    "joined": "Joined",
+    "verified": "Verified",
+    "pending": "Pending",
+    "client": "Client",
+    "admin": "Admin",
+    "allUsers": "All registered users",
+    "allProjects": "All active projects",
+    "allCategories": "All service categories",
+    "platformFees": "Platform earnings",
+    "generalSettings": "General Settings",
+    "platformName": "Platform Name",
+    "platformFee": "Platform Fee",
+    "paymentSettings": "Payment Settings",
+    "paymentMethods": "Payment Methods",
+    "developmentTools": "Development Tools",
+    "saveChanges": "Save Changes",
+    "unauthorized": "Unauthorized access",
+    "postProject": "Post Project"
   },
   "auth": {
     "login": "Login",
@@ -308,5 +329,11 @@
     "date": "Please enter a valid date",
     "fileSize": "File size is too large (max: {{max}})",
     "fileType": "File type not supported"
+  },
+  "admin": {
+    "createTestAccounts": "Create Test Accounts",
+    "createTestAccountsDescription": "Create test accounts for demonstration purposes. This will generate accounts with different roles: admin, client, content creator, and expert.",
+    "testAccountsCreated": "Test accounts created successfully. You can now log in with any of these accounts using the password: 123456",
+    "testAccountsError": "Error creating test accounts. Please try again."
   }
 }

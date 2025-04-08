@@ -36,7 +36,28 @@
     "toggleTheme": "تغيير المظهر",
     "light": "فاتح",
     "dark": "داكن",
-    "system": "النظام"
+    "system": "النظام",
+    "add": "إضافة",
+    "actions": "إجراءات",
+    "status": "الحالة",
+    "joined": "تاريخ الانضمام",
+    "verified": "موثق",
+    "pending": "قيد المراجعة",
+    "client": "عميل",
+    "admin": "مدير",
+    "allUsers": "جميع المستخدمين المسجلين",
+    "allProjects": "جميع المشاريع النشطة",
+    "allCategories": "جميع فئات الخدمات",
+    "platformFees": "عائدات المنصة",
+    "generalSettings": "الإعدادات العامة",
+    "platformName": "اسم المنصة",
+    "platformFee": "رسوم المنصة",
+    "paymentSettings": "إعدادات الدفع",
+    "paymentMethods": "وسائل الدفع",
+    "developmentTools": "أدوات التطوير",
+    "saveChanges": "حفظ التغييرات",
+    "unauthorized": "صلاحيات غير كافية",
+    "postProject": "نشر مشروع"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -119,7 +140,25 @@
     "title": "أفضل المستقلين في مكان واحد",
     "subtitle": "ابحث عن محترفين موثوقين لإكمال مشاريعك أو قدّم خدماتك للعملاء الباحثين عن خبرتك",
     "clientButton": "أنا أبحث عن مستقلين",
-    "freelancerButton": "أنا مستقل أبحث عن عمل"
+    "freelancerButton": "أنا مستقل أبحث عن عمل",
+    "searchPlaceholder": "ما الذي تبحث عنه؟",
+    "searchButton": "ابحث الآن",
+    "searchResults": "نتائج البحث عن: {{query}}",
+    "noResults": "لا توجد نتائج مطابقة لبحثك",
+    "popularSearches": "البحثات الشائعة:",
+    "trendingCategories": "الفئات الشائعة:",
+    "recentProjects": "أحدث المشاريع:",
+    "recentFreelancers": "أحدث المستقلين:",
+    "badge": "مستقل مميز",
+    "webDevelopment": "تطوير ويب",
+    "contentCreation": "إنشاء محتوى",
+    "UI/UX design": "تصميم UI/UX",
+    "freelancers": "مستقلون",
+    "projects": "مشاريع",
+    "categories": "فئات",
+    "clients": "عملاء",
+    "satisfaction": "نسبة الرضا",
+    "trustedBy": "موثوق بنا من قبل"
   },
   "howItWorks": {
     "title": "كيف تعمل منصة خبراء",
@@ -202,7 +241,11 @@
     "privacyPolicy": "سياسة الخصوصية",
     "support": "الدعم والمساعدة",
     "contactUs": "التواصل معنا",
-    "copyright": "© 2023 منصة خبراء - جميع الحقوق محفوظة"
+    "copyright": "© 2023 منصة خبراء - جميع الحقوق محفوظة",
+    "getInTouch": "تواصل معنا",
+    "newsletter": "النشرة الإخبارية",
+    "subscribe": "اشترك الآن",
+    "newsletterDesc": "ابق على اطلاع بأحدث الأخبار والمقالات والتحديثات من منصة خبراء"
   },
   "chat": {
     "title": "المحادثات",
@@ -308,5 +351,11 @@
     "date": "يرجى إدخال تاريخ صحيح",
     "fileSize": "حجم الملف كبير جداً (الحد الأقصى: {{max}})",
     "fileType": "نوع الملف غير مدعوم"
+  },
+  "admin": {
+    "createTestAccounts": "إنشاء حسابات اختبارية",
+    "createTestAccountsDescription": "إنشاء حسابات اختبارية لأغراض العرض التوضيحي. سيتم إنشاء حسابات بأدوار مختلفة: مدير، عميل، منشئ محتوى، وخبير.",
+    "testAccountsCreated": "تم إنشاء الحسابات الاختبارية بنجاح. يمكنك الآن تسجيل الدخول باستخدام أي من هذه الحسابات باستخدام كلمة المرور: 123456",
+    "testAccountsError": "حدث خطأ أثناء إنشاء الحسابات الاختبارية. يرجى المحاولة مرة أخرى."
   }
 }

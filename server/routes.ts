@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { setupWebSocketServer } from "./chat";
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema } from "@shared/schema";
 import { z } from "zod";
@@ -38,6 +38,110 @@ export function registerRoutes(app: Express): Server {
   
   // Setup WebSocket server for chat
   setupWebSocketServer(httpServer);
+  
+  // Create test accounts route - for development only
+  app.post('/api/create-test-accounts', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can create test accounts' });
+      }
+      // Check if users already exist to avoid duplicates
+      const adminExists = await storage.getUserByEmail('almodroid@gmail.com');
+      const clientExists = await storage.getUserByEmail('client@example.com');
+      const contentCreatorExists = await storage.getUserByEmail('creator@example.com');
+      const expertExists = await storage.getUserByEmail('expert@example.com');
+      
+      const results = [];
+      
+      // Create admin user if it doesn't exist
+      if (!adminExists) {
+        const adminUser = await storage.createUser({
+          username: 'almodroid',
+          password: await hashPassword('123456'),
+          email: 'almodroid@gmail.com',
+          fullName: 'Admin User',
+          role: 'admin',
+          bio: 'Platform administrator with full access',
+          country: 'Saudi Arabia',
+          city: 'Riyadh',
+          confirmPassword: '123456'
+        });
+        const { password, ...adminWithoutPassword } = adminUser;
+        results.push({ type: 'admin', user: adminWithoutPassword });
+      } else {
+        results.push({ type: 'admin', message: 'Admin user already exists' });
+      }
+      
+      // Create client user if it doesn't exist
+      if (!clientExists) {
+        const clientUser = await storage.createUser({
+          username: 'client',
+          password: await hashPassword('123456'),
+          email: 'client@example.com',
+          fullName: 'Client User',
+          role: 'client',
+          bio: 'Looking to hire talented freelancers',
+          country: 'Saudi Arabia',
+          city: 'Jeddah',
+          confirmPassword: '123456'
+        });
+        const { password, ...clientWithoutPassword } = clientUser;
+        results.push({ type: 'client', user: clientWithoutPassword });
+      } else {
+        results.push({ type: 'client', message: 'Client user already exists' });
+      }
+      
+      // Create content creator user if it doesn't exist
+      if (!contentCreatorExists) {
+        const creatorUser = await storage.createUser({
+          username: 'creator',
+          password: await hashPassword('123456'),
+          email: 'creator@example.com',
+          fullName: 'Content Creator',
+          role: 'freelancer',
+          bio: 'Experienced content creator specializing in digital media',
+          freelancerType: 'content_creator',
+          freelancerLevel: 'intermediate',
+          hourlyRate: 50,
+          country: 'Egypt',
+          city: 'Cairo',
+          confirmPassword: '123456'
+        });
+        const { password, ...creatorWithoutPassword } = creatorUser;
+        results.push({ type: 'content_creator', user: creatorWithoutPassword });
+      } else {
+        results.push({ type: 'content_creator', message: 'Content creator already exists' });
+      }
+      
+      // Create expert user if it doesn't exist
+      if (!expertExists) {
+        const expertUser = await storage.createUser({
+          username: 'expert',
+          password: await hashPassword('123456'),
+          email: 'expert@example.com',
+          fullName: 'Domain Expert',
+          role: 'freelancer',
+          bio: 'Senior consultant with 10+ years of industry experience',
+          freelancerType: 'expert',
+          freelancerLevel: 'advanced',
+          hourlyRate: 100,
+          country: 'United Arab Emirates',
+          city: 'Dubai',
+          confirmPassword: '123456'
+        });
+        const { password, ...expertWithoutPassword } = expertUser;
+        results.push({ type: 'expert', user: expertWithoutPassword });
+      } else {
+        results.push({ type: 'expert', message: 'Expert user already exists' });
+      }
+      
+      res.status(201).json({ message: 'Test accounts created successfully', results });
+    } catch (error) {
+      console.error('Error creating test accounts:', error);
+      res.status(500).json({ message: 'Failed to create test accounts', error: error.message });
+    }
+  });
 
   // Categories Routes
   app.get('/api/categories', async (req, res) => {

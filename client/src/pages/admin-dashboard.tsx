@@ -26,7 +26,9 @@ import {
   Edit,
   Trash,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserPlus,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +59,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AdminDashboardPage() {
   const { t, i18n } = useTranslation();
@@ -64,7 +67,37 @@ export default function AdminDashboardPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("users");
+  const [isCreatingTestAccounts, setIsCreatingTestAccounts] = useState(false);
   const isRTL = i18n.language === "ar";
+  
+  // Function to create test accounts
+  const createTestAccounts = async () => {
+    try {
+      setIsCreatingTestAccounts(true);
+      
+      const response = await apiRequest('POST', '/api/create-test-accounts');
+      const data = await response.json();
+      
+      toast({
+        title: t("common.success"),
+        description: t("admin.testAccountsCreated"),
+        variant: "default",
+      });
+      
+      // Refresh the page or update the user list
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      toast({
+        title: t("common.error"),
+        description: t("admin.testAccountsError"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingTestAccounts(false);
+    }
+  };
 
   // Redirect if not admin
   useEffect(() => {
@@ -531,6 +564,28 @@ export default function AdminDashboardPage() {
                           <Badge variant="secondary">PayPal</Badge>
                           <Badge variant="outline">PayTabs</Badge>
                         </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid gap-3">
+                      <h3 className="text-lg font-medium">{t("common.developmentTools")}</h3>
+                      <div className="grid gap-2">
+                        <p className="text-sm text-muted-foreground">
+                          {t("admin.createTestAccountsDescription")}
+                        </p>
+                        <Button 
+                          variant="secondary"
+                          className="gap-2 mt-2"
+                          onClick={createTestAccounts}
+                          disabled={isCreatingTestAccounts}
+                        >
+                          {isCreatingTestAccounts ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <UserPlus className="h-4 w-4" />
+                          )}
+                          {t("admin.createTestAccounts")}
+                        </Button>
                       </div>
                     </div>
                     
