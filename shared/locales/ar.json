@@ -56,7 +56,8 @@
     "paymentMethods": "وسائل الدفع",
     "developmentTools": "أدوات التطوير",
     "saveChanges": "حفظ التغييرات",
-    "unauthorized": "صلاحيات غير كافية"
+    "unauthorized": "صلاحيات غير كافية",
+    "postProject": "نشر مشروع"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -148,7 +149,7 @@
     "trendingCategories": "الفئات الشائعة:",
     "recentProjects": "أحدث المشاريع:",
     "recentFreelancers": "أحدث المستقلين:",
-    "badge": "مستقل مميز",
+    "badge": "مستقلين مميزين",
     "webDevelopment": "تطوير ويب",
     "contentCreation": "إنشاء محتوى",
     "UI/UX design": "تصميم UI/UX",
@@ -159,13 +160,14 @@
     "satisfaction": "نسبة الرضا",
     "trustedBy": "موثوق بنا من قبل",
     "topRated": "أعلى التقييمات",
-    "worldwide": "في جميع مناطق المملكة"
+    "worldwide": "في جميع مناطق المملكة",
+    "global": "جودة عالمية"
   },
   "howItWorks": {
     "title": "كيف تعمل منصة خبراء",
     "subtitle": "خطوات بسيطة للوصول إلى النتائج التي تريدها",
     "step1Title": "نشر المشروع",
-    "step1Description": "وصف احتياجاتك بالتفصيل وحدد ميزانيتك والمهارات المطلوبة",
+    "step1Description": "وصف احتياجاتك بالتفٵيل وحدد ميزانيتك والمهارات المطلوبة",
     "step2Title": "اختيار العروض",
     "step2Description": "راجع عروض المستقلين واختر الأفضل لمشروعك",
     "step3Title": "استلام العمل",
@@ -312,7 +314,27 @@
     "statistics": "الإحصائيات",
     "noActiveProjects": "لا توجد مشاريع نشطة",
     "noPendingProposals": "لا توجد عروض معلقة",
-    "noNotifications": "لا توجد إشعارات",
+    "noNotifications": "لا توجد إشعارات"
+  },
+  "notification": {
+    "title": "الإشعارات",
+    "empty": "لا توجد إشعارات",
+    "unread": "غير مقروء",
+    "markAsRead": "تعيين كمقروء",
+    "delete": "حذف الإشعار",
+    "deleteConfirm": "هل أنت متأكد من رغبتك في حذف هذا الإشعار؟",
+    "markAllAsRead": "تعيين الكل كمقروء",
+    "message": "رسالة",
+    "proposal": "عرض",
+    "projectUpdate": "تحديث مشروع",
+    "payment": "دفع",
+    "review": "تقييم",
+    "admin": "النظام",
+    "newMessage": "لديك رسالة جديدة",
+    "newProposal": "عرض جديد لمشروعك",
+    "projectStatusUpdate": "تم تحديث حالة المشروع",
+    "newPayment": "تمت عملية الدفع بنجاح",
+    "newReview": "تم استلام تقييم جديد",
     "noMessages": "لا توجد رسائل"
   },
   "proposals": {

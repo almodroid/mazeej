@@ -1,5 +1,5 @@
-import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments } from "@shared/schema";
-import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage } from "@shared/schema";
+import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications } from "@shared/schema";
+import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -56,6 +56,12 @@ export interface IStorage {
   getFilesByUser(userId: number): Promise<File[]>;
   getFilesByProject(projectId: number): Promise<File[]>;
   
+  // Notification operations
+  getUserNotifications(userId: number): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(id: number): Promise<Notification | undefined>;
+  deleteNotification(id: number): Promise<boolean>;
+  
   // Session store
   sessionStore: SessionStore;
 }
@@ -73,6 +79,7 @@ export class MemStorage implements IStorage {
   private reviews: Map<number, Review>;
   private files: Map<number, File>;
   private payments: Map<number, Payment>;
+  private notifications: Map<number, Notification>;
   
   // Counters for generating IDs
   private userId: number = 1;
@@ -86,6 +93,7 @@ export class MemStorage implements IStorage {
   private reviewId: number = 1;
   private fileId: number = 1;
   private paymentId: number = 1;
+  private notificationId: number = 1;
   
   // Session store
   sessionStore: SessionStore;
@@ -102,6 +110,7 @@ export class MemStorage implements IStorage {
     this.reviews = new Map();
     this.files = new Map();
     this.payments = new Map();
+    this.notifications = new Map();
     
     // Initialize session store
     this.sessionStore = new MemoryStore({
@@ -445,6 +454,51 @@ export class MemStorage implements IStorage {
     return Array.from(this.files.values()).filter(
       (file) => file.projectId === projectId
     );
+  }
+
+  // Notification operations
+  async getUserNotifications(userId: number): Promise<Notification[]> {
+    return Array.from(this.notifications.values())
+      .filter(notification => notification.userId === userId)
+      .sort((a, b) => {
+        // Sort by creation time, newest first
+        const timeA = a.createdAt ? a.createdAt.getTime() : 0;
+        const timeB = b.createdAt ? b.createdAt.getTime() : 0;
+        return timeB - timeA;
+      });
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const id = this.notificationId++;
+    const now = new Date();
+    const relatedId = notification.relatedId === undefined ? null : notification.relatedId;
+
+    const newNotification: Notification = {
+      id,
+      userId: notification.userId,
+      title: notification.title,
+      content: notification.content,
+      type: notification.type,
+      isRead: false,
+      relatedId,
+      createdAt: now,
+    };
+    
+    this.notifications.set(id, newNotification);
+    return newNotification;
+  }
+
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const notification = this.notifications.get(id);
+    if (!notification) return undefined;
+
+    const updatedNotification = { ...notification, isRead: true };
+    this.notifications.set(id, updatedNotification);
+    return updatedNotification;
+  }
+
+  async deleteNotification(id: number): Promise<boolean> {
+    return this.notifications.delete(id);
   }
 
   // Seed categories

@@ -1,5 +1,5 @@
-import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments } from "@shared/schema";
-import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage } from "@shared/schema";
+import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications } from "@shared/schema";
+import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -349,6 +349,47 @@ export class DatabaseStorage implements IStorage {
       .from(files)
       .where(eq(files.projectId, projectId))
       .orderBy(desc(files.uploadedAt));
+  }
+
+  // Notification operations
+  async getUserNotifications(userId: number): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [newNotification] = await db
+      .insert(notifications)
+      .values({
+        ...notification,
+        isRead: false
+      })
+      .returning();
+    return newNotification;
+  }
+
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const [updatedNotification] = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, id))
+      .returning();
+    return updatedNotification;
+  }
+
+  async deleteNotification(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(notifications)
+        .where(eq(notifications.id, id));
+      return true;
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      return false;
+    }
   }
 
   // Seed categories

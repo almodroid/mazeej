@@ -6,7 +6,7 @@ import path from "path";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./auth";
 import { setupWebSocketServer } from "./chat";
-import { insertProjectSchema, insertProposalSchema, insertReviewSchema } from "@shared/schema";
+import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema } from "@shared/schema";
 import { z } from "zod";
 import fs from "fs";
 
@@ -550,6 +550,103 @@ export function registerRoutes(app: Express): Server {
       res.json(userWithoutPassword);
     } catch (error) {
       res.status(500).json({ message: 'Failed to update profile' });
+    }
+  });
+
+  // Notification Routes
+  app.get('/api/notifications', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const notifications = await storage.getUserNotifications(req.user.id);
+      res.json(notifications);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch notifications' });
+    }
+  });
+
+  app.post('/api/notifications', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Admin can create notifications for any user
+      if (req.user.role !== 'admin' && req.body.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to create notifications for other users' });
+      }
+
+      const validatedData = insertNotificationSchema.parse(req.body);
+      const notification = await storage.createNotification(validatedData);
+      res.status(201).json(notification);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create notification' });
+    }
+  });
+
+  app.patch('/api/notifications/:id/read', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const notificationId = parseInt(req.params.id);
+      
+      // Get the notification to check ownership
+      const notifications = await storage.getUserNotifications(req.user.id);
+      const notification = notifications.find(n => n.id === notificationId);
+      
+      if (!notification) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+
+      // Check if this notification belongs to the current user
+      if (notification.userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to update this notification' });
+      }
+
+      const updatedNotification = await storage.markNotificationAsRead(notificationId);
+      res.json(updatedNotification);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to mark notification as read' });
+    }
+  });
+
+  app.delete('/api/notifications/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const notificationId = parseInt(req.params.id);
+      
+      // Get the notification to check ownership
+      const notifications = await storage.getUserNotifications(req.user.id);
+      const notification = notifications.find(n => n.id === notificationId);
+      
+      if (!notification) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+
+      // Check if this notification belongs to the current user
+      if (notification.userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to delete this notification' });
+      }
+
+      const success = await storage.deleteNotification(notificationId);
+      
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(404).json({ message: 'Notification not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete notification' });
     }
   });
 

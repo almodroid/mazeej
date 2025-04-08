@@ -138,6 +138,22 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Notifications table
+export const notificationTypes = pgEnum('notification_type', [
+  'message', 'proposal', 'project_update', 'payment', 'review', 'admin'
+]);
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  type: notificationTypes("type").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  relatedId: integer("related_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true, isVerified: true })
@@ -158,6 +174,7 @@ export const insertProposalSchema = createInsertSchema(proposals).omit({ id: tru
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true, reviewerId: true });
 export const insertFileSchema = createInsertSchema(files).omit({ id: true, uploadedAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true, senderId: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, isRead: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -187,6 +204,9 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 export type Payment = typeof payments.$inferSelect;
 
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects, { relationName: "user_projects" }),
@@ -196,6 +216,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   proposals: many(proposals, { relationName: "user_proposals" }),
   reviews: many(reviews, { relationName: "user_reviews" }),
   files: many(files, { relationName: "user_files" }),
+  notifications: many(notifications),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -252,4 +273,11 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   project: one(projects, { relationName: "project_payments", fields: [payments.projectId], references: [projects.id] }),
   client: one(users, { fields: [payments.clientId], references: [users.id] }),
   freelancer: one(users, { fields: [payments.freelancerId], references: [users.id] }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
 }));

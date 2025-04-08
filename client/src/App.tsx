@@ -12,6 +12,7 @@ import ProjectsPage from "@/pages/projects-page";
 import CategoriesPage from "@/pages/categories-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
+import { NotificationsProvider } from "./hooks/use-notifications";
 import { ThemeProvider } from "@/components/theme-provider";
 
 function Router() {
@@ -54,8 +55,10 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="freelance-platform-theme">
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Router />
-          <Toaster />
+          <NotificationsProvider>
+            <Router />
+            <Toaster />
+          </NotificationsProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

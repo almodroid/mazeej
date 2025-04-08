@@ -24,6 +24,7 @@ import {
   List,
   Sparkles
 } from "lucide-react";
+import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { changeLanguage } from "@/lib/i18n";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -156,10 +157,7 @@ export default function Navbar() {
             
             {user ? (
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="rounded-full relative">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive"></span>
-                </Button>
+                <NotificationsDropdown />
                 
                 <Button variant="ghost" size="icon" className="rounded-full relative">
                   <MessageSquare className="h-5 w-5" />
@@ -228,10 +226,7 @@ export default function Navbar() {
           <div className="flex items-center lg:hidden">
             {user && (
               <div className="flex">
-                <Button variant="ghost" size="icon" className="relative mr-1">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive"></span>
-                </Button>
+                <NotificationsDropdown />
               </div>
             )}
             
