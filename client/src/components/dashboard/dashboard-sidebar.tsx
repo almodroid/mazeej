@@ -15,6 +15,7 @@ import {
   HelpCircle,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -114,6 +115,11 @@ export default function DashboardSidebar() {
           href: "/projects",
           icon: <Briefcase size={18} />,
           label: t("common.findProjects"),
+        },
+        {
+          href: "/verification",
+          icon: <ShieldCheck size={18} />,
+          label: t("common.verification"),
         },
         {
           href: "/reviews/received",

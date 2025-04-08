@@ -6,7 +6,7 @@ import path from "path";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./auth";
 import { setupWebSocketServer } from "./chat";
-import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema } from "@shared/schema";
+import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { z } from "zod";
 import fs from "fs";
 
@@ -748,6 +748,254 @@ export function registerRoutes(app: Express): Server {
 
   // Serve attached assets directly
   app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
+
+  // Verification Routes
+  // Submit a verification request (for freelancers)
+  app.post('/api/verification-requests', upload.single('document'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Only freelancers can submit verification requests
+      if (req.user.role !== 'freelancer') {
+        return res.status(403).json({ message: 'Only freelancers can submit verification requests' });
+      }
+
+      // Check if user is already verified
+      if (req.user.isVerified) {
+        return res.status(400).json({ message: 'User is already verified' });
+      }
+
+      // Check if the user has a pending verification request
+      const existingRequests = await storage.getVerificationRequestsForUser(req.user.id);
+      const pendingRequest = existingRequests.find(request => request.status === 'pending');
+      
+      if (pendingRequest) {
+        return res.status(400).json({ 
+          message: 'You already have a pending verification request',
+          request: pendingRequest
+        });
+      }
+
+      // Handle file upload
+      if (!req.file) {
+        return res.status(400).json({ message: 'Document file is required' });
+      }
+
+      // Save file record
+      const file = await storage.uploadFile({
+        userId: req.user.id,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size
+      });
+
+      // Create verification request
+      const requestData = {
+        userId: req.user.id,
+        documentType: req.body.documentType,
+        documentUrl: `/uploads/${file.filename}`,
+        additionalInfo: req.body.additionalInfo
+      };
+
+      const validatedData = insertVerificationRequestSchema.parse(requestData);
+      const verificationRequest = await storage.createVerificationRequest(validatedData);
+
+      // Create a notification for the user
+      await storage.createNotification({
+        userId: req.user.id,
+        title: 'تم استلام طلب التحقق',
+        content: 'تم استلام طلب التحقق الخاص بك وسيتم مراجعته قريبًا',
+        type: 'verification_request'
+      });
+
+      // Notify admins about the new verification request
+      const adminUsers = Array.from((await storage.getFreelancers())).filter(user => user.role === 'admin');
+      for (const admin of adminUsers) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: 'طلب تحقق جديد',
+          content: `قام ${req.user.fullName} بتقديم طلب تحقق جديد`,
+          type: 'admin_alert',
+          relatedId: verificationRequest.id
+        });
+      }
+
+      res.status(201).json(verificationRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error creating verification request:', error);
+      res.status(500).json({ message: 'Failed to create verification request', error: error.message });
+    }
+  });
+
+  // Get verification requests (for admin)
+  app.get('/api/verification-requests', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Only admins can view all verification requests
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can view all verification requests' });
+      }
+
+      const status = req.query.status as string | undefined;
+      const requests = await storage.getVerificationRequests(status);
+      
+      // Enrich requests with user information
+      const enrichedRequests = await Promise.all(requests.map(async (request) => {
+        const user = await storage.getUser(request.userId);
+        return {
+          ...request,
+          user: user ? { 
+            id: user.id, 
+            fullName: user.fullName, 
+            username: user.username,
+            email: user.email,
+            profileImage: user.profileImage
+          } : null
+        };
+      }));
+
+      res.json(enrichedRequests);
+    } catch (error) {
+      console.error('Error fetching verification requests:', error);
+      res.status(500).json({ message: 'Failed to fetch verification requests', error: error.message });
+    }
+  });
+
+  // Get user's verification requests (for freelancers)
+  app.get('/api/my-verification-requests', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const requests = await storage.getVerificationRequestsForUser(req.user.id);
+      res.json(requests);
+    } catch (error) {
+      console.error('Error fetching user verification requests:', error);
+      res.status(500).json({ message: 'Failed to fetch verification requests', error: error.message });
+    }
+  });
+
+  // Get a specific verification request
+  app.get('/api/verification-requests/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const requestId = parseInt(req.params.id);
+      const request = await storage.getVerificationRequestById(requestId);
+      
+      if (!request) {
+        return res.status(404).json({ message: 'Verification request not found' });
+      }
+
+      // Only admins or the request owner can view it
+      if (req.user.role !== 'admin' && request.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to view this verification request' });
+      }
+
+      // If admin is viewing, include user details
+      if (req.user.role === 'admin') {
+        const user = await storage.getUser(request.userId);
+        return res.json({
+          ...request,
+          user: user ? { 
+            id: user.id, 
+            fullName: user.fullName, 
+            username: user.username,
+            email: user.email,
+            profileImage: user.profileImage
+          } : null
+        });
+      }
+
+      res.json(request);
+    } catch (error) {
+      console.error('Error fetching verification request:', error);
+      res.status(500).json({ message: 'Failed to fetch verification request', error: error.message });
+    }
+  });
+
+  // Update verification request status (for admin)
+  app.patch('/api/verification-requests/:id/status', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update verification request status' });
+      }
+
+      const requestId = parseInt(req.params.id);
+      const { status, reviewNotes } = req.body;
+      
+      // Validate status
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status. Must be "approved" or "rejected"' });
+      }
+      
+      // Get the verification request
+      const request = await storage.getVerificationRequestById(requestId);
+      if (!request) {
+        return res.status(404).json({ message: 'Verification request not found' });
+      }
+      
+      // Update the status
+      const updatedRequest = await storage.updateVerificationRequestStatus(
+        requestId, 
+        status, 
+        req.user.id, 
+        reviewNotes
+      );
+      
+      if (!updatedRequest) {
+        return res.status(500).json({ message: 'Failed to update verification request' });
+      }
+
+      // Create a notification for the user
+      const notificationTitle = status === 'approved' 
+        ? 'تم الموافقة على طلب التحقق' 
+        : 'تم رفض طلب التحقق';
+      
+      const notificationContent = status === 'approved'
+        ? 'تهانينا! تم الموافقة على طلب التحقق الخاص بك. الآن يمكنك الاستفادة من مميزات المستخدمين المتحقق منهم.'
+        : `تم رفض طلب التحقق الخاص بك. ${reviewNotes ? `السبب: ${reviewNotes}` : 'يرجى التواصل مع الدعم لمزيد من المعلومات.'}`;
+      
+      await storage.createNotification({
+        userId: request.userId,
+        title: notificationTitle,
+        content: notificationContent,
+        type: 'verification_update',
+        relatedId: request.id
+      });
+
+      // If approved, update the user mail settings here (would require SendGrid)
+      // This part would require the SendGrid API key, so we'll comment it for now
+      // if (status === 'approved') {
+      //   const user = await storage.getUser(request.userId);
+      //   if (user && user.email) {
+      //     try {
+      //       // Send verification confirmation email 
+      //       // Implementation would go here
+      //     } catch (emailError) {
+      //       console.error('Error sending verification email:', emailError);
+      //     }
+      //   }
+      // }
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error('Error updating verification request:', error);
+      res.status(500).json({ message: 'Failed to update verification request', error: error.message });
+    }
+  });
 
   return httpServer;
 }

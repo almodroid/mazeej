@@ -18,6 +18,9 @@ export const projectStatusEnum = pgEnum('project_status', ['open', 'in_progress'
 // Proposal status enum
 export const proposalStatusEnum = pgEnum('proposal_status', ['pending', 'accepted', 'rejected']);
 
+// Verification status enum
+export const verificationStatusEnum = pgEnum('verification_status', ['pending', 'approved', 'rejected']);
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -140,7 +143,8 @@ export const payments = pgTable("payments", {
 
 // Notifications table
 export const notificationTypes = pgEnum('notification_type', [
-  'message', 'proposal', 'project_update', 'payment', 'review', 'admin'
+  'message', 'proposal', 'project_update', 'payment', 'review', 'admin', 'verification',
+  'verification_request', 'verification_update', 'admin_alert'
 ]);
 
 export const notifications = pgTable("notifications", {
@@ -152,6 +156,20 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("is_read").notNull().default(false),
   relatedId: integer("related_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Verification Requests table
+export const verificationRequests = pgTable("verification_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  documentType: text("document_type").notNull(),  // ID, passport, certificate, etc.
+  documentUrl: text("document_url").notNull(),
+  additionalInfo: text("additional_info"),
+  status: verificationStatusEnum("status").default('pending'),
+  reviewerId: integer("reviewer_id").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
 });
 
 // Insert schemas
@@ -175,6 +193,14 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, c
 export const insertFileSchema = createInsertSchema(files).omit({ id: true, uploadedAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true, senderId: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, isRead: true });
+export const insertVerificationRequestSchema = createInsertSchema(verificationRequests).omit({
+  id: true,
+  submittedAt: true,
+  status: true,
+  reviewerId: true,
+  reviewNotes: true,
+  reviewedAt: true
+});
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -207,6 +233,9 @@ export type Payment = typeof payments.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
+export type VerificationRequest = typeof verificationRequests.$inferSelect;
+export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects, { relationName: "user_projects" }),
@@ -217,6 +246,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   reviews: many(reviews, { relationName: "user_reviews" }),
   files: many(files, { relationName: "user_files" }),
   notifications: many(notifications),
+  verificationRequests: many(verificationRequests, { relationName: "user_verification_requests" }),
+  reviewedVerifications: many(verificationRequests, { relationName: "reviewer_verification_requests" }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -278,6 +309,19 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
+export const verificationRequestsRelations = relations(verificationRequests, ({ one }) => ({
+  user: one(users, {
+    relationName: "user_verification_requests",
+    fields: [verificationRequests.userId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    relationName: "reviewer_verification_requests",
+    fields: [verificationRequests.reviewerId],
     references: [users.id],
   }),
 }));

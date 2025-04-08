@@ -1,5 +1,5 @@
-import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications } from "@shared/schema";
-import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification } from "@shared/schema";
+import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests } from "@shared/schema";
+import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -62,6 +62,13 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
   deleteNotification(id: number): Promise<boolean>;
   
+  // Verification operations
+  getVerificationRequests(status?: string): Promise<VerificationRequest[]>;
+  getVerificationRequestsForUser(userId: number): Promise<VerificationRequest[]>;
+  getVerificationRequestById(id: number): Promise<VerificationRequest | undefined>;
+  createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest>;
+  updateVerificationRequestStatus(id: number, status: string, reviewerId: number, reviewNotes?: string): Promise<VerificationRequest | undefined>;
+  
   // Session store
   sessionStore: SessionStore;
 }
@@ -80,6 +87,7 @@ export class MemStorage implements IStorage {
   private files: Map<number, File>;
   private payments: Map<number, Payment>;
   private notifications: Map<number, Notification>;
+  private verificationRequests: Map<number, VerificationRequest>;
   
   // Counters for generating IDs
   private userId: number = 1;
@@ -94,6 +102,7 @@ export class MemStorage implements IStorage {
   private fileId: number = 1;
   private paymentId: number = 1;
   private notificationId: number = 1;
+  private verificationRequestId: number = 1;
   
   // Session store
   sessionStore: SessionStore;
@@ -111,6 +120,7 @@ export class MemStorage implements IStorage {
     this.files = new Map();
     this.payments = new Map();
     this.notifications = new Map();
+    this.verificationRequests = new Map();
     
     // Initialize session store
     this.sessionStore = new MemoryStore({
@@ -499,6 +509,91 @@ export class MemStorage implements IStorage {
 
   async deleteNotification(id: number): Promise<boolean> {
     return this.notifications.delete(id);
+  }
+
+  // Verification operations
+  async getVerificationRequests(status?: string): Promise<VerificationRequest[]> {
+    let requests = Array.from(this.verificationRequests.values());
+    
+    if (status) {
+      requests = requests.filter(request => request.status === status);
+    }
+    
+    // Sort by submission date, newest first
+    return requests.sort((a, b) => {
+      const timeA = a.submittedAt ? a.submittedAt.getTime() : 0;
+      const timeB = b.submittedAt ? b.submittedAt.getTime() : 0;
+      return timeB - timeA;
+    });
+  }
+
+  async getVerificationRequestsForUser(userId: number): Promise<VerificationRequest[]> {
+    return Array.from(this.verificationRequests.values())
+      .filter(request => request.userId === userId)
+      .sort((a, b) => {
+        const timeA = a.submittedAt ? a.submittedAt.getTime() : 0;
+        const timeB = b.submittedAt ? b.submittedAt.getTime() : 0;
+        return timeB - timeA;
+      });
+  }
+
+  async getVerificationRequestById(id: number): Promise<VerificationRequest | undefined> {
+    return this.verificationRequests.get(id);
+  }
+
+  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> {
+    const id = this.verificationRequestId++;
+    const now = new Date();
+    const additionalInfo = request.additionalInfo === undefined ? null : request.additionalInfo;
+    
+    const newRequest: VerificationRequest = {
+      id,
+      userId: request.userId,
+      documentType: request.documentType,
+      documentUrl: request.documentUrl,
+      additionalInfo,
+      status: 'pending',
+      reviewerId: null,
+      reviewNotes: null,
+      submittedAt: now,
+      reviewedAt: null,
+    };
+    
+    this.verificationRequests.set(id, newRequest);
+    return newRequest;
+  }
+
+  async updateVerificationRequestStatus(
+    id: number, 
+    status: string, 
+    reviewerId: number, 
+    reviewNotes?: string
+  ): Promise<VerificationRequest | undefined> {
+    const request = this.verificationRequests.get(id);
+    if (!request) return undefined;
+    
+    const now = new Date();
+    const notes = reviewNotes === undefined ? null : reviewNotes;
+    
+    const updatedRequest: VerificationRequest = {
+      ...request,
+      status: status as any,
+      reviewerId,
+      reviewNotes: notes,
+      reviewedAt: now,
+    };
+    
+    this.verificationRequests.set(id, updatedRequest);
+    
+    // If approved, update the user's verification status
+    if (status === 'approved') {
+      const user = this.users.get(request.userId);
+      if (user) {
+        this.updateUser(user.id, { isVerified: true });
+      }
+    }
+    
+    return updatedRequest;
   }
 
   // Seed categories

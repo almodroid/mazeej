@@ -11,6 +11,7 @@ import BrowseFreelancers from "@/pages/browse-freelancers";
 import ProjectsPage from "@/pages/projects-page";
 import CategoriesPage from "@/pages/categories-page";
 import ChatPage from "@/pages/chat-page";
+import VerificationPage from "@/pages/verification-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { NotificationsProvider } from "./hooks/use-notifications";
@@ -48,6 +49,11 @@ function Router() {
       <Route path="/admin">
         <ProtectedRoute>
           <AdminDashboardPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/verification">
+        <ProtectedRoute>
+          <VerificationPage />
         </ProtectedRoute>
       </Route>
       <Route>
