@@ -9,6 +9,9 @@ import DashboardPage from "@/pages/dashboard-page";
 import AdminDashboardPage from "@/pages/admin-dashboard";
 import BrowseFreelancers from "@/pages/browse-freelancers";
 import ProjectsPage from "@/pages/projects-page";
+import CreateProjectPage from "@/pages/create-project-page";
+import ProjectDetailsPage from "@/pages/project-details-page";
+import SubmitProposalPage from "@/pages/submit-proposal-page";
 import CategoriesPage from "@/pages/categories-page";
 import ChatPage from "@/pages/chat-page";
 import VerificationPage from "@/pages/verification-page";
@@ -32,6 +35,19 @@ function Router() {
       </Route>
       <Route path="/projects">
         <ProjectsPage />
+      </Route>
+      <Route path="/projects/create">
+        <ProtectedRoute>
+          <CreateProjectPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/projects/:id">
+        <ProjectDetailsPage />
+      </Route>
+      <Route path="/projects/:id/proposals/new">
+        <ProtectedRoute>
+          <SubmitProposalPage />
+        </ProtectedRoute>
       </Route>
       <Route path="/categories">
         <CategoriesPage />

@@ -355,6 +355,23 @@ export function registerRoutes(app: Express): Server {
       
       // Create the proposal
       const proposal = await storage.createProposal(validatedData, req.user.id);
+      
+      // Send notification to the project owner
+      try {
+        const freelancer = await storage.getUser(req.user.id);
+        if (freelancer) {
+          await storage.createNotification({
+            userId: project.clientId,
+            title: 'عرض جديد على مشروعك',
+            content: `تلقى مشروعك "${project.title}" عرضًا جديدًا من ${freelancer.fullName || freelancer.username}`,
+            type: 'proposal',
+            relatedId: proposal.id
+          });
+        }
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError);
+      }
+      
       res.status(201).json(proposal);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -406,8 +423,50 @@ export function registerRoutes(app: Express): Server {
         for (const otherProposal of otherProposals) {
           if (otherProposal.id !== proposalId && otherProposal.status === 'pending') {
             await storage.updateProposalStatus(otherProposal.id, 'rejected');
+            
+            // Send rejection notification to freelancer
+            await storage.createNotification({
+              userId: otherProposal.freelancerId,
+              title: 'تم رفض عرضك',
+              content: `تم رفض عرضك للمشروع "${project.title}"`,
+              type: 'proposal',
+              relatedId: project.id
+            });
           }
         }
+        
+        // Send acceptance notification to the freelancer
+        await storage.createNotification({
+          userId: proposal.freelancerId,
+          title: 'تم قبول عرضك!',
+          content: `تم قبول عرضك للمشروع "${project.title}". يمكنك الآن التواصل مع العميل.`,
+          type: 'proposal',
+          relatedId: project.id
+        });
+        
+        // Add a chat notification so the client and freelancer can start chatting
+        const client = await storage.getUser(project.clientId);
+        const freelancer = await storage.getUser(proposal.freelancerId);
+        
+        if (client && freelancer) {
+          // Notify client about chat availability
+          await storage.createNotification({
+            userId: client.id,
+            title: 'يمكنك البدء بالمحادثة',
+            content: `يمكنك الآن التواصل مع ${freelancer.fullName || freelancer.username} لمناقشة تفاصيل المشروع "${project.title}"`,
+            type: 'message',
+            relatedId: freelancer.id
+          });
+        }
+      } else if (status === 'rejected') {
+        // Send rejection notification to freelancer
+        await storage.createNotification({
+          userId: proposal.freelancerId,
+          title: 'تم رفض عرضك',
+          content: `تم رفض عرضك للمشروع "${project.title}"`,
+          type: 'proposal',
+          relatedId: project.id
+        });
       }
       
       res.json(updatedProposal);

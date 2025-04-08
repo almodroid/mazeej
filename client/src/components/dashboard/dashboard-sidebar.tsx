@@ -90,6 +90,11 @@ export default function DashboardSidebar() {
           label: t("common.myProjects"),
         },
         {
+          href: "/projects/create",
+          icon: <FileText size={18} />,
+          label: t("common.createProject"),
+        },
+        {
           href: "/browse-freelancers",
           icon: <Users size={18} />,
           label: t("common.browseFreelancers"),
@@ -107,9 +112,9 @@ export default function DashboardSidebar() {
       ]
     : [
         {
-          href: "/proposals",
+          href: "/proposals/my-proposals",
           icon: <FileText size={18} />,
-          label: t("common.proposals"),
+          label: t("common.myProposals"),
         },
         {
           href: "/projects",

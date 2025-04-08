@@ -17,15 +17,17 @@ type ChatWidgetProps = {
 export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const { messages, sendMessage, isConnected, isConnecting, selectedUser, selectUser } = useChat();
+  const { 
+    messages, 
+    sendMessage, 
+    isConnected, 
+    isConnecting, 
+    contacts, 
+    activeContact, 
+    setActiveContact 
+  } = useChat();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Fetch users for contacts
-  const { data: users = [] } = useQuery<Omit<User, 'password'>[]>({
-    queryKey: ["/api/users"],
-    enabled: isOpen,
-  });
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -35,8 +37,8 @@ export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
   }, [messages]);
 
   const handleSendMessage = () => {
-    if (newMessage.trim() && selectedUser) {
-      sendMessage(selectedUser.id, newMessage);
+    if (newMessage.trim()) {
+      sendMessage(newMessage);
       setNewMessage("");
     }
   };
@@ -47,9 +49,6 @@ export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
       handleSendMessage();
     }
   };
-
-  // Filter out current user from contacts
-  const contacts = users.filter(u => u.id !== user?.id);
 
   return (
     <>
@@ -67,7 +66,7 @@ export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
           {/* Header */}
           <div className="bg-primary text-white p-3 flex justify-between items-center">
             <h3 className="font-medium">
-              {selectedUser ? selectedUser.fullName || selectedUser.username : t("chat.title")}
+              {activeContact ? activeContact.fullName || activeContact.username : t("chat.title")}
             </h3>
             <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
               <X className="h-5 w-5" />
@@ -75,7 +74,7 @@ export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
           </div>
 
           {/* Chat area */}
-          {!selectedUser ? (
+          {!activeContact ? (
             <div className="flex-grow overflow-y-auto p-4">
               <h4 className="font-medium mb-2">{t("chat.contacts")}</h4>
               {contacts.length > 0 ? (
@@ -85,15 +84,27 @@ export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
                       <Button
                         variant="ghost"
                         className="w-full flex items-center justify-start p-2 hover:bg-neutral-100"
-                        onClick={() => selectUser(contact)}
+                        onClick={() => setActiveContact(contact)}
                       >
                         <Avatar className="h-8 w-8 mr-3">
-                          <AvatarImage src={contact.profileImage} />
+                          <AvatarImage src={contact.avatar || undefined} />
                           <AvatarFallback>
                             {(contact.fullName || contact.username).charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <span>{contact.fullName || contact.username}</span>
+                        <div className="flex flex-col items-start">
+                          <span>{contact.fullName || contact.username}</span>
+                          {contact.lastMessage && (
+                            <span className="text-xs text-neutral-500 truncate max-w-[180px]">
+                              {contact.lastMessage.content}
+                            </span>
+                          )}
+                        </div>
+                        {contact.unreadCount ? (
+                          <span className="ml-auto bg-primary text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center">
+                            {contact.unreadCount}
+                          </span>
+                        ) : null}
                       </Button>
                     </li>
                   ))}
@@ -129,7 +140,7 @@ export default function ChatWidget({ isOpen, setIsOpen }: ChatWidgetProps) {
                         >
                           <p>{msg.content}</p>
                           <span className="text-xs opacity-70 block mt-1">
-                            {new Date(msg.timestamp).toLocaleTimeString(
+                            {new Date(msg.createdAt).toLocaleTimeString(
                               i18n.language === "ar" ? "ar-EG" : "en-US",
                               { hour: "2-digit", minute: "2-digit" }
                             )}

@@ -1,4 +1,4 @@
-import { Bell, Check, Trash2 } from "lucide-react";
+import { Bell, Check, Trash2, MessageCircle, FileCheck, FileX } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
+import { useChat } from "@/hooks/use-chat";
 
 export function NotificationsDropdown() {
   const { 
@@ -23,7 +25,9 @@ export function NotificationsDropdown() {
     markAsReadMutation,
     deleteNotificationMutation
   } = useNotifications();
+  const { setActiveContact, contacts } = useChat();
   const { t } = useTranslation();
+  const [, navigate] = useLocation();
 
   const handleMarkAsRead = (id: number) => {
     markAsReadMutation.mutate(id);
@@ -31,6 +35,54 @@ export function NotificationsDropdown() {
 
   const handleDelete = (id: number) => {
     deleteNotificationMutation.mutate(id);
+  };
+
+  const handleNotificationClick = (notification: any) => {
+    // Mark as read first
+    if (!notification.isRead) {
+      handleMarkAsRead(notification.id);
+    }
+
+    // Handle different notification types
+    switch (notification.type) {
+      case 'project':
+        // Navigate to project page
+        navigate(`/projects/${notification.relatedId}`);
+        break;
+      case 'proposal':
+        // Navigate to project with proposal
+        navigate(`/projects/${notification.relatedId}`);
+        break;
+      case 'message':
+        // Open chat with user
+        const contactId = notification.relatedId;
+        const contact = contacts.find(c => c.id === contactId);
+        if (contact) {
+          setActiveContact(contact);
+          navigate('/chat');
+        }
+        break;
+      case 'review':
+        // Navigate to reviews
+        navigate(`/users/${notification.relatedId}`);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'message':
+        return <MessageCircle className="h-4 w-4 mr-2 text-blue-500" />;
+      case 'proposal':
+        return <FileCheck className="h-4 w-4 mr-2 text-green-500" />;
+      case 'project':
+        return <FileX className="h-4 w-4 mr-2 text-orange-500" />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -62,9 +114,14 @@ export function NotificationsDropdown() {
         ) : (
           <DropdownMenuGroup className="max-h-80 overflow-y-auto">
             {notifications.map((notification) => (
-              <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3">
+              <DropdownMenuItem 
+                key={notification.id} 
+                className="flex flex-col items-start p-3 cursor-pointer"
+                onClick={() => handleNotificationClick(notification)}
+              >
                 <div className="flex justify-between w-full">
-                  <div className="font-medium">
+                  <div className="font-medium flex items-center">
+                    {getNotificationIcon(notification.type)}
                     {notification.title}
                   </div>
                   <div className="flex gap-1">
