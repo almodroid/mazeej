@@ -32,7 +32,11 @@
     "info": "Info",
     "required": "Required",
     "perHour": "/ hour",
-    "contactMe": "Contact Me"
+    "contactMe": "Contact Me",
+    "toggleTheme": "Toggle Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   },
   "auth": {
     "login": "Login",

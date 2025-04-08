@@ -14,6 +14,7 @@ import {
 import { Bell, Menu, MessageSquare, User, Settings, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { changeLanguage } from "@/lib/i18n";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export default function Navbar() {
   const { t, i18n } = useTranslation();
@@ -36,7 +37,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-md">
+    <nav className="bg-background dark:bg-background border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
@@ -54,8 +55,8 @@ export default function Navbar() {
                   href={link.href}
                   className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                     location === link.href
-                      ? "border-primary text-neutral-900"
-                      : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                      ? "border-primary text-foreground dark:text-foreground"
+                      : "border-transparent text-muted-foreground hover:border-border hover:text-foreground dark:hover:text-foreground"
                   }`}
                 >
                   {link.label}
@@ -72,6 +73,10 @@ export default function Navbar() {
             >
               {i18n.language === 'ar' ? 'EN' : 'عربي'}
             </Button>
+            
+            <div className="mr-2">
+              <ThemeSwitcher />
+            </div>
             
             {user ? (
               <>
@@ -130,6 +135,9 @@ export default function Navbar() {
             <Button variant="ghost" size="icon" className="mr-2" onClick={toggleLanguage}>
               {i18n.language === 'ar' ? 'EN' : 'عربي'}
             </Button>
+            <div className="mr-2">
+              <ThemeSwitcher />
+            </div>
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -145,32 +153,32 @@ export default function Navbar() {
                       className={`text-base font-medium ${
                         location === link.href
                           ? "text-primary"
-                          : "text-neutral-500 hover:text-neutral-700"
+                          : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {link.label}
                     </Link>
                   ))}
-                  <div className="pt-4 border-t border-neutral-200">
+                  <div className="pt-4 border-t border-border">
                     {user ? (
                       <>
                         <Link 
                           href="/dashboard"
-                          className="flex items-center py-2 text-base font-medium text-neutral-500 hover:text-neutral-700"
+                          className="flex items-center py-2 text-base font-medium text-muted-foreground hover:text-foreground"
                         >
                           <User className="mr-2 h-5 w-5" />
                           <span>{t("common.dashboard")}</span>
                         </Link>
                         <Link 
                           href="/settings"
-                          className="flex items-center py-2 text-base font-medium text-neutral-500 hover:text-neutral-700"
+                          className="flex items-center py-2 text-base font-medium text-muted-foreground hover:text-foreground"
                         >
                           <Settings className="mr-2 h-5 w-5" />
                           <span>{t("common.settings")}</span>
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className="flex items-center py-2 text-base font-medium text-neutral-500 hover:text-neutral-700"
+                          className="flex items-center py-2 text-base font-medium text-muted-foreground hover:text-foreground"
                         >
                           <LogOut className="mr-2 h-5 w-5" />
                           <span>{t("common.logout")}</span>

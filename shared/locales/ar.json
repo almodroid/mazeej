@@ -32,7 +32,11 @@
     "info": "معلومات",
     "required": "مطلوب",
     "perHour": "/ ساعة",
-    "contactMe": "تواصل معي"
+    "contactMe": "تواصل معي",
+    "toggleTheme": "تغيير المظهر",
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "النظام"
   },
   "auth": {
     "login": "تسجيل الدخول",
