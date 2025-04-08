@@ -340,7 +340,10 @@
     "statistics": "الإحصائيات",
     "noActiveProjects": "لا توجد مشاريع نشطة",
     "noPendingProposals": "لا توجد عروض معلقة",
-    "noNotifications": "لا توجد إشعارات"
+    "noNotifications": "لا توجد إشعارات",
+    "totalUsers": "اجمالي المستخدمين" ,
+    "totalProjects": "اجمالي المشاريع",
+    "categories": "اجمالي الفئات"
   },
   "notification": {
     "title": "الإشعارات",

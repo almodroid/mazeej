@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
   const { t, i18n } = useTranslation();
@@ -160,7 +161,10 @@ export default function AdminDashboardPage() {
       
       <main className="flex-grow container mx-auto py-8">
         <div className="flex flex-col space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className={cn(
+            "flex flex-col md:flex-row justify-between items-start md:items-center gap-4",
+            isRTL && "md:flex-row-reverse"
+          )}>
             <div>
               <h1 className="text-3xl font-cairo font-bold mb-2 text-foreground">
                 {t("auth.admin.title")}
@@ -170,12 +174,15 @@ export default function AdminDashboardPage() {
               </p>
             </div>
             
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="flex items-center gap-1 px-3 py-1 rounded-full border-primary text-primary">
+            <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <Badge variant="outline" className={cn(
+                "flex items-center gap-1 px-3 py-1 rounded-full border-primary text-primary", 
+                isRTL && "flex-row-reverse"
+              )}>
                 <Shield className="h-4 w-4" />
                 {t("common.admin")}
               </Badge>
-              <Select defaultValue="ar">
+              <Select defaultValue={i18n.language} onValueChange={(value) => i18n.changeLanguage(value)}>
                 <SelectTrigger className="w-[100px]">
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
@@ -231,23 +238,23 @@ export default function AdminDashboardPage() {
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full gap-2">
-              <TabsTrigger value="users" className="flex items-center gap-2">
+              <TabsTrigger value="users" className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                 <Users className="h-4 w-4" />
                 <span className="hidden md:inline">{t("auth.admin.users")}</span>
               </TabsTrigger>
-              <TabsTrigger value="projects" className="flex items-center gap-2">
+              <TabsTrigger value="projects" className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                 <Folder className="h-4 w-4" />
                 <span className="hidden md:inline">{t("auth.admin.projects")}</span>
               </TabsTrigger>
-              <TabsTrigger value="categories" className="flex items-center gap-2">
+              <TabsTrigger value="categories" className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                 <Layers className="h-4 w-4" />
                 <span className="hidden md:inline">{t("auth.admin.categories")}</span>
               </TabsTrigger>
-              <TabsTrigger value="payments" className="flex items-center gap-2">
+              <TabsTrigger value="payments" className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                 <CreditCard className="h-4 w-4" />
                 <span className="hidden md:inline">{t("auth.admin.payments")}</span>
               </TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center gap-2">
+              <TabsTrigger value="settings" className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                 <Settings className="h-4 w-4" />
                 <span className="hidden md:inline">{t("auth.admin.settings")}</span>
               </TabsTrigger>
@@ -257,14 +264,23 @@ export default function AdminDashboardPage() {
             <TabsContent value="users" className="space-y-4">
               <Card>
                 <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
+                  <div className={cn(
+                    "flex justify-between items-center",
+                    isRTL && "flex-row-reverse"
+                  )}>
                     <CardTitle>{t("auth.admin.users")}</CardTitle>
-                    <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "flex items-center gap-2",
+                      isRTL && "flex-row-reverse"
+                    )}>
                       <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder={t("common.search")} className="pl-8 w-60" />
+                        <Search className={cn(
+                          "absolute top-2.5 text-muted-foreground h-4 w-4",
+                          isRTL ? "right-2.5" : "left-2.5" 
+                        )} />
+                        <Input placeholder={t("common.search")} className={isRTL ? "pr-8 w-60" : "pl-8 w-60"} />
                       </div>
-                      <Button size="sm" className="gap-1">
+                      <Button size="sm" className={cn("gap-1", isRTL && "flex-row-reverse")}>
                         <Plus className="h-4 w-4" />
                         <span>{t("common.add")}</span>
                       </Button>
@@ -319,16 +335,16 @@ export default function AdminDashboardPage() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                  <Edit className="h-4 w-4 mr-2" />
+                                <DropdownMenuItem className={cn(isRTL && "flex-row-reverse")}>
+                                  <Edit className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                                   {t("common.edit")}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Shield className="h-4 w-4 mr-2" />
+                                <DropdownMenuItem className={cn(isRTL && "flex-row-reverse")}>
+                                  <Shield className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                                   {t("common.verify")}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive">
-                                  <Trash className="h-4 w-4 mr-2" />
+                                <DropdownMenuItem className={cn("text-destructive", isRTL && "flex-row-reverse")}>
+                                  <Trash className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                                   {t("common.delete")}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -338,15 +354,18 @@ export default function AdminDashboardPage() {
                       ))}
                     </TableBody>
                   </Table>
-                  <div className="flex items-center justify-end space-x-2 py-4">
+                  <div className={cn(
+                    "flex items-center justify-end py-4",
+                    isRTL ? "space-x-reverse space-x-2" : "space-x-2"
+                  )}>
                     <Button variant="outline" size="sm">
-                      <ChevronLeft className="h-4 w-4" />
+                      {isRTL ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                     </Button>
                     <Button variant="outline" size="sm">
                       1
                     </Button>
                     <Button variant="outline" size="sm">
-                      <ChevronRight className="h-4 w-4" />
+                      {isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </Button>
                   </div>
                 </CardContent>
@@ -357,12 +376,21 @@ export default function AdminDashboardPage() {
             <TabsContent value="projects" className="space-y-4">
               <Card>
                 <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
+                  <div className={cn(
+                    "flex justify-between items-center",
+                    isRTL && "flex-row-reverse"
+                  )}>
                     <CardTitle>{t("auth.admin.projects")}</CardTitle>
-                    <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "flex items-center gap-2",
+                      isRTL && "flex-row-reverse"
+                    )}>
                       <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder={t("common.search")} className="pl-8 w-60" />
+                        <Search className={cn(
+                          "absolute top-2.5 text-muted-foreground h-4 w-4",
+                          isRTL ? "right-2.5" : "left-2.5" 
+                        )} />
+                        <Input placeholder={t("common.search")} className={isRTL ? "pr-8 w-60" : "pl-8 w-60"} />
                       </div>
                     </div>
                   </div>
@@ -432,10 +460,16 @@ export default function AdminDashboardPage() {
             <TabsContent value="categories" className="space-y-4">
               <Card>
                 <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
+                  <div className={cn(
+                    "flex justify-between items-center",
+                    isRTL && "flex-row-reverse"
+                  )}>
                     <CardTitle>{t("auth.admin.categories")}</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" className="gap-1">
+                    <div className={cn(
+                      "flex items-center gap-2",
+                      isRTL && "flex-row-reverse"
+                    )}>
+                      <Button size="sm" className={cn("gap-1", isRTL && "flex-row-reverse")}>
                         <Plus className="h-4 w-4" />
                         <span>{t("common.add")}</span>
                       </Button>

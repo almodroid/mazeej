@@ -17,7 +17,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SidebarLinkProps {
   href: string;
@@ -25,9 +25,10 @@ interface SidebarLinkProps {
   label: string;
   active: boolean;
   collapsed: boolean;
+  isRTL: boolean;
 }
 
-const SidebarLink = ({ href, icon, label, active, collapsed }: SidebarLinkProps) => {
+const SidebarLink = ({ href, icon, label, active, collapsed, isRTL }: SidebarLinkProps) => {
   return (
     <Link href={href}>
       <a
@@ -35,10 +36,11 @@ const SidebarLink = ({ href, icon, label, active, collapsed }: SidebarLinkProps)
           "flex items-center py-2 px-3 rounded-md text-sm font-medium transition-colors",
           active
             ? "bg-primary text-white"
-            : "text-neutral-700 hover:bg-neutral-100 hover:text-primary"
+            : "text-neutral-700 hover:bg-neutral-100 hover:text-primary",
+          isRTL && "flex-row-reverse"
         )}
       >
-        <span className="mr-2">{icon}</span>
+        <span className={isRTL ? "ml-2" : "mr-2"}>{icon}</span>
         {!collapsed && <span>{label}</span>}
       </a>
     </Link>
@@ -127,14 +129,21 @@ export default function DashboardSidebar() {
 
   const allLinks = [...commonLinks, ...roleLinks];
 
+  // Ensure the document has the correct RTL direction
+  useEffect(() => {
+    document.documentElement.dir = isRTL ? "rtl" : "ltr";
+  }, [isRTL]);
+  
   return (
     <aside
       className={cn(
-        "bg-white border-l border-neutral-200 h-full transition-all duration-300 flex flex-col",
+        "bg-white h-full transition-all duration-300 flex flex-col",
+        isRTL ? "border-r" : "border-l", 
+        "border-neutral-200",
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="p-4 flex items-center justify-between">
+      <div className={cn("p-4 flex items-center justify-between", isRTL && "flex-row-reverse")}>
         {!collapsed && (
           <h2 className="text-xl font-cairo font-bold text-primary">
             {t("common.appName")}
@@ -143,7 +152,7 @@ export default function DashboardSidebar() {
         <Button
           variant="ghost"
           size="sm"
-          className="ml-auto"
+          className={isRTL ? "mr-auto" : "ml-auto"}
           onClick={() => setCollapsed(!collapsed)}
         >
           {chevronIcon}
@@ -158,6 +167,7 @@ export default function DashboardSidebar() {
             label={link.label}
             active={location === link.href}
             collapsed={collapsed}
+            isRTL={isRTL}
           />
         ))}
       </div>
@@ -168,6 +178,7 @@ export default function DashboardSidebar() {
           label={t("common.help")}
           active={location === "/help"}
           collapsed={collapsed}
+          isRTL={isRTL}
         />
       </div>
     </aside>
