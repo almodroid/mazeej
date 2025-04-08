@@ -1,5 +1,5 @@
-import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, skillAssessments, assessmentQuestions, userAssessments, userResponses } from "@shared/schema";
-import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest, SkillAssessment, AssessmentQuestion, UserAssessment, UserResponse, InsertSkillAssessment, InsertAssessmentQuestion, InsertUserAssessment, InsertUserResponse } from "@shared/schema";
+import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests } from "@shared/schema";
+import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -69,30 +69,6 @@ export interface IStorage {
   createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest>;
   updateVerificationRequestStatus(id: number, status: string, reviewerId: number, reviewNotes?: string): Promise<VerificationRequest | undefined>;
   
-  // Skill Assessment operations
-  getSkillAssessments(skillId?: number): Promise<SkillAssessment[]>;
-  getSkillAssessmentById(id: number): Promise<SkillAssessment | undefined>;
-  createSkillAssessment(assessment: InsertSkillAssessment): Promise<SkillAssessment>;
-  updateSkillAssessment(id: number, assessment: Partial<SkillAssessment>): Promise<SkillAssessment | undefined>;
-  
-  // Assessment Question operations
-  getAssessmentQuestions(assessmentId: number): Promise<AssessmentQuestion[]>;
-  getAssessmentQuestionById(id: number): Promise<AssessmentQuestion | undefined>;
-  createAssessmentQuestion(question: InsertAssessmentQuestion): Promise<AssessmentQuestion>;
-  updateAssessmentQuestion(id: number, question: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | undefined>;
-  
-  // User Assessment operations
-  getUserAssessments(userId: number): Promise<UserAssessment[]>;
-  getUserAssessmentById(id: number): Promise<UserAssessment | undefined>;
-  createUserAssessment(assessment: InsertUserAssessment): Promise<UserAssessment>;
-  updateUserAssessment(id: number, assessment: Partial<UserAssessment>): Promise<UserAssessment | undefined>;
-  completeUserAssessment(id: number, score: number, skillLevel: string, timeSpentSeconds: number, aiEvaluation?: any): Promise<UserAssessment | undefined>;
-  
-  // User Response operations
-  getUserResponses(userAssessmentId: number): Promise<UserResponse[]>;
-  createUserResponse(response: InsertUserResponse): Promise<UserResponse>;
-  updateUserResponseEvaluation(id: number, isCorrect: boolean, score: number, feedback?: string, aiEvaluation?: string): Promise<UserResponse | undefined>;
-  
   // Session store
   sessionStore: SessionStore;
 }
@@ -112,10 +88,6 @@ export class MemStorage implements IStorage {
   private payments: Map<number, Payment>;
   private notifications: Map<number, Notification>;
   private verificationRequests: Map<number, VerificationRequest>;
-  private skillAssessments: Map<number, SkillAssessment>;
-  private assessmentQuestions: Map<number, AssessmentQuestion>;
-  private userAssessments: Map<number, UserAssessment>;
-  private userResponses: Map<number, UserResponse>;
   
   // Counters for generating IDs
   private userId: number = 1;
@@ -131,10 +103,6 @@ export class MemStorage implements IStorage {
   private paymentId: number = 1;
   private notificationId: number = 1;
   private verificationRequestId: number = 1;
-  private skillAssessmentId: number = 1;
-  private assessmentQuestionId: number = 1;
-  private userAssessmentId: number = 1;
-  private userResponseId: number = 1;
   
   // Session store
   sessionStore: SessionStore;
@@ -153,10 +121,6 @@ export class MemStorage implements IStorage {
     this.payments = new Map();
     this.notifications = new Map();
     this.verificationRequests = new Map();
-    this.skillAssessments = new Map();
-    this.assessmentQuestions = new Map();
-    this.userAssessments = new Map();
-    this.userResponses = new Map();
     
     // Initialize session store
     this.sessionStore = new MemoryStore({
@@ -630,253 +594,6 @@ export class MemStorage implements IStorage {
     }
     
     return updatedRequest;
-  }
-
-  // Skill Assessment operations
-  async getSkillAssessments(skillId?: number): Promise<SkillAssessment[]> {
-    let assessments = Array.from(this.skillAssessments.values());
-    
-    if (skillId) {
-      assessments = assessments.filter(assessment => assessment.skillId === skillId);
-    }
-    
-    return assessments;
-  }
-
-  async getSkillAssessmentById(id: number): Promise<SkillAssessment | undefined> {
-    return this.skillAssessments.get(id);
-  }
-
-  async createSkillAssessment(assessment: InsertSkillAssessment): Promise<SkillAssessment> {
-    const id = this.skillAssessmentId++;
-    const now = new Date();
-    
-    const newAssessment: SkillAssessment = {
-      id,
-      skillId: assessment.skillId,
-      title: assessment.title,
-      description: assessment.description,
-      difficulty: assessment.difficulty,
-      durationMinutes: assessment.durationMinutes,
-      passingScore: assessment.passingScore,
-      createdAt: now,
-      updatedAt: now,
-      isActive: true,
-      aiModel: assessment.aiModel,
-    };
-    
-    this.skillAssessments.set(id, newAssessment);
-    return newAssessment;
-  }
-
-  async updateSkillAssessment(id: number, assessment: Partial<SkillAssessment>): Promise<SkillAssessment | undefined> {
-    const existingAssessment = this.skillAssessments.get(id);
-    if (!existingAssessment) return undefined;
-    
-    const now = new Date();
-    const updatedAssessment = { 
-      ...existingAssessment, 
-      ...assessment,
-      updatedAt: now 
-    };
-    
-    this.skillAssessments.set(id, updatedAssessment);
-    return updatedAssessment;
-  }
-
-  // Assessment Question operations
-  async getAssessmentQuestions(assessmentId: number): Promise<AssessmentQuestion[]> {
-    return Array.from(this.assessmentQuestions.values())
-      .filter(question => question.assessmentId === assessmentId);
-  }
-
-  async getAssessmentQuestionById(id: number): Promise<AssessmentQuestion | undefined> {
-    return this.assessmentQuestions.get(id);
-  }
-
-  async createAssessmentQuestion(question: InsertAssessmentQuestion): Promise<AssessmentQuestion> {
-    const id = this.assessmentQuestionId++;
-    const now = new Date();
-    
-    const options = question.options === undefined ? null : question.options;
-    const correctAnswer = question.correctAnswer === undefined ? null : question.correctAnswer;
-    const codeTemplate = question.codeTemplate === undefined ? null : question.codeTemplate;
-    const scoreWeight = question.scoreWeight === undefined ? null : question.scoreWeight;
-    const testCases = question.testCases === undefined ? null : question.testCases;
-    const evaluationCriteria = question.evaluationCriteria === undefined ? null : question.evaluationCriteria;
-    const aiPrompt = question.aiPrompt === undefined ? null : question.aiPrompt;
-    
-    const newQuestion: AssessmentQuestion = {
-      id,
-      assessmentId: question.assessmentId,
-      question: question.question,
-      type: question.type,
-      options,
-      correctAnswer,
-      scoreWeight,
-      codeTemplate,
-      testCases,
-      evaluationCriteria,
-      aiPrompt,
-      createdAt: now,
-    };
-    
-    this.assessmentQuestions.set(id, newQuestion);
-    return newQuestion;
-  }
-
-  async updateAssessmentQuestion(id: number, question: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | undefined> {
-    const existingQuestion = this.assessmentQuestions.get(id);
-    if (!existingQuestion) return undefined;
-    
-    const now = new Date();
-    const updatedQuestion = { 
-      ...existingQuestion, 
-      ...question,
-      updatedAt: now 
-    };
-    
-    this.assessmentQuestions.set(id, updatedQuestion);
-    return updatedQuestion;
-  }
-
-  // User Assessment operations
-  async getUserAssessments(userId: number): Promise<UserAssessment[]> {
-    return Array.from(this.userAssessments.values())
-      .filter(assessment => assessment.userId === userId)
-      .sort((a, b) => {
-        const timeA = a.startedAt ? a.startedAt.getTime() : 0;
-        const timeB = b.startedAt ? b.startedAt.getTime() : 0;
-        return timeB - timeA; // Sort by start time, newest first
-      });
-  }
-
-  async getUserAssessmentById(id: number): Promise<UserAssessment | undefined> {
-    return this.userAssessments.get(id);
-  }
-
-  async createUserAssessment(assessment: InsertUserAssessment): Promise<UserAssessment> {
-    const id = this.userAssessmentId++;
-    const now = new Date();
-    
-    const newAssessment: UserAssessment = {
-      id,
-      userId: assessment.userId,
-      assessmentId: assessment.assessmentId,
-      status: 'in_progress',
-      score: null,
-      skillLevel: null,
-      startedAt: now,
-      completedAt: null,
-      timeSpentSeconds: null,
-      aiEvaluation: null,
-      certificateUrl: null,
-    };
-    
-    this.userAssessments.set(id, newAssessment);
-    return newAssessment;
-  }
-
-  async updateUserAssessment(id: number, assessment: Partial<UserAssessment>): Promise<UserAssessment | undefined> {
-    const existingAssessment = this.userAssessments.get(id);
-    if (!existingAssessment) return undefined;
-    
-    const updatedAssessment = { ...existingAssessment, ...assessment };
-    this.userAssessments.set(id, updatedAssessment);
-    return updatedAssessment;
-  }
-
-  async completeUserAssessment(id: number, score: number, skillLevel: string, timeSpentSeconds: number, aiEvaluation?: any): Promise<UserAssessment | undefined> {
-    const assessment = this.userAssessments.get(id);
-    if (!assessment) return undefined;
-    
-    const now = new Date();
-    const updatedAssessment: UserAssessment = {
-      ...assessment,
-      status: 'completed',
-      score,
-      skillLevel: skillLevel as any,
-      completedAt: now,
-      timeSpentSeconds,
-      aiEvaluation: aiEvaluation || null,
-      certificateUrl: score >= 70 ? `/certificates/${assessment.id}.pdf` : null
-    };
-    
-    this.userAssessments.set(id, updatedAssessment);
-    
-    // If user passed the assessment, add the skill to their profile
-    if (score >= 70) { // Arbitrary passing threshold
-      const skillAssessment = this.skillAssessments.get(assessment.assessmentId);
-      if (skillAssessment) {
-        // Check if user already has this skill
-        const userSkills = await this.getUserSkills(assessment.userId);
-        const hasSkill = userSkills.some(skill => skill.id === skillAssessment.skillId);
-        
-        if (!hasSkill) {
-          await this.addUserSkill(assessment.userId, skillAssessment.skillId);
-          
-          // Create a notification that the user has earned a new skill
-          const skill = this.skills.get(skillAssessment.skillId);
-          if (skill) {
-            await this.createNotification({
-              userId: assessment.userId,
-              title: "مهارة جديدة",
-              content: `لقد اكتسبت مهارة جديدة: ${skill.name}`,
-              type: 'admin' as any, // Using admin type as placeholder for achievement
-              relatedId: skill.id
-            });
-          }
-        }
-      }
-    }
-    
-    return updatedAssessment;
-  }
-
-  // User Response operations
-  async getUserResponses(userAssessmentId: number): Promise<UserResponse[]> {
-    return Array.from(this.userResponses.values())
-      .filter(response => response.userAssessmentId === userAssessmentId);
-  }
-
-  async createUserResponse(response: InsertUserResponse): Promise<UserResponse> {
-    const id = this.userResponseId++;
-    const now = new Date();
-    
-    const newResponse: UserResponse = {
-      id,
-      userAssessmentId: response.userAssessmentId,
-      questionId: response.questionId,
-      response: response.response,
-      responseTime: response.responseTime || null,
-      submittedAt: now,
-      isCorrect: null,
-      score: null,
-      feedback: null,
-      aiEvaluation: null,
-    };
-    
-    this.userResponses.set(id, newResponse);
-    return newResponse;
-  }
-
-  async updateUserResponseEvaluation(id: number, isCorrect: boolean, score: number, feedback?: string, aiEvaluation?: string): Promise<UserResponse | undefined> {
-    const response = this.userResponses.get(id);
-    if (!response) return undefined;
-    
-    const feedbackText = feedback === undefined ? null : feedback;
-    const aiEval = aiEvaluation === undefined ? null : aiEvaluation;
-    
-    const updatedResponse: UserResponse = {
-      ...response,
-      isCorrect,
-      score,
-      feedback: feedbackText,
-      aiEvaluation: aiEval,
-    };
-    
-    this.userResponses.set(id, updatedResponse);
-    return updatedResponse;
   }
 
   // Seed categories

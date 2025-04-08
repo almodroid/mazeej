@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useOnboarding } from "@/hooks/use-onboarding";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
@@ -10,7 +9,6 @@ import StatCard from "@/components/dashboard/stat-card";
 import RecentProjects from "@/components/dashboard/recent-projects";
 import RecentProposals from "@/components/dashboard/recent-proposals";
 import ChatWidget from "@/components/chat/chat-widget";
-import OnboardingTour from "@/components/onboarding/onboarding-tour";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project, Proposal } from "@shared/schema";
@@ -18,7 +16,6 @@ import { Project, Proposal } from "@shared/schema";
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const { showOnboarding, markOnboardingComplete } = useOnboarding();
   const [chatOpen, setChatOpen] = useState(false);
 
   // Fetch data based on user role
@@ -58,14 +55,14 @@ export default function DashboardPage() {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <div className="flex-grow flex">
-        <DashboardSidebar className="dashboard-sidebar" />
+        <DashboardSidebar />
         <main className="flex-grow p-6">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-cairo font-bold mb-6 dashboard-welcome">
+            <h1 className="text-3xl font-cairo font-bold mb-6">
               {t("dashboard.welcomeBack")} {user.fullName || user.username}
             </h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 dashboard-stats">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatCard 
                 title={t("dashboard.activeProjects")} 
                 value={activeProjects.toString()} 
@@ -96,8 +93,8 @@ export default function DashboardPage() {
               <div className="lg:col-span-2">
                 <Tabs defaultValue="projects" className="w-full">
                   <TabsList>
-                    <TabsTrigger value="projects" className="projects-tab">{t("dashboard.recentProjects")}</TabsTrigger>
-                    <TabsTrigger value="proposals" className="proposals-tab">{t("dashboard.recentProposals")}</TabsTrigger>
+                    <TabsTrigger value="projects">{t("dashboard.recentProjects")}</TabsTrigger>
+                    <TabsTrigger value="proposals">{t("dashboard.recentProposals")}</TabsTrigger>
                   </TabsList>
                   <TabsContent value="projects" className="mt-4">
                     <RecentProjects projects={clientProjects.slice(0, 5)} />
@@ -110,7 +107,7 @@ export default function DashboardPage() {
               <div>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="notifications-dropdown">{t("dashboard.notifications")}</CardTitle>
+                    <CardTitle>{t("dashboard.notifications")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {/* This would show notifications in a real implementation */}
@@ -125,13 +122,7 @@ export default function DashboardPage() {
         </main>
       </div>
       <Footer />
-      <ChatWidget isOpen={chatOpen} setIsOpen={setChatOpen} className="chat-widget-trigger" />
-      
-      {/* Onboarding tour */}
-      <OnboardingTour 
-        isOpen={showOnboarding} 
-        onClose={markOnboardingComplete} 
-      />
+      <ChatWidget isOpen={chatOpen} setIsOpen={setChatOpen} />
     </div>
   );
 }
