@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, json } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -185,3 +186,70 @@ export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 export type Payment = typeof payments.$inferSelect;
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  projects: many(projects, { relationName: "user_projects" }),
+  skills: many(userSkills, { relationName: "user_skills" }),
+  sentMessages: many(messages, { relationName: "user_sent_messages" }),
+  receivedMessages: many(messages, { relationName: "user_received_messages" }),
+  proposals: many(proposals, { relationName: "user_proposals" }),
+  reviews: many(reviews, { relationName: "user_reviews" }),
+  files: many(files, { relationName: "user_files" }),
+}));
+
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  skills: many(skills, { relationName: "category_skills" }),
+}));
+
+export const skillsRelations = relations(skills, ({ one, many }) => ({
+  category: one(categories, { relationName: "category_skills", fields: [skills.categoryId], references: [categories.id] }),
+  users: many(userSkills, { relationName: "skill_users" }),
+  projects: many(projectSkills, { relationName: "skill_projects" }),
+}));
+
+export const userSkillsRelations = relations(userSkills, ({ one }) => ({
+  user: one(users, { relationName: "user_skills", fields: [userSkills.userId], references: [users.id] }),
+  skill: one(skills, { relationName: "skill_users", fields: [userSkills.skillId], references: [skills.id] }),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  client: one(users, { relationName: "user_projects", fields: [projects.clientId], references: [users.id] }),
+  skills: many(projectSkills, { relationName: "project_skills" }),
+  proposals: many(proposals, { relationName: "project_proposals" }),
+  reviews: many(reviews, { relationName: "project_reviews" }),
+  files: many(files, { relationName: "project_files" }),
+  payments: many(payments, { relationName: "project_payments" }),
+}));
+
+export const projectSkillsRelations = relations(projectSkills, ({ one }) => ({
+  project: one(projects, { relationName: "project_skills", fields: [projectSkills.projectId], references: [projects.id] }),
+  skill: one(skills, { relationName: "skill_projects", fields: [projectSkills.skillId], references: [skills.id] }),
+}));
+
+export const proposalsRelations = relations(proposals, ({ one }) => ({
+  project: one(projects, { relationName: "project_proposals", fields: [proposals.projectId], references: [projects.id] }),
+  freelancer: one(users, { relationName: "user_proposals", fields: [proposals.freelancerId], references: [users.id] }),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  sender: one(users, { relationName: "user_sent_messages", fields: [messages.senderId], references: [users.id] }),
+  receiver: one(users, { relationName: "user_received_messages", fields: [messages.receiverId], references: [users.id] }),
+}));
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+  project: one(projects, { relationName: "project_reviews", fields: [reviews.projectId], references: [projects.id] }),
+  reviewer: one(users, { fields: [reviews.reviewerId], references: [users.id] }),
+  reviewee: one(users, { relationName: "user_reviews", fields: [reviews.revieweeId], references: [users.id] }),
+}));
+
+export const filesRelations = relations(files, ({ one }) => ({
+  user: one(users, { relationName: "user_files", fields: [files.userId], references: [users.id] }),
+  project: one(projects, { relationName: "project_files", fields: [files.projectId], references: [projects.id] }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  project: one(projects, { relationName: "project_payments", fields: [payments.projectId], references: [projects.id] }),
+  client: one(users, { fields: [payments.clientId], references: [users.id] }),
+  freelancer: one(users, { fields: [payments.freelancerId], references: [users.id] }),
+}));

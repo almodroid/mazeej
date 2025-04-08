@@ -16,13 +16,29 @@ import { ThemeProvider } from "@/components/theme-provider";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={HomePage} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/browse-freelancers" component={BrowseFreelancers} />
-      <Route path="/projects" component={ProjectsPage} />
-      <Route path="/categories" component={CategoriesPage} />
-      <ProtectedRoute path="/dashboard" component={DashboardPage} />
-      <Route component={NotFound} />
+      <Route path="/">
+        <HomePage />
+      </Route>
+      <Route path="/auth">
+        <AuthPage />
+      </Route>
+      <Route path="/browse-freelancers">
+        <BrowseFreelancers />
+      </Route>
+      <Route path="/projects">
+        <ProjectsPage />
+      </Route>
+      <Route path="/categories">
+        <CategoriesPage />
+      </Route>
+      <Route path="/dashboard">
+        <ProtectedRoute>
+          <DashboardPage />
+        </ProtectedRoute>
+      </Route>
+      <Route>
+        <NotFound />
+      </Route>
     </Switch>
   );
 }

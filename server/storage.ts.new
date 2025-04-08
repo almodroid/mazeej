@@ -133,13 +133,7 @@ export class MemStorage implements IStorage {
     const id = this.userId++;
     const now = new Date();
     
-    // Ensure required fields are provided
-    if (!insertUser.username || !insertUser.password || !insertUser.email || 
-        !insertUser.fullName || !insertUser.role) {
-      throw new Error('Missing required user fields');
-    }
-    
-    // Handle nullable fields
+    // Handle undefined values for nullable fields
     const bio = insertUser.bio === undefined ? null : insertUser.bio;
     const profileImage = insertUser.profileImage === undefined ? null : insertUser.profileImage;
     const country = insertUser.country === undefined ? null : insertUser.country;
