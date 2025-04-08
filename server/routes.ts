@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
@@ -39,6 +40,56 @@ export function registerRoutes(app: Express): Server {
   // Setup WebSocket server for chat
   setupWebSocketServer(httpServer);
   
+  // Update freelancer profile images with Saudi profile images
+  app.post('/api/update-saudi-profile-images', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update profile images' });
+      }
+      
+      // Saudi profile images from attached assets
+      const saudiProfileImages = [
+        'attached_assets/IMG_2279.jpeg',
+        'attached_assets/IMG_2280.jpeg',
+        'attached_assets/IMG_2283.jpeg',
+        'attached_assets/IMG_2285.jpeg', 
+        'attached_assets/IMG_2287.jpeg',
+        'attached_assets/IMG_2288.jpeg',
+        'attached_assets/IMG_2289.jpeg',
+        'attached_assets/IMG_2290.jpeg',
+        'attached_assets/IMG_0724.jpeg',
+        'attached_assets/IMG_0726.jpeg'
+      ];
+      
+      // Get all freelancers
+      const freelancers = await storage.getFreelancers();
+      const updatedFreelancers = [];
+      
+      // Update each freelancer with a random Saudi profile image
+      for (let i = 0; i < freelancers.length; i++) {
+        const freelancer = freelancers[i];
+        const randomImageIndex = Math.floor(Math.random() * saudiProfileImages.length);
+        const profileImage = saudiProfileImages[randomImageIndex];
+        
+        const updatedFreelancer = await storage.updateUser(freelancer.id, { profileImage });
+        if (updatedFreelancer) {
+          const { password, ...freelancerWithoutPassword } = updatedFreelancer;
+          updatedFreelancers.push(freelancerWithoutPassword);
+        }
+      }
+      
+      res.status(200).json({ 
+        message: 'Saudi profile images updated successfully', 
+        count: updatedFreelancers.length,
+        updatedFreelancers 
+      });
+    } catch (error) {
+      console.error('Error updating Saudi profile images:', error);
+      res.status(500).json({ message: 'Failed to update profile images', error: error.message });
+    }
+  });
+  
   // Create test accounts route - for development only
   app.post('/api/create-test-accounts', async (req, res) => {
     try {
@@ -62,9 +113,10 @@ export function registerRoutes(app: Express): Server {
           email: 'almodroid@gmail.com',
           fullName: 'Admin User',
           role: 'admin',
-          bio: 'Platform administrator with full access',
+          bio: 'مدير منصة مع صلاحيات كاملة للنظام',
           country: 'Saudi Arabia',
           city: 'Riyadh',
+          profileImage: 'attached_assets/IMG_2290.jpeg',
           confirmPassword: '123456'
         });
         const { password, ...adminWithoutPassword } = adminUser;
@@ -79,11 +131,12 @@ export function registerRoutes(app: Express): Server {
           username: 'client',
           password: await hashPassword('123456'),
           email: 'client@example.com',
-          fullName: 'Client User',
+          fullName: 'عبدالله العتيبي',
           role: 'client',
-          bio: 'Looking to hire talented freelancers',
+          bio: 'صاحب أعمال يبحث عن مستقلين موهوبين لتنفيذ مشاريع متنوعة',
           country: 'Saudi Arabia',
-          city: 'Jeddah',
+          city: 'Riyadh',
+          profileImage: 'attached_assets/IMG_2283.jpeg',
           confirmPassword: '123456'
         });
         const { password, ...clientWithoutPassword } = clientUser;
@@ -98,14 +151,15 @@ export function registerRoutes(app: Express): Server {
           username: 'creator',
           password: await hashPassword('123456'),
           email: 'creator@example.com',
-          fullName: 'Content Creator',
+          fullName: 'محمد الشمري',
           role: 'freelancer',
-          bio: 'Experienced content creator specializing in digital media',
+          bio: 'خبير في إنشاء المحتوى الرقمي والتصميم البصري',
           freelancerType: 'content_creator',
           freelancerLevel: 'intermediate',
           hourlyRate: 50,
-          country: 'Egypt',
-          city: 'Cairo',
+          country: 'Saudi Arabia',
+          city: 'Riyadh',
+          profileImage: 'attached_assets/IMG_2279.jpeg',
           confirmPassword: '123456'
         });
         const { password, ...creatorWithoutPassword } = creatorUser;
@@ -120,14 +174,15 @@ export function registerRoutes(app: Express): Server {
           username: 'expert',
           password: await hashPassword('123456'),
           email: 'expert@example.com',
-          fullName: 'Domain Expert',
+          fullName: 'سامي الفيصل',
           role: 'freelancer',
-          bio: 'Senior consultant with 10+ years of industry experience',
+          bio: 'خبير استشاري مع أكثر من 10 سنوات خبرة في مجال تطوير الأعمال والبرمجة',
           freelancerType: 'expert',
           freelancerLevel: 'advanced',
           hourlyRate: 100,
-          country: 'United Arab Emirates',
-          city: 'Dubai',
+          country: 'Saudi Arabia',
+          city: 'Jeddah',
+          profileImage: 'attached_assets/IMG_2280.jpeg',
           confirmPassword: '123456'
         });
         const { password, ...expertWithoutPassword } = expertUser;
@@ -497,6 +552,9 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: 'Failed to update profile' });
     }
   });
+
+  // Serve attached assets directly
+  app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
 
   return httpServer;
 }
