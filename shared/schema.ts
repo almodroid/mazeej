@@ -187,7 +187,11 @@ export const insertUserSchema = createInsertSchema(users)
 
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertSkillSchema = createInsertSchema(skills).omit({ id: true });
-export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, status: true, clientId: true });
+export const insertProjectSchema = createInsertSchema(projects)
+  .omit({ id: true, createdAt: true, status: true, clientId: true })
+  .extend({
+    deadline: z.string().nullable().transform(val => val ? new Date(val) : null),
+  });
 export const insertProposalSchema = createInsertSchema(proposals).omit({ id: true, createdAt: true, status: true, freelancerId: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true, reviewerId: true });
 export const insertFileSchema = createInsertSchema(files).omit({ id: true, uploadedAt: true });
