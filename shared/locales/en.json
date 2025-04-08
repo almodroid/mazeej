@@ -42,19 +42,30 @@
     "login": "Login",
     "register": "Register",
     "email": "Email",
+    "emailPlaceholder": "Enter your email address",
     "username": "Username",
+    "usernamePlaceholder": "Choose a username",
+    "usernameOrEmail": "Username or Email",
+    "usernameOrEmailPlaceholder": "Enter your username or email",
     "password": "Password",
+    "passwordPlaceholder": "Enter your password",
     "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
     "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
     "forgotPassword": "Forgot Password?",
     "rememberMe": "Remember Me",
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?",
     "createAccount": "Create a new account",
+    "signIn": "Sign In",
     "signInWith": "Sign in with",
+    "orContinueWith": "or continue with",
     "accountType": "Account Type",
     "client": "Client",
     "freelancer": "Freelancer",
+    "clientDescription": "Post projects and hire freelancers for your specific tasks",
+    "freelancerDescription": "Offer your skills and expertise to clients seeking your services",
     "registerAsClient": "Register as Client",
     "registerAsFreelancer": "Join as Freelancer",
     "loginSuccess": "Login successful",
@@ -64,7 +75,45 @@
     "userExists": "Username already exists",
     "emailExists": "Email already in use",
     "passwordMismatch": "Passwords do not match",
-    "passwordLength": "Password must be at least 6 characters"
+    "passwordLength": "Password must be at least 6 characters",
+    "required": "This field is required",
+    "usernameTooShort": "Username must be at least 3 characters",
+    "fullNameRequired": "Full name must be at least 2 characters",
+    "invalidEmail": "Please enter a valid email address",
+    "welcomeBack": "Welcome Back!",
+    "loginSubtitle": "Sign in to access your account",
+    "joinCommunity": "Join Our Community!",
+    "registerSubtitle": "Create an account to get started",
+    "platformFeatures": "Why Choose Khobaraa Platform?",
+    "platformDescription": "We connect skilled freelancers with clients looking for quality work across various fields",
+    "trustedPlatform": "Trusted by thousands of users worldwide",
+    "users": "users",
+    "projects": "projects",
+    "satisfaction": "satisfaction rate",
+    "benefits": {
+      "freelance": {
+        "title": "Work on Your Terms",
+        "description": "Freedom to choose projects and set your own hours"
+      },
+      "verified": {
+        "title": "Verified Profiles",
+        "description": "All users go through a verification process for security"
+      },
+      "secure": {
+        "title": "Secure Payments",
+        "description": "Payment protection guarantees you get what you pay for"
+      }
+    },
+    "admin": {
+      "title": "Admin Dashboard",
+      "description": "Manage all platform operations efficiently",
+      "users": "Users Management",
+      "projects": "Projects Management",
+      "categories": "Categories Management",
+      "reports": "Reports & Analytics",
+      "payments": "Payments Overview",
+      "settings": "Platform Settings"
+    }
   },
   "hero": {
     "title": "Best Freelancers in One Place",

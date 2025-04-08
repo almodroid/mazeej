@@ -42,19 +42,30 @@
     "login": "تسجيل الدخول",
     "register": "إنشاء حساب",
     "email": "البريد الإلكتروني",
+    "emailPlaceholder": "أدخل عنوان بريدك الإلكتروني",
     "username": "اسم المستخدم",
+    "usernamePlaceholder": "اختر اسم مستخدم",
+    "usernameOrEmail": "اسم المستخدم أو البريد الإلكتروني",
+    "usernameOrEmailPlaceholder": "أدخل اسم المستخدم أو البريد الإلكتروني",
     "password": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
     "confirmPassword": "تأكيد كلمة المرور",
+    "confirmPasswordPlaceholder": "أكد كلمة المرور",
     "fullName": "الاسم الكامل",
+    "fullNamePlaceholder": "أدخل اسمك الكامل",
     "forgotPassword": "نسيت كلمة المرور؟",
     "rememberMe": "تذكرني",
     "noAccount": "ليس لديك حساب؟",
     "haveAccount": "لديك حساب بالفعل؟",
     "createAccount": "إنشاء حساب جديد",
+    "signIn": "تسجيل الدخول",
     "signInWith": "تسجيل الدخول باستخدام",
+    "orContinueWith": "أو تابع باستخدام",
     "accountType": "نوع الحساب",
     "client": "عميل",
     "freelancer": "مستقل",
+    "clientDescription": "انشر مشاريع ووظف مستقلين لمهامك المحددة",
+    "freelancerDescription": "قدم مهاراتك وخبراتك للعملاء الباحثين عن خدماتك",
     "registerAsClient": "سجل كعميل",
     "registerAsFreelancer": "انضم كمستقل",
     "loginSuccess": "تم تسجيل الدخول بنجاح",
@@ -64,7 +75,45 @@
     "userExists": "اسم المستخدم موجود بالفعل",
     "emailExists": "البريد الإلكتروني مستخدم بالفعل",
     "passwordMismatch": "كلمات المرور غير متطابقة",
-    "passwordLength": "يجب أن تكون كلمة المرور 6 أحرف على الأقل"
+    "passwordLength": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+    "required": "هذا الحقل مطلوب",
+    "usernameTooShort": "يجب أن يكون اسم المستخدم 3 أحرف على الأقل",
+    "fullNameRequired": "يجب أن يكون الاسم الكامل حرفين على الأقل",
+    "invalidEmail": "يرجى إدخال بريد إلكتروني صحيح",
+    "welcomeBack": "مرحبًا بعودتك!",
+    "loginSubtitle": "سجل دخولك للوصول إلى حسابك",
+    "joinCommunity": "انضم إلى مجتمعنا!",
+    "registerSubtitle": "أنشئ حسابًا للبدء",
+    "platformFeatures": "لماذا تختار منصة خبراء؟",
+    "platformDescription": "نربط المستقلين المهرة بالعملاء الباحثين عن عمل عالي الجودة في مختلف المجالات",
+    "trustedPlatform": "موثوق به من قبل آلاف المستخدمين حول العالم",
+    "users": "مستخدم",
+    "projects": "مشروع",
+    "satisfaction": "نسبة الرضا",
+    "benefits": {
+      "freelance": {
+        "title": "اعمل بشروطك",
+        "description": "حرية اختيار المشاريع وتحديد ساعات عملك"
+      },
+      "verified": {
+        "title": "ملفات شخصية موثقة",
+        "description": "يخضع جميع المستخدمين لعملية تحقق للحفاظ على الأمان"
+      },
+      "secure": {
+        "title": "مدفوعات آمنة",
+        "description": "حماية الدفع تضمن لك الحصول على ما تدفع مقابله"
+      }
+    },
+    "admin": {
+      "title": "لوحة إدارة المنصة",
+      "description": "إدارة كافة عمليات المنصة بكفاءة",
+      "users": "إدارة المستخدمين",
+      "projects": "إدارة المشاريع",
+      "categories": "إدارة الفئات",
+      "reports": "التقارير والتحليلات",
+      "payments": "نظرة عامة على المدفوعات",
+      "settings": "إعدادات المنصة"
+    }
   },
   "hero": {
     "title": "أفضل المستقلين في مكان واحد",
