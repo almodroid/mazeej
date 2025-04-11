@@ -85,7 +85,7 @@ export default function DashboardSidebar() {
   const roleLinks = user?.role === "client"
     ? [
         {
-          href: "/projects/my-projects",
+          href: "/my-projects",
           icon: <Briefcase size={18} />,
           label: t("common.myProjects"),
         },
@@ -112,7 +112,7 @@ export default function DashboardSidebar() {
       ]
     : [
         {
-          href: "/proposals/my-proposals",
+          href: "/my-proposals",
           icon: <FileText size={18} />,
           label: t("common.myProposals"),
         },

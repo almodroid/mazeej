@@ -15,6 +15,16 @@ import SubmitProposalPage from "@/pages/submit-proposal-page";
 import CategoriesPage from "@/pages/categories-page";
 import ChatPage from "@/pages/chat-page";
 import VerificationPage from "@/pages/verification-page";
+import ProfilePage from "@/pages/profile-page";
+import SettingsPage from "@/pages/settings-page";
+import MessagesPage from "@/pages/messages-page";
+import MyProjectsPage from "@/pages/my-projects-page";
+import MyProposalsPage from "@/pages/my-proposals-page";
+import EarningsPage from "@/pages/earnings-page";
+import ReviewsReceivedPage from "@/pages/reviews-received-page";
+import ReviewsGivenPage from "@/pages/reviews-given-page";
+import PaymentsPage from "@/pages/payments-page";
+import HelpPage from "@/pages/help-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { NotificationsProvider } from "./hooks/use-notifications";
@@ -57,6 +67,11 @@ function Router() {
           <ChatPage />
         </ProtectedRoute>
       </Route>
+      <Route path="/messages">
+        <ProtectedRoute>
+          <MessagesPage />
+        </ProtectedRoute>
+      </Route>
       <Route path="/dashboard">
         <ProtectedRoute>
           <DashboardPage />
@@ -70,6 +85,41 @@ function Router() {
       <Route path="/verification">
         <ProtectedRoute>
           <VerificationPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute>
+          <ProfilePage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute>
+          <SettingsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/earnings">
+        <ProtectedRoute>
+          <EarningsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/reviews/received">
+        <ProtectedRoute>
+          <ReviewsReceivedPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/reviews/given">
+        <ProtectedRoute>
+          <ReviewsGivenPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/payments">
+        <ProtectedRoute>
+          <PaymentsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/help">
+        <ProtectedRoute>
+          <HelpPage />
         </ProtectedRoute>
       </Route>
       <Route>
