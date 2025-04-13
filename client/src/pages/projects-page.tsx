@@ -45,6 +45,11 @@ export default function ProjectsPage() {
 
   // Filter projects based on search term and filters
   const filteredProjects = projects.filter(project => {
+    // Hide pending projects from freelancers
+    if (user?.role === 'freelancer' && project.status === 'pending') {
+      return false;
+    }
+    
     // Search by title or description
     const titleMatch = project.title.toLowerCase().includes(searchTerm.toLowerCase());
     const descriptionMatch = project.description.toLowerCase().includes(searchTerm.toLowerCase());

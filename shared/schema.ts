@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, json, numeric } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -13,13 +13,22 @@ export const freelancerLevelEnum = pgEnum('freelancer_level', ['beginner', 'inte
 export const freelancerTypeEnum = pgEnum('freelancer_type', ['content_creator', 'expert']);
 
 // Project status enum
-export const projectStatusEnum = pgEnum('project_status', ['open', 'in_progress', 'completed', 'cancelled']);
+export const projectStatusEnum = pgEnum('project_status', ['pending', 'open', 'in_progress', 'completed', 'cancelled']);
 
 // Proposal status enum
 export const proposalStatusEnum = pgEnum('proposal_status', ['pending', 'accepted', 'rejected']);
 
 // Verification status enum
 export const verificationStatusEnum = pgEnum('verification_status', ['pending', 'approved', 'rejected']);
+
+// Payment status enum
+export const paymentStatusEnum = pgEnum('payment_status', ['completed', 'pending', 'failed']);
+
+// Payment type enum
+export const paymentTypeEnum = pgEnum('payment_type', ['deposit', 'withdrawal', 'project_payment']);
+
+// Transaction type enum
+export const transactionTypeEnum = pgEnum('transaction_type', ['fee', 'payment', 'refund']);
 
 // Users table
 export const users = pgTable("users", {
@@ -36,6 +45,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   createdAt: timestamp("created_at").defaultNow(),
   isVerified: boolean("is_verified").default(false),
+  isBlocked: boolean("is_blocked").default(false),
   freelancerLevel: freelancerLevelEnum("freelancer_level"),
   freelancerType: freelancerTypeEnum("freelancer_type"),
   hourlyRate: integer("hourly_rate"),
@@ -103,6 +113,9 @@ export const messages = pgTable("messages", {
   content: text("content").notNull(),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  supervisedBy: integer("supervised_by").references(() => users.id),
+  isFlagged: boolean("is_flagged").default(false),
+  supervisorNotes: text("supervisor_notes"),
 });
 
 // Reviews table
@@ -128,17 +141,28 @@ export const files = pgTable("files", {
   uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
-// Payments table
+// Payment table
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
-  projectId: integer("project_id").notNull(),
-  clientId: integer("client_id").notNull(),
-  freelancerId: integer("freelancer_id").notNull(),
-  amount: integer("amount").notNull(),
-  status: text("status").notNull(),
-  transactionId: text("transaction_id"),
-  paymentMethod: text("payment_method"),
-  createdAt: timestamp("created_at").defaultNow(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  amount: numeric("amount").notNull(),
+  status: paymentStatusEnum("status").notNull(),
+  type: paymentTypeEnum("type").notNull(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: 'set null' }),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Transaction table
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  paymentId: integer("payment_id").references(() => payments.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  amount: numeric("amount").notNull(),
+  type: transactionTypeEnum("type").notNull(),
+  status: paymentStatusEnum("status").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Notifications table
@@ -195,7 +219,7 @@ export const insertProjectSchema = createInsertSchema(projects)
 export const insertProposalSchema = createInsertSchema(proposals).omit({ id: true, createdAt: true, status: true, freelancerId: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true, reviewerId: true });
 export const insertFileSchema = createInsertSchema(files).omit({ id: true, uploadedAt: true });
-export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true, senderId: true });
+export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true, senderId: true, supervisedBy: true, isFlagged: true, supervisorNotes: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, isRead: true });
 export const insertVerificationRequestSchema = createInsertSchema(verificationRequests).omit({
   id: true,
@@ -304,10 +328,10 @@ export const filesRelations = relations(files, ({ one }) => ({
   project: one(projects, { relationName: "project_files", fields: [files.projectId], references: [projects.id] }),
 }));
 
-export const paymentsRelations = relations(payments, ({ one }) => ({
+export const paymentsRelations = relations(payments, ({ one, many }) => ({
   project: one(projects, { relationName: "project_payments", fields: [payments.projectId], references: [projects.id] }),
-  client: one(users, { fields: [payments.clientId], references: [users.id] }),
-  freelancer: one(users, { fields: [payments.freelancerId], references: [users.id] }),
+  client: one(users, { fields: [payments.userId], references: [users.id] }),
+  transactions: many(transactions, { relationName: "payment_transactions" }),
 }));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
@@ -328,4 +352,8 @@ export const verificationRequestsRelations = relations(verificationRequests, ({ 
     fields: [verificationRequests.reviewerId],
     references: [users.id],
   }),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  payment: one(payments, { relationName: "payment_transactions", fields: [transactions.paymentId], references: [payments.id] }),
 }));

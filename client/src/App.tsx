@@ -7,6 +7,10 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
 import AdminDashboardPage from "@/pages/admin-dashboard";
+import AdminUsersPage from "@/pages/admin/users";
+import AdminProjectsPage from "@/pages/admin/projects";
+import AdminCategoriesPage from "@/pages/admin/categories";
+import AdminSettingsPage from "@/pages/admin/settings";
 import BrowseFreelancers from "@/pages/browse-freelancers";
 import ProjectsPage from "@/pages/projects-page";
 import CreateProjectPage from "@/pages/create-project-page";
@@ -30,6 +34,18 @@ import { AuthProvider } from "./hooks/use-auth";
 import { NotificationsProvider } from "./hooks/use-notifications";
 import { ChatProvider } from "./hooks/use-chat";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SettingsProvider } from "./contexts/settings-context";
+import { Redirect } from "wouter";
+import { lazy, Suspense } from "react";
+
+// Lazy load admin components
+const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
+const AdminUsers = lazy(() => import('./pages/admin/users'));
+const AdminProjects = lazy(() => import('./pages/admin/projects'));
+const AdminCategories = lazy(() => import('./pages/admin/categories'));
+const AdminSettings = lazy(() => import('./pages/admin/settings'));
+const AdminPayments = lazy(() => import('./pages/admin/payments'));
+const AdminMessages = lazy(() => import('./pages/admin/messages'));
 
 function Router() {
   return (
@@ -40,11 +56,24 @@ function Router() {
       <Route path="/auth">
         <AuthPage />
       </Route>
+      <Route path="/auth/register">
+        {/* Register component */}
+      </Route>
       <Route path="/browse-freelancers">
         <BrowseFreelancers />
       </Route>
       <Route path="/projects">
         <ProjectsPage />
+      </Route>
+      <Route path="/my-projects">
+        <ProtectedRoute>
+          <MyProjectsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/my-proposals">
+        <ProtectedRoute>
+          <MyProposalsPage />
+        </ProtectedRoute>
       </Route>
       <Route path="/projects/create">
         <ProtectedRoute>
@@ -78,8 +107,55 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/admin">
+        {(params) => <Redirect to="/admin/dashboard" />}
+      </Route>
+      <Route path="/admin/dashboard">
         <ProtectedRoute>
-          <AdminDashboardPage />
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminDashboard />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/users">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminUsers />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/projects">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminProjects />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/categories">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminCategories />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/settings">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminSettings />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/payments">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminPayments />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/messages">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminMessages />
+          </Suspense>
         </ProtectedRoute>
       </Route>
       <Route path="/verification">
@@ -134,12 +210,14 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="freelance-platform-theme">
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <NotificationsProvider>
-            <ChatProvider>
-              <Router />
-              <Toaster />
-            </ChatProvider>
-          </NotificationsProvider>
+          <SettingsProvider>
+            <NotificationsProvider>
+              <ChatProvider>
+                <Router />
+                <Toaster />
+              </ChatProvider>
+            </NotificationsProvider>
+          </SettingsProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

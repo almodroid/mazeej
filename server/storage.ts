@@ -7,6 +7,46 @@ import { DatabaseStorage } from "./db-storage";
 
 const MemoryStore = createMemoryStore(session);
 
+export interface PaymentData {
+  id: number;
+  userId: number;
+  amount: number;
+  status: 'completed' | 'pending' | 'failed';
+  type: 'deposit' | 'withdrawal' | 'project_payment';
+  projectId?: number;
+  description?: string;
+  createdAt: Date;
+}
+
+export interface Transaction {
+  id: number;
+  paymentId: number;
+  userId: number;
+  amount: number;
+  type: 'fee' | 'payment' | 'refund';
+  status: 'completed' | 'pending' | 'failed';
+  description?: string;
+  createdAt: Date;
+}
+
+export interface CreatePaymentParams {
+  userId: number;
+  amount: number;
+  status: 'completed' | 'pending' | 'failed';
+  type: 'deposit' | 'withdrawal' | 'project_payment';
+  projectId?: number;
+  description?: string;
+}
+
+export interface CreateTransactionParams {
+  paymentId: number;
+  userId: number;
+  amount: number;
+  type: 'fee' | 'payment' | 'refund';
+  status: 'completed' | 'pending' | 'failed';
+  description?: string;
+}
+
 // Define the storage interface
 export interface IStorage {
   // User operations
@@ -17,6 +57,8 @@ export interface IStorage {
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
   getFreelancers(limit?: number): Promise<User[]>;
   getFreelancersByCategory(categoryId: number, limit?: number): Promise<User[]>;
+  getAllUsers(): Promise<Omit<User, 'password'>[]>;
+  deleteUser(id: number): Promise<boolean>;
   
   // Category operations
   getCategories(): Promise<Category[]>;
@@ -35,6 +77,7 @@ export interface IStorage {
   getProjectsByClient(clientId: number): Promise<Project[]>;
   createProject(project: InsertProject, clientId: number): Promise<Project>;
   updateProjectStatus(id: number, status: string): Promise<Project | undefined>;
+  updateProject(id: number, data: Partial<Project>): Promise<Project | undefined>;
   
   // Proposal operations
   getProposalById(id: number): Promise<Proposal | undefined>;
@@ -42,10 +85,14 @@ export interface IStorage {
   getProposalsByFreelancer(freelancerId: number): Promise<Proposal[]>;
   createProposal(proposal: InsertProposal, freelancerId: number): Promise<Proposal>;
   updateProposalStatus(id: number, status: string): Promise<Proposal | undefined>;
+  updateProposal(id: number, data: Partial<Proposal>): Promise<Proposal | undefined>;
+  deleteProposal(id: number): Promise<boolean>;
   
   // Message operations
   getMessages(senderId: number, receiverId: number): Promise<Message[]>;
   createMessage(message: InsertMessage, senderId: number): Promise<Message>;
+  getAllUserMessages(userId: number): Promise<Message[]>;
+  markMessageAsRead(messageId: number): Promise<void>;
   
   // Review operations
   getReviewsByUser(userId: number): Promise<Review[]>;
@@ -63,11 +110,24 @@ export interface IStorage {
   deleteNotification(id: number): Promise<boolean>;
   
   // Verification operations
-  getVerificationRequests(status?: string): Promise<VerificationRequest[]>;
+  getVerificationRequests(status?: "pending" | "approved" | "rejected"): Promise<VerificationRequest[]>;
   getVerificationRequestsForUser(userId: number): Promise<VerificationRequest[]>;
   getVerificationRequestById(id: number): Promise<VerificationRequest | undefined>;
   createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest>;
   updateVerificationRequestStatus(id: number, status: string, reviewerId: number, reviewNotes?: string): Promise<VerificationRequest | undefined>;
+  
+  // Payment operations
+  getPayment(id: number): Promise<PaymentData | undefined>;
+  createPayment(payment: CreatePaymentParams): Promise<PaymentData>;
+  getAllPayments(): Promise<PaymentData[]>;
+  getUserPayments(userId: number): Promise<PaymentData[]>;
+  deletePayment(id: number): Promise<boolean>;
+  
+  // Transaction operations
+  createTransaction(transaction: CreateTransactionParams): Promise<Transaction>;
+  getAllTransactions(): Promise<Transaction[]>;
+  getUserTransactions(userId: number): Promise<Transaction[]>;
+  deleteTransactionsByPaymentId(paymentId: number): Promise<boolean>;
   
   // Session store
   sessionStore: SessionStore;
@@ -85,9 +145,10 @@ export class MemStorage implements IStorage {
   private messages: Map<number, Message>;
   private reviews: Map<number, Review>;
   private files: Map<number, File>;
-  private payments: Map<number, Payment>;
+  private payments: Map<number, PaymentData>;
   private notifications: Map<number, Notification>;
   private verificationRequests: Map<number, VerificationRequest>;
+  private transactions: Map<number, Transaction>;
   
   // Counters for generating IDs
   private userId: number = 1;
@@ -103,6 +164,7 @@ export class MemStorage implements IStorage {
   private paymentId: number = 1;
   private notificationId: number = 1;
   private verificationRequestId: number = 1;
+  private transactionId: number = 1;
   
   // Session store
   sessionStore: SessionStore;
@@ -121,6 +183,7 @@ export class MemStorage implements IStorage {
     this.payments = new Map();
     this.notifications = new Map();
     this.verificationRequests = new Map();
+    this.transactions = new Map();
     
     // Initialize session store
     this.sessionStore = new MemoryStore({
@@ -146,6 +209,11 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(
       (user) => user.email.toLowerCase() === email.toLowerCase()
     );
+  }
+
+  async getAllUsers(): Promise<Omit<User, 'password'>[]> {
+    // Get all users and remove password
+    return Array.from(this.users.values()).map(({ password, ...user }) => user);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -182,6 +250,7 @@ export class MemStorage implements IStorage {
       phone,
       createdAt: now,
       isVerified: false,
+      isBlocked: false,
       freelancerLevel,
       freelancerType,
       hourlyRate,
@@ -198,6 +267,56 @@ export class MemStorage implements IStorage {
     const updatedUser = { ...user, ...userData };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    // Also clean up related data (proposals, reviews, etc.)
+    // In a real app, you might want to handle this in a transaction
+    
+    // Delete user skills
+    Array.from(this.userSkills.entries()).forEach(([skillId, entry]) => {
+      if (entry.userId === id) {
+        this.userSkills.delete(skillId);
+      }
+    });
+    
+    // Delete user projects (if client)
+    Array.from(this.projects.entries()).forEach(([projectId, project]) => {
+      if (project.clientId === id) {
+        this.projects.delete(projectId);
+      }
+    });
+    
+    // Delete user proposals (if freelancer)
+    Array.from(this.proposals.entries()).forEach(([proposalId, proposal]) => {
+      if (proposal.freelancerId === id) {
+        this.proposals.delete(proposalId);
+      }
+    });
+    
+    // Delete user reviews
+    Array.from(this.reviews.entries()).forEach(([reviewId, review]) => {
+      if (review.reviewerId === id || review.revieweeId === id) {
+        this.reviews.delete(reviewId);
+      }
+    });
+    
+    // Delete user files
+    Array.from(this.files.entries()).forEach(([fileId, file]) => {
+      if (file.userId === id) {
+        this.files.delete(fileId);
+      }
+    });
+    
+    // Delete user notifications
+    Array.from(this.notifications.entries()).forEach(([notificationId, notification]) => {
+      if (notification.userId === id) {
+        this.notifications.delete(notificationId);
+      }
+    });
+    
+    // Finally delete the user
+    return this.users.delete(id);
   }
 
   async getFreelancers(limit?: number): Promise<User[]> {
@@ -339,6 +458,15 @@ export class MemStorage implements IStorage {
     return updatedProject;
   }
 
+  async updateProject(id: number, data: Partial<Project>): Promise<Project | undefined> {
+    const project = this.projects.get(id);
+    if (!project) return undefined;
+    
+    const updatedProject = { ...project, ...data };
+    this.projects.set(id, updatedProject);
+    return updatedProject;
+  }
+
   // Proposal operations
   async getProposalById(id: number): Promise<Proposal | undefined> {
     return this.proposals.get(id);
@@ -379,6 +507,19 @@ export class MemStorage implements IStorage {
     return updatedProposal;
   }
 
+  async updateProposal(id: number, data: Partial<Proposal>): Promise<Proposal | undefined> {
+    const proposal = this.proposals.get(id);
+    if (!proposal) return undefined;
+    
+    const updatedProposal = { ...proposal, ...data };
+    this.proposals.set(id, updatedProposal);
+    return updatedProposal;
+  }
+
+  async deleteProposal(id: number): Promise<boolean> {
+    return this.proposals.delete(id);
+  }
+
   // Message operations
   async getMessages(senderId: number, receiverId: number): Promise<Message[]> {
     return Array.from(this.messages.values()).filter(
@@ -405,6 +546,20 @@ export class MemStorage implements IStorage {
     };
     this.messages.set(id, newMessage);
     return newMessage;
+  }
+
+  async getAllUserMessages(userId: number): Promise<Message[]> {
+    return Array.from(this.messages.values()).filter(
+      (message) => message.senderId === userId || message.receiverId === userId
+    );
+  }
+
+  async markMessageAsRead(messageId: number): Promise<void> {
+    const message = this.messages.get(messageId);
+    if (message) {
+      message.isRead = true;
+      this.messages.set(messageId, message);
+    }
   }
 
   // Review operations
@@ -512,7 +667,7 @@ export class MemStorage implements IStorage {
   }
 
   // Verification operations
-  async getVerificationRequests(status?: string): Promise<VerificationRequest[]> {
+  async getVerificationRequests(status?: "pending" | "approved" | "rejected"): Promise<VerificationRequest[]> {
     let requests = Array.from(this.verificationRequests.values());
     
     if (status) {
@@ -610,6 +765,91 @@ export class MemStorage implements IStorage {
     categories.forEach(category => {
       this.createCategory(category);
     });
+  }
+
+  // Payment operations
+  async getPayment(id: number): Promise<PaymentData | undefined> {
+    return this.payments.get(id);
+  }
+
+  async createPayment(payment: CreatePaymentParams): Promise<PaymentData> {
+    const id = this.paymentId++;
+    const now = new Date();
+    const { userId, amount, status, type, projectId, description } = payment;
+    
+    const newPayment: PaymentData = {
+      id,
+      userId,
+      amount,
+      status,
+      type,
+      projectId,
+      description,
+      createdAt: now,
+    };
+    
+    this.payments.set(id, newPayment);
+    return newPayment;
+  }
+
+  async getAllPayments(): Promise<PaymentData[]> {
+    return Array.from(this.payments.values());
+  }
+
+  async getUserPayments(userId: number): Promise<PaymentData[]> {
+    return Array.from(this.payments.values()).filter(
+      (payment) => payment.userId === userId
+    );
+  }
+
+  async deletePayment(id: number): Promise<boolean> {
+    return this.payments.delete(id);
+  }
+
+  // Transaction operations
+  async createTransaction(transaction: CreateTransactionParams): Promise<Transaction> {
+    const id = this.transactionId++;
+    const now = new Date();
+    const { paymentId, userId, amount, type, status, description } = transaction;
+    
+    const newTransaction: Transaction = {
+      id,
+      paymentId,
+      userId,
+      amount,
+      type,
+      status,
+      description,
+      createdAt: now,
+    };
+    
+    this.transactions.set(id, newTransaction);
+    return newTransaction;
+  }
+
+  async getAllTransactions(): Promise<Transaction[]> {
+    return Array.from(this.transactions.values());
+  }
+
+  async getUserTransactions(userId: number): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter(transaction => transaction.userId === userId)
+      .sort((a, b) => {
+        const timeA = a.createdAt.getTime();
+        const timeB = b.createdAt.getTime();
+        return timeB - timeA;
+      });
+  }
+
+  async deleteTransactionsByPaymentId(paymentId: number): Promise<boolean> {
+    let deleted = false;
+    Array.from(this.transactions.entries()).forEach(([id, transaction]) => {
+      if (transaction.paymentId === paymentId) {
+        this.transactions.delete(id);
+        deleted = true;
+      }
+    });
+    return deleted;
   }
 }
 

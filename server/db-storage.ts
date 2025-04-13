@@ -1,12 +1,12 @@
-import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications } from "@shared/schema";
-import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification } from "@shared/schema";
+import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions } from "@shared/schema";
+import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { db } from "./db";
 import { eq, and, or, desc, asc, inArray, SQL } from "drizzle-orm";
 import { pool } from "./db";
-import { IStorage } from "./storage";
+import { IStorage, PaymentData, CreatePaymentParams, CreateTransactionParams, Transaction } from "./storage";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -63,6 +63,59 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      // In a real app, you might want to use transactions
+      // Delete associated data first to maintain referential integrity
+      
+      // Delete user skills
+      await db
+        .delete(userSkills)
+        .where(eq(userSkills.userId, id));
+      
+      // Delete user proposals
+      await db
+        .delete(proposals)
+        .where(eq(proposals.freelancerId, id));
+      
+      // Delete reviews by and for this user
+      await db
+        .delete(reviews)
+        .where(
+          or(
+            eq(reviews.reviewerId, id),
+            eq(reviews.revieweeId, id)
+          )
+        );
+      
+      // Delete user files
+      await db
+        .delete(files)
+        .where(eq(files.userId, id));
+      
+      // Delete user notifications
+      await db
+        .delete(notifications)
+        .where(eq(notifications.userId, id));
+      
+      // Delete user's projects
+      await db
+        .delete(projects)
+        .where(eq(projects.clientId, id));
+      
+      // Finally delete the user
+      const result = await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return false;
+    }
+  }
+
   async getFreelancers(limit?: number): Promise<User[]> {
     let query = db
       .select()
@@ -76,6 +129,14 @@ export class DatabaseStorage implements IStorage {
     }
     
     return result;
+  }
+
+  async getAllUsers(): Promise<Omit<User, 'password'>[]> {
+    // Get all users
+    const allUsers = await db.select().from(users);
+    
+    // Remove password field for security
+    return allUsers.map(({ password, ...user }) => user);
   }
 
   async getFreelancersByCategory(categoryId: number, limit?: number): Promise<User[]> {
@@ -213,7 +274,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...project,
         clientId,
-        status: 'open'
+        status: 'pending'
       })
       .returning();
     return newProject;
@@ -225,6 +286,23 @@ export class DatabaseStorage implements IStorage {
       .set({ status: status as any })
       .where(eq(projects.id, id))
       .returning();
+    return updatedProject;
+  }
+
+  async updateProject(id: number, data: Partial<Project>): Promise<Project | undefined> {
+    const allowedUpdates = {
+      title: data.title,
+      description: data.description,
+      budget: data.budget,
+      category: data.category
+    };
+    
+    const [updatedProject] = await db
+      .update(projects)
+      .set(allowedUpdates)
+      .where(eq(projects.id, id))
+      .returning();
+      
     return updatedProject;
   }
 
@@ -266,12 +344,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProposalStatus(id: number, status: string): Promise<Proposal | undefined> {
-    const [updatedProposal] = await db
+    await db
       .update(proposals)
-      .set({ status: status as any })
-      .where(eq(proposals.id, id))
-      .returning();
-    return updatedProposal;
+      .set({ status: status as "pending" | "accepted" | "rejected" | null })
+      .where(eq(proposals.id, id));
+    return this.getProposalById(id);
+  }
+
+  async updateProposal(id: number, data: Partial<Proposal>): Promise<Proposal | undefined> {
+    // Get current proposal
+    const proposal = await this.getProposalById(id);
+    if (!proposal) return undefined;
+    
+    // Only allow updating these fields
+    const allowedUpdates = {
+      description: data.description,
+      price: data.price,
+      deliveryTime: data.deliveryTime
+    };
+    
+    await db
+      .update(proposals)
+      .set(allowedUpdates)
+      .where(eq(proposals.id, id));
+    
+    return this.getProposalById(id);
+  }
+
+  async deleteProposal(id: number): Promise<boolean> {
+    const result = await db
+      .delete(proposals)
+      .where(eq(proposals.id, id));
+    
+    return !!result;
   }
 
   // Message operations
@@ -304,6 +409,26 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return newMessage;
+  }
+  
+  async getAllUserMessages(userId: number): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(
+        or(
+          eq(messages.senderId, userId),
+          eq(messages.receiverId, userId)
+        )
+      )
+      .orderBy(desc(messages.createdAt));
+  }
+
+  async markMessageAsRead(messageId: number): Promise<void> {
+    await db
+      .update(messages)
+      .set({ isRead: true })
+      .where(eq(messages.id, messageId));
   }
 
   // Review operations
@@ -393,16 +518,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Verification operations
-  async getVerificationRequests(status?: string): Promise<VerificationRequest[]> {
-    let query = db.select().from(verificationRequests);
+  async getVerificationRequests(status?: "pending" | "approved" | "rejected"): Promise<VerificationRequest[]> {
+    const query = db.select().from(verificationRequests);
     
     if (status) {
-      query = query.where(eq(verificationRequests.status, status as any));
+      const filtered = query.where(eq(verificationRequests.status, status));
+      return await filtered.orderBy(desc(verificationRequests.submittedAt));
     }
     
     // Sort by submission date, newest first
-    const requests = await query.orderBy(desc(verificationRequests.submittedAt));
-    return requests;
+    return await query.orderBy(desc(verificationRequests.submittedAt));
   }
 
   async getVerificationRequestsForUser(userId: number): Promise<VerificationRequest[]> {
@@ -465,6 +590,13 @@ export class DatabaseStorage implements IStorage {
     return updatedRequest;
   }
 
+  async getVerificationRequestsByStatus(status: "pending" | "approved" | "rejected"): Promise<VerificationRequest[]> {
+    return await db
+      .select()
+      .from(verificationRequests)
+      .where(eq(verificationRequests.status, status));
+  }
+
   // Seed categories
   private async seedCategories() {
     const existingCategories = await this.getCategories();
@@ -482,6 +614,154 @@ export class DatabaseStorage implements IStorage {
       for (const category of categories) {
         await this.createCategory(category);
       }
+    }
+  }
+
+  // Payment operations
+  async getPayment(id: number): Promise<PaymentData | undefined> {
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, id))
+      .limit(1);
+    
+    if (!payment) return undefined;
+    
+    // Convert amount from string to number and null to undefined
+    return {
+      ...payment,
+      amount: Number(payment.amount),
+      projectId: payment.projectId ?? undefined,
+      description: payment.description ?? undefined
+    };
+  }
+
+  async createPayment(paymentData: CreatePaymentParams): Promise<PaymentData> {
+    // Convert number to string for database
+    const dbPaymentData = {
+      ...paymentData,
+      amount: String(paymentData.amount)
+    };
+    
+    const [payment] = await db
+      .insert(payments)
+      .values(dbPaymentData)
+      .returning();
+    
+    // Convert back to number for return and null to undefined
+    return {
+      ...payment,
+      amount: Number(payment.amount),
+      projectId: payment.projectId ?? undefined,
+      description: payment.description ?? undefined
+    };
+  }
+
+  async getAllPayments(): Promise<PaymentData[]> {
+    const result = await db
+      .select({
+        payment: payments,
+        username: users.username
+      })
+      .from(payments)
+      .leftJoin(users, eq(payments.userId, users.id));
+    
+    return result.map(row => ({
+      ...row.payment,
+      username: row.username,
+      amount: Number(row.payment.amount),
+      projectId: row.payment.projectId ?? undefined,
+      description: row.payment.description ?? undefined
+    }));
+  }
+
+  async getUserPayments(userId: number): Promise<PaymentData[]> {
+    const userPayments = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.userId, userId));
+    
+    return userPayments.map(payment => ({
+      ...payment,
+      amount: Number(payment.amount),
+      projectId: payment.projectId ?? undefined,
+      description: payment.description ?? undefined
+    }));
+  }
+
+  async deletePayment(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(payments)
+        .where(eq(payments.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      return false;
+    }
+  }
+
+  // Transaction operations
+  async createTransaction(transactionData: CreateTransactionParams): Promise<Transaction> {
+    // Convert number to string for database
+    const dbTransactionData = {
+      ...transactionData,
+      amount: String(transactionData.amount)
+    };
+    
+    const [transaction] = await db
+      .insert(transactions)
+      .values(dbTransactionData)
+      .returning();
+    
+    // Convert back to number for return and null to undefined
+    return {
+      ...transaction,
+      amount: Number(transaction.amount),
+      description: transaction.description ?? undefined
+    };
+  }
+
+  async getAllTransactions(): Promise<Transaction[]> {
+    const result = await db
+      .select({
+        transaction: transactions,
+        username: users.username
+      })
+      .from(transactions)
+      .leftJoin(users, eq(transactions.userId, users.id));
+    
+    return result.map(row => ({
+      ...row.transaction,
+      username: row.username,
+      amount: Number(row.transaction.amount),
+      description: row.transaction.description ?? undefined
+    }));
+  }
+
+  async getUserTransactions(userId: number): Promise<Transaction[]> {
+    const userTransactions = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(desc(transactions.createdAt));
+    
+    return userTransactions.map(transaction => ({
+      ...transaction,
+      amount: Number(transaction.amount),
+      description: transaction.description ?? undefined
+    }));
+  }
+
+  async deleteTransactionsByPaymentId(paymentId: number): Promise<boolean> {
+    try {
+      await db
+        .delete(transactions)
+        .where(eq(transactions.paymentId, paymentId));
+      return true;
+    } catch (error) {
+      console.error("Error deleting transactions:", error);
+      return false;
     }
   }
 }

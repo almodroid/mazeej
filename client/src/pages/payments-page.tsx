@@ -1,97 +1,194 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import Navbar from "@/components/navbar";
-import Footer from "@/components/footer";
-import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
-import ChatWidget from "@/components/chat/chat-widget";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Plus, Download, DollarSign } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CreditCard, Plus, Download, DollarSign, BanknoteIcon, Trash } from "lucide-react";
+import DashboardLayout from "@/components/layouts/dashboard-layout";
+import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface Transaction {
-  id: string;
+  id: number;
   amount: number;
   date: string;
   status: "completed" | "pending" | "failed";
   projectTitle: string;
-  freelancerName: string;
+  partyName: string;
 }
 
 interface PaymentMethod {
-  id: string;
-  type: "credit_card" | "paypal";
+  id: number;
+  type: "credit_card" | "paypal" | "bank_account";
   last4?: string;
   expiryDate?: string;
   isDefault: boolean;
   name: string;
+  accountDetails?: string;
 }
+
+// Schema for bank account form
+const bankAccountSchema = z.object({
+  bankName: z.string().min(2, { message: "Bank name is required" }),
+  accountName: z.string().min(2, { message: "Account name is required" }),
+  accountNumber: z.string().min(5, { message: "Valid account number is required" }),
+  swiftCode: z.string().optional(),
+  routingNumber: z.string().optional(),
+  isDefault: z.boolean().default(false)
+});
+
+// Schema for PayPal form
+const paypalSchema = z.object({
+  email: z.string().email({ message: "Valid email is required" }),
+  isDefault: z.boolean().default(false)
+});
 
 export default function PaymentsPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const [chatOpen, setChatOpen] = useState(false);
+  const { toast } = useToast();
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [paymentType, setPaymentType] = useState<"bank_account" | "paypal">("bank_account");
+  
+  // Define RTL state based on language
+  const isRTL = i18n.language === 'ar';
 
-  // Ensure the document has the correct RTL direction
-  useEffect(() => {
-    document.documentElement.dir = i18n.language === "ar" ? "rtl" : "ltr";
-  }, [i18n.language]);
-
-  // Mock payment methods data (would come from API in real implementation)
-  const paymentMethods: PaymentMethod[] = [
-    {
-      id: "1",
-      type: "credit_card",
-      last4: "4242",
-      expiryDate: "12/25",
-      isDefault: true,
-      name: "Visa ending in 4242"
-    },
-    {
-      id: "2",
-      type: "paypal",
-      isDefault: false,
-      name: "PayPal - user@example.com"
+  // Bank account form
+  const bankForm = useForm<z.infer<typeof bankAccountSchema>>({
+    resolver: zodResolver(bankAccountSchema),
+    defaultValues: {
+      bankName: "",
+      accountName: "",
+      accountNumber: "",
+      swiftCode: "",
+      routingNumber: "",
+      isDefault: false
     }
-  ];
+  });
 
-  // Mock transactions data (would come from API in real implementation)
-  const transactions: Transaction[] = [
-    {
-      id: "1",
-      amount: 750,
-      date: "2023-06-15",
-      status: "completed",
-      projectTitle: "E-commerce Website Development",
-      freelancerName: "Mohammed Ali"
+  // PayPal form
+  const paypalForm = useForm<z.infer<typeof paypalSchema>>({
+    resolver: zodResolver(paypalSchema),
+    defaultValues: {
+      email: "",
+      isDefault: false
+    }
+  });
+
+  // Fetch payment methods from API
+  const { data: paymentMethods = [], isLoading: isLoadingPaymentMethods, refetch: refetchPaymentMethods } = useQuery<PaymentMethod[]>({
+    queryKey: ['/api/users/payment-methods'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/users/payment-methods');
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment methods');
+      }
+      return response.json();
+    }
+  });
+
+  // Fetch transactions from API
+  const { data: transactions = [], isLoading: isLoadingTransactions } = useQuery<Transaction[]>({
+    queryKey: ['/api/users/transactions'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/users/transactions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions');
+      }
+      return response.json();
+    }
+  });
+
+  // Add payment method mutation
+  const addPaymentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/users/payment-methods', {
+        type: paymentType,
+        ...data
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add payment method');
+      }
+      
+      return response.json();
     },
-    {
-      id: "2",
-      amount: 500,
-      date: "2023-06-01",
-      status: "completed",
-      projectTitle: "Mobile App UI Design",
-      freelancerName: "Fatima Hassan"
+    onSuccess: () => {
+      toast({
+        title: t("payments.methodAdded"),
+        description: t("payments.methodAddedDesc"),
+        variant: "default",
+      });
+      setIsAddPaymentOpen(false);
+      refetchPaymentMethods();
+      
+      // Reset forms
+      bankForm.reset();
+      paypalForm.reset();
     },
-    {
-      id: "3",
-      amount: 1200,
-      date: "2023-05-15",
-      status: "completed",
-      projectTitle: "CRM System Integration",
-      freelancerName: "Khalid Ibrahim"
+    onError: (error) => {
+      toast({
+        title: t("common.error"),
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Delete payment method mutation
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/users/payment-methods/${id}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete payment method');
+      }
+      
+      return response;
     },
-    {
-      id: "4",
-      amount: 350,
-      date: "2023-07-01",
-      status: "pending",
-      projectTitle: "Content Writing for Blog",
-      freelancerName: "Sara Ahmed"
+    onSuccess: () => {
+      toast({
+        title: t("payments.methodDeleted"),
+        description: t("payments.methodDeletedDesc"),
+        variant: "default",
+      });
+      refetchPaymentMethods();
     },
-  ];
+    onError: (error) => {
+      toast({
+        title: t("common.error"),
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handle method deletion with confirmation
+  const handleDeleteMethod = (id: number) => {
+    if (window.confirm(t("payments.confirmDelete"))) {
+      deletePaymentMutation.mutate(id);
+    }
+  };
+
+  // Handle form submission
+  const onSubmitBankAccount = (data: z.infer<typeof bankAccountSchema>) => {
+    addPaymentMutation.mutate(data);
+  };
+
+  const onSubmitPaypal = (data: z.infer<typeof paypalSchema>) => {
+    addPaymentMutation.mutate(data);
+  };
 
   // Format date to display in a user-friendly way
   const formatDate = (dateString: string) => {
@@ -113,105 +210,301 @@ export default function PaymentsPage() {
     }
   };
 
-  if (!user || user.role !== "client") {
+  if (!user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="flex-grow flex">
-        <DashboardSidebar />
-        <main className="flex-grow p-6">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-cairo font-bold mb-6">
-              {t("payments.title")}
-            </h1>
+    <DashboardLayout>
+      <h1 className="text-3xl font-cairo font-bold mb-6">
+        {t("payments.title")}
+      </h1>
 
-            <Tabs defaultValue="methods" className="w-full">
-              <TabsList>
-                <TabsTrigger value="methods">{t("payments.paymentMethods")}</TabsTrigger>
-                <TabsTrigger value="transactions">{t("payments.transactions")}</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="methods" className="mt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">{t("payments.savedMethods")}</h2>
+      <Tabs defaultValue={user.role === "freelancer" ? "methods" : "transactions"} className="w-full" dir={isRTL ? "rtl" : "ltr"}>
+        <TabsList>
+          {user.role === "freelancer" && (
+            <TabsTrigger value="methods">{t("payments.paymentMethods")}</TabsTrigger>
+          )}
+          <TabsTrigger value="transactions">{t("payments.transactions")}</TabsTrigger>
+        </TabsList>
+        
+        {user.role === "freelancer" && (
+          <TabsContent value="methods" className="mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{t("payments.savedMethods")}</h2>
+              <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
+                <DialogTrigger asChild>
                   <Button>
-                    <Plus size={16} className="mr-2" />
+                    <Plus size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
                     {t("payments.addNew")}
                   </Button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {paymentMethods.map((method) => (
-                    <Card key={method.id}>
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <div className="bg-primary/10 p-3 rounded-full mr-3">
-                              <CreditCard className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                              <h3 className="font-medium">{method.name}</h3>
-                              {method.isDefault && (
-                                <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200">
-                                  {t("payments.default")}
-                                </Badge>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>{t("payments.addPaymentMethod")}</DialogTitle>
+                    <DialogDescription>
+                      {t("payments.addPaymentMethodDesc")}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <Tabs defaultValue="bank_account" className="w-full mt-4" onValueChange={(value) => setPaymentType(value as "bank_account" | "paypal")}>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="bank_account">
+                        <BanknoteIcon size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
+                        {t("payments.bankAccount")}
+                      </TabsTrigger>
+                      <TabsTrigger value="paypal">
+                        <CreditCard size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
+                        PayPal
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="bank_account" className="space-y-4 mt-4">
+                      <Form {...bankForm}>
+                        <form onSubmit={bankForm.handleSubmit(onSubmitBankAccount)} className="space-y-4">
+                          <FormField
+                            control={bankForm.control}
+                            name="bankName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("payments.bankName")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={bankForm.control}
+                            name="accountName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("payments.accountName")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={bankForm.control}
+                            name="accountNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("payments.accountNumber")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={bankForm.control}
+                              name="swiftCode"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("payments.swiftCode")}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
                               )}
-                            </div>
+                            />
+                            
+                            <FormField
+                              control={bankForm.control}
+                              name="routingNumber"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("payments.routingNumber")}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <FormField
+                            control={bankForm.control}
+                            name="isDefault"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
+                                <FormControl>
+                                  <input
+                                    type="checkbox"
+                                    checked={field.value}
+                                    onChange={field.onChange}
+                                    className="h-4 w-4 rounded border-gray-300"
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {t("payments.makeDefault")}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <DialogFooter>
+                            <Button type="submit" disabled={addPaymentMutation.isPending}>
+                              {addPaymentMutation.isPending ? t("common.saving") : t("common.save")}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </Form>
+                    </TabsContent>
+                    
+                    <TabsContent value="paypal" className="space-y-4 mt-4">
+                      <Form {...paypalForm}>
+                        <form onSubmit={paypalForm.handleSubmit(onSubmitPaypal)} className="space-y-4">
+                          <FormField
+                            control={paypalForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("payments.paypalEmail")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="email" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={paypalForm.control}
+                            name="isDefault"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
+                                <FormControl>
+                                  <input
+                                    type="checkbox"
+                                    checked={field.value}
+                                    onChange={field.onChange}
+                                    className="h-4 w-4 rounded border-gray-300"
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {t("payments.makeDefault")}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <DialogFooter>
+                            <Button type="submit" disabled={addPaymentMutation.isPending}>
+                              {addPaymentMutation.isPending ? t("common.saving") : t("common.save")}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </Form>
+                    </TabsContent>
+                  </Tabs>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {isLoadingPaymentMethods ? (
+                <p className="col-span-2 text-center py-10">{t("common.loading")}</p>
+              ) : paymentMethods.length === 0 ? (
+                <div className="col-span-2 bg-neutral-50 rounded-lg border border-neutral-200 p-6 text-center">
+                  <p className="text-neutral-500 mb-4">{t("payments.noMethods")}</p>
+                  <Button variant="outline" onClick={() => setIsAddPaymentOpen(true)}>
+                    <Plus size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
+                    {t("payments.addPaymentMethod")}
+                  </Button>
+                </div>
+              ) : (
+                paymentMethods.map((method) => (
+                  <Card key={method.id}>
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <div className={cn("bg-primary/10 p-3 rounded-full", isRTL ? "ml-3" : "mr-3")}>
+                            {method.type === "bank_account" ? (
+                              <BanknoteIcon className="h-5 w-5 text-primary" />
+                            ) : method.type === "paypal" ? (
+                              <CreditCard className="h-5 w-5 text-primary" />
+                            ) : (
+                              <CreditCard className="h-5 w-5 text-primary" />
+                            )}
                           </div>
                           <div>
-                            <Button variant="outline" size="sm">
-                              {t("common.edit")}
-                            </Button>
+                            <h3 className="font-medium">{method.name}</h3>
+                            {method.isDefault && (
+                              <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200">
+                                {t("payments.default")}
+                              </Badge>
+                            )}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                        <div>
+                          <Button variant="outline" size="sm" onClick={() => handleDeleteMethod(method.id)}>
+                            {t("common.delete")}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+        )}
+        
+        <TabsContent value="transactions" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>{t("payments.transactionHistory")}</CardTitle>
+                <Button variant="outline">
+                  <Download size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
+                  {t("payments.exportCSV")}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingTransactions ? (
+                <div className="text-center py-10">{t("common.loading")}</div>
+              ) : transactions.length === 0 ? (
+                <div className="text-center py-10 border rounded-md">
+                  <DollarSign className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
+                  <p className="text-neutral-500">{t("payments.noTransactions")}</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <div className="grid grid-cols-5 bg-neutral-50 p-4 text-sm font-medium text-neutral-500">
+                    <div>{t("payments.project")}</div>
+                    <div>{user.role === "client" ? t("payments.freelancer") : t("payments.client")}</div>
+                    <div>{t("payments.date")}</div>
+                    <div className={isRTL ? "text-right" : "text-left"}>{t("payments.amount")}</div>
+                    <div className={isRTL ? "text-right" : "text-left"}>{t("payments.status")}</div>
+                  </div>
+                  {transactions.map((transaction) => (
+                    <div key={transaction.id} className="grid grid-cols-5 p-4 text-sm border-t">
+                      <div className="font-medium">{transaction.projectTitle}</div>
+                      <div>{transaction.partyName}</div>
+                      <div dir="auto">{formatDate(transaction.date)}</div>
+                      <div className={isRTL ? "text-right" : "text-left"}>${transaction.amount}</div>
+                      <div className={isRTL ? "text-right" : "text-left"}>{getStatusBadge(transaction.status)}</div>
+                    </div>
                   ))}
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="transactions" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>{t("payments.transactionHistory")}</CardTitle>
-                      <Button variant="outline">
-                        <Download size={16} className="mr-2" />
-                        {t("payments.exportCSV")}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="rounded-md border">
-                      <div className="grid grid-cols-5 bg-neutral-50 p-4 text-sm font-medium text-neutral-500">
-                        <div>{t("payments.project")}</div>
-                        <div>{t("payments.freelancer")}</div>
-                        <div>{t("payments.date")}</div>
-                        <div>{t("payments.amount")}</div>
-                        <div>{t("payments.status")}</div>
-                      </div>
-                      {transactions.map((transaction) => (
-                        <div key={transaction.id} className="grid grid-cols-5 p-4 text-sm border-t">
-                          <div className="font-medium">{transaction.projectTitle}</div>
-                          <div>{transaction.freelancerName}</div>
-                          <div>{formatDate(transaction.date)}</div>
-                          <div>${transaction.amount}</div>
-                          <div>{getStatusBadge(transaction.status)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </main>
-      </div>
-      <Footer />
-      <ChatWidget isOpen={chatOpen} setIsOpen={setChatOpen} />
-    </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </DashboardLayout>
   );
 }

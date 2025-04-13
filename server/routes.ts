@@ -11,6 +11,7 @@ import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from ".
 import { z } from "zod";
 import fs from "fs";
 import crypto from "crypto";
+import { eq, and, or, desc } from "drizzle-orm";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -42,7 +43,186 @@ export function registerRoutes(app: Express): Server {
   // Setup WebSocket server for chat
   setupWebSocketServer(httpServer);
   
-  // Update freelancer profile images with Saudi profile images
+  // Messages API Routes
+  
+  // Get user conversations
+  app.get('/api/conversations', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to access conversations' });
+    }
+    
+    try {
+      const userId = req.user.id;
+      
+      // Get all messages for this user using the storage API
+      const userMessages = await storage.getAllUserMessages(userId);
+      
+      if (!userMessages || userMessages.length === 0) {
+        return res.json([]);
+      }
+      
+      // Extract unique conversation partners
+      const conversationPartners = new Set<number>();
+      userMessages.forEach(msg => {
+        if (msg.senderId === userId) {
+          conversationPartners.add(msg.receiverId);
+        } else {
+          conversationPartners.add(msg.senderId);
+        }
+      });
+      
+      // Get conversation data for each partner
+      const conversations = [];
+      for (const partnerId of Array.from(conversationPartners)) {
+        // Get the latest message for this conversation
+        const latestMessage = userMessages.find(msg => 
+          (msg.senderId === userId && msg.receiverId === partnerId) || 
+          (msg.senderId === partnerId && msg.receiverId === userId)
+        );
+        
+        if (!latestMessage) continue;
+        
+        // Count unread messages in this conversation
+        const unreadCount = userMessages.filter(msg => 
+          msg.senderId === partnerId && 
+          msg.receiverId === userId && 
+          msg.isRead === false
+        ).length;
+        
+        // Get the partner's user details
+        const partner = await storage.getUser(partnerId);
+        if (!partner) continue;
+        
+        const { password, ...partnerWithoutPassword } = partner;
+        
+        conversations.push({
+          id: `conv-${userId}-${partnerId}`,
+          participantId: partnerId,
+          participantName: partner.fullName || partner.username,
+          participantAvatar: partner.profileImage || "",
+          lastMessage: latestMessage.content,
+          timestamp: latestMessage.createdAt,
+          unreadCount: unreadCount,
+          participant: partnerWithoutPassword
+        });
+      }
+      
+      // Sort conversations by timestamp (most recent first)
+      conversations.sort((a, b) => {
+        const timeA = new Date(a.timestamp || 0).getTime();
+        const timeB = new Date(b.timestamp || 0).getTime();
+        return timeB - timeA;
+      });
+      
+      res.json(conversations);
+    } catch (error: any) {
+      console.error('Error fetching conversations:', error);
+      res.status(500).json({ message: 'Failed to fetch conversations' });
+    }
+  });
+
+  // Get messages between two users
+  app.get('/api/messages/:partnerId', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to access messages' });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const partnerId = parseInt(req.params.partnerId);
+      
+      if (isNaN(partnerId)) {
+        return res.status(400).json({ message: 'Invalid partner ID' });
+      }
+      
+      // Get messages between users
+      const messages = await storage.getMessages(userId, partnerId);
+      
+      // Mark received messages as read
+      if (messages.length > 0) {
+        // Get IDs of unread messages
+        const unreadMessageIds = messages
+          .filter(msg => msg.senderId === partnerId && msg.isRead === false)
+          .map(msg => msg.id);
+          
+        if (unreadMessageIds.length > 0) {
+          // Mark messages as read
+          for (const msgId of unreadMessageIds) {
+            await storage.markMessageAsRead(msgId);
+          }
+        }
+      }
+      
+      res.json(messages);
+    } catch (error: any) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ message: 'Failed to fetch messages' });
+    }
+  });
+
+  // Send a message
+  app.post('/api/messages', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to send messages' });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const { receiverId, content } = req.body;
+      
+      if (!receiverId || !content?.trim()) {
+        return res.status(400).json({ message: 'Receiver ID and content are required' });
+      }
+      
+      // Validate receiverId is a number
+      const receiverIdNum = parseInt(receiverId);
+      if (isNaN(receiverIdNum)) {
+        return res.status(400).json({ message: 'Invalid receiver ID' });
+      }
+      
+      // Validate receiver exists
+      const receiver = await storage.getUser(receiverIdNum);
+      if (!receiver) {
+        return res.status(404).json({ message: 'Receiver not found' });
+      }
+      
+      // Create the message
+      const message = await storage.createMessage({
+        receiverId: receiverIdNum,
+        content: content.trim()
+      }, userId);
+      
+      res.status(201).json(message);
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      res.status(500).json({ message: 'Failed to send message' });
+    }
+  });
+  
+  // Get user by ID
+  app.get('/api/users/:id', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ message: 'Failed to fetch user' });
+    }
+  });
+  
+  // Update Saudi freelancer profile images with Saudi profile images
   app.post('/api/update-saudi-profile-images', async (req, res) => {
     try {
       // Check if user is authenticated and is an admin
@@ -86,7 +266,7 @@ export function registerRoutes(app: Express): Server {
         count: updatedFreelancers.length,
         updatedFreelancers 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating Saudi profile images:', error);
       res.status(500).json({ message: 'Failed to update profile images', error: error.message });
     }
@@ -194,7 +374,7 @@ export function registerRoutes(app: Express): Server {
       }
       
       res.status(201).json({ message: 'Test accounts created successfully', results });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating test accounts:', error);
       res.status(500).json({ message: 'Failed to create test accounts', error: error.message });
     }
@@ -472,6 +652,78 @@ export function registerRoutes(app: Express): Server {
       res.json(updatedProposal);
     } catch (error) {
       res.status(500).json({ message: 'Failed to update proposal status' });
+    }
+  });
+
+  // Update a proposal (PUT /api/proposals/:id)
+  app.put('/api/proposals/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const proposalId = parseInt(req.params.id);
+      
+      // Get the proposal
+      const proposal = await storage.getProposalById(proposalId);
+      if (!proposal) {
+        return res.status(404).json({ message: 'Proposal not found' });
+      }
+      
+      // Check if the user is the owner of the proposal
+      if (proposal.freelancerId !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to update this proposal' });
+      }
+      
+      // Check if the proposal is not in 'pending' status
+      if (proposal.status !== 'pending') {
+        return res.status(400).json({ message: 'Can only edit pending proposals' });
+      }
+      
+      // Update the proposal
+      const updatedProposal = await storage.updateProposal(proposalId, req.body);
+      res.json(updatedProposal);
+    } catch (error: any) {
+      console.error('Error updating proposal:', error);
+      res.status(500).json({ message: 'Failed to update proposal' });
+    }
+  });
+
+  // Delete a proposal (DELETE /api/proposals/:id)
+  app.delete('/api/proposals/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const proposalId = parseInt(req.params.id);
+      
+      // Get the proposal
+      const proposal = await storage.getProposalById(proposalId);
+      if (!proposal) {
+        return res.status(404).json({ message: 'Proposal not found' });
+      }
+      
+      // Check if the user is the owner of the proposal
+      if (proposal.freelancerId !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to delete this proposal' });
+      }
+      
+      // Check if the proposal is not in 'pending' status
+      if (proposal.status !== 'pending') {
+        return res.status(400).json({ message: 'Can only delete pending proposals' });
+      }
+      
+      // Delete the proposal
+      const deleted = await storage.deleteProposal(proposalId);
+      if (deleted) {
+        res.status(204).end();
+      } else {
+        res.status(500).json({ message: 'Failed to delete proposal' });
+      }
+    } catch (error: any) {
+      console.error('Error deleting proposal:', error);
+      res.status(500).json({ message: 'Failed to delete proposal' });
     }
   });
 
@@ -803,12 +1055,177 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error('Error generating Zoom token:', error);
-      res.status(500).json({ message: 'Failed to generate Zoom token', error: error.message });
+      res.status(500).json({ message: 'Failed to generate Zoom token', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
   // Serve attached assets directly
   app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
+
+  // Admin routes
+  app.get('/api/users', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      // Get all users - we need to implement this method in the storage class
+      const allUsers = await storage.getAllUsers();
+      
+      // Set proper content type
+      res.setHeader('Content-Type', 'application/json');
+      res.json(allUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: 'Failed to fetch users', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin user creation endpoint
+  app.post('/api/users', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const { username, email, password, fullName, role } = req.body;
+      
+      // Validate required fields
+      if (!username || !email || !password || !fullName || !role) {
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+      
+      // Check if username or email already exists
+      const existingUserByUsername = await storage.getUserByUsername(username);
+      if (existingUserByUsername) {
+        return res.status(400).json({ message: 'Username already exists' });
+      }
+      
+      const existingUserByEmail = await storage.getUserByEmail(email);
+      if (existingUserByEmail) {
+        return res.status(400).json({ message: 'Email already exists' });
+      }
+      
+      // Hash the password
+      const hashedPassword = await hashPassword(password);
+      
+      // Create the user
+      const newUser = await storage.createUser({
+        username,
+        email,
+        fullName,
+        password: hashedPassword,
+        role,
+        confirmPassword: password, // This field is just for validation, not stored
+      });
+      
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = newUser;
+      
+      // Set proper content type and return the created user
+      res.setHeader('Content-Type', 'application/json');
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ message: 'Failed to create user', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin delete user endpoint
+  app.delete('/api/users/:id', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const userId = parseInt(req.params.id);
+      
+      // Check if the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Prevent deleting admin users
+      if (user.role === 'admin') {
+        return res.status(403).json({ message: 'Admin users cannot be deleted' });
+      }
+      
+      // Delete the user
+      const success = await storage.deleteUser(userId);
+      
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(500).json({ message: 'Failed to delete user' });
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: 'Failed to delete user', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin update user status endpoint (block/unblock)
+  app.patch('/api/users/:id/status', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const userId = parseInt(req.params.id);
+      const { blocked } = req.body;
+      
+      if (typeof blocked !== 'boolean') {
+        return res.status(400).json({ message: 'Blocked status must be a boolean' });
+      }
+      
+      // Check if the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Prevent blocking admin users
+      if (user.role === 'admin') {
+        return res.status(403).json({ message: 'Admin users cannot be blocked' });
+      }
+      
+      // Update the user's blocked status
+      const updatedUser = await storage.updateUser(userId, { isBlocked: blocked });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: 'Failed to update user status' });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      res.status(500).json({ message: 'Failed to update user status', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
 
   // Verification Routes
   // Submit a verification request (for freelancers)
@@ -890,23 +1307,34 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }
       console.error('Error creating verification request:', error);
-      res.status(500).json({ message: 'Failed to create verification request', error: error.message });
+      res.status(500).json({ message: 'Failed to create verification request', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
-  // Get verification requests (for admin)
+  // Admin - Get all verification requests
   app.get('/api/verification-requests', async (req, res) => {
     try {
+      // Check if user is authenticated and is an admin
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      // Only admins can view all verification requests
       if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Only admins can view all verification requests' });
+        return res.status(403).json({ message: 'Admin access required' });
       }
 
-      const status = req.query.status as string | undefined;
+      const rawStatus = req.query.status as string | undefined;
+      // Validate and convert the status to the expected type
+      let status: "pending" | "approved" | "rejected" | undefined = undefined;
+      
+      if (rawStatus) {
+        if (["pending", "approved", "rejected"].includes(rawStatus)) {
+          status = rawStatus as "pending" | "approved" | "rejected";
+        } else {
+          return res.status(400).json({ message: 'Invalid status parameter' });
+        }
+      }
+      
       const requests = await storage.getVerificationRequests(status);
       
       // Enrich requests with user information
@@ -927,7 +1355,7 @@ export function registerRoutes(app: Express): Server {
       res.json(enrichedRequests);
     } catch (error) {
       console.error('Error fetching verification requests:', error);
-      res.status(500).json({ message: 'Failed to fetch verification requests', error: error.message });
+      res.status(500).json({ message: 'Failed to fetch verification requests', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -942,7 +1370,7 @@ export function registerRoutes(app: Express): Server {
       res.json(requests);
     } catch (error) {
       console.error('Error fetching user verification requests:', error);
-      res.status(500).json({ message: 'Failed to fetch verification requests', error: error.message });
+      res.status(500).json({ message: 'Failed to fetch verification requests', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -983,7 +1411,7 @@ export function registerRoutes(app: Express): Server {
       res.json(request);
     } catch (error) {
       console.error('Error fetching verification request:', error);
-      res.status(500).json({ message: 'Failed to fetch verification request', error: error.message });
+      res.status(500).json({ message: 'Failed to fetch verification request', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -1054,7 +1482,7 @@ export function registerRoutes(app: Express): Server {
       res.json(updatedRequest);
     } catch (error) {
       console.error('Error updating verification request:', error);
-      res.status(500).json({ message: 'Failed to update verification request', error: error.message });
+      res.status(500).json({ message: 'Failed to update verification request', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -1124,7 +1552,7 @@ export function registerRoutes(app: Express): Server {
       res.json({ token, meetingId });
     } catch (error: any) {
       console.error('Error generating video token:', error);
-      res.status(500).json({ message: 'Failed to generate video token', error: error.message });
+      res.status(500).json({ message: 'Failed to generate video token', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
   
@@ -1184,7 +1612,7 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error: any) {
       console.error('Error creating Zoom meeting:', error);
-      res.status(500).json({ message: 'Failed to create meeting', error: error.message });
+      res.status(500).json({ message: 'Failed to create meeting', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -1200,6 +1628,337 @@ export function registerRoutes(app: Express): Server {
       }
     });
   }, 60 * 60 * 1000);
+
+  // Add endpoint to get current user's proposals
+  app.get('/api/proposals/my', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Only freelancers can have proposals
+      if (req.user.role !== 'freelancer') {
+        return res.status(403).json({ message: 'Only freelancers can view their proposals' });
+      }
+      
+      const proposals = await storage.getProposalsByFreelancer(req.user.id);
+      res.json(proposals);
+    } catch (error: any) {
+      console.error('Error fetching user proposals:', error);
+      res.status(500).json({ message: 'Failed to fetch proposals' });
+    }
+  });
+
+  // Get all payments (admin only)
+  app.get('/api/payments', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      // Get all payments with user information joined
+      const payments = await storage.getAllPayments();
+      
+      // Return the payments
+      return res.json(payments);
+    } catch (error) {
+      console.error('Error getting payments:', error);
+      return res.status(500).json({ message: 'Failed to get payments' });
+    }
+  });
+
+  // Create a new payment (admin only)
+  app.post('/api/payments', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const { userId, amount, type, projectId, status, description } = req.body;
+      
+      // Validate required fields
+      if (!userId || !amount || !type || !status) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+      
+      // Validate amount is positive
+      if (amount <= 0) {
+        return res.status(400).json({ message: 'Amount must be positive' });
+      }
+      
+      // Validate user exists
+      const userExists = await storage.getUser(parseInt(userId));
+      if (!userExists) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // If project payment, validate project exists
+      if (type === 'project_payment' && projectId) {
+        const projectExists = await storage.getProject(parseInt(projectId));
+        if (!projectExists) {
+          return res.status(404).json({ message: 'Project not found' });
+        }
+      }
+      
+      // Create the payment
+      const payment = await storage.createPayment({
+        userId: parseInt(userId),
+        amount,
+        type,
+        projectId: projectId ? parseInt(projectId) : undefined,
+        status,
+        description,
+      });
+      
+      // If payment is completed, create a transaction record for platform fee
+      if (status === 'completed' && payment) {
+        const platformFee = amount * 0.05; // 5% platform fee
+        
+        await storage.createTransaction({
+          paymentId: payment.id,
+          userId: parseInt(userId),
+          amount: platformFee,
+          type: 'fee',
+          status: 'completed',
+          description: `Platform fee for payment #${payment.id}`,
+        });
+      }
+      
+      return res.status(201).json(payment);
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      return res.status(500).json({ message: 'Failed to create payment' });
+    }
+  });
+
+  // Delete a payment (admin only)
+  app.delete('/api/payments/:id', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const paymentId = parseInt(req.params.id);
+      
+      // Check if payment exists
+      const payment = await storage.getPayment(paymentId);
+      if (!payment) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
+      
+      // Delete associated transactions first
+      await storage.deleteTransactionsByPaymentId(paymentId);
+      
+      // Delete the payment
+      const success = await storage.deletePayment(paymentId);
+      
+      if (success) {
+        return res.status(200).json({ message: 'Payment deleted successfully' });
+      } else {
+        return res.status(500).json({ message: 'Failed to delete payment' });
+      }
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      return res.status(500).json({ message: 'Failed to delete payment' });
+    }
+  });
+
+  // Get all transactions (admin only)
+  app.get('/api/transactions', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      // Get all transactions with user information joined
+      const transactions = await storage.getAllTransactions();
+      
+      // Return the transactions
+      return res.json(transactions);
+    } catch (error) {
+      console.error('Error getting transactions:', error);
+      return res.status(500).json({ message: 'Failed to get transactions' });
+    }
+  });
+
+  app.patch('/api/projects/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can edit projects' });
+      }
+
+      const projectId = parseInt(req.params.id);
+      const { title, description, budget, category } = req.body;
+      
+      // Get the project to make sure it exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Update project
+      const updatedProject = await storage.updateProject(projectId, {
+        title,
+        description,
+        budget,
+        category
+      });
+      
+      res.json(updatedProject);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update project' });
+    }
+  });
+
+  // Add file upload endpoints
+  // Get project files
+  app.get('/api/projects/:id/files', async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const files = await storage.getFilesByProject(projectId);
+      res.json(files);
+    } catch (error: any) {
+      console.error('Error fetching project files:', error);
+      res.status(500).json({ message: 'Failed to fetch project files' });
+    }
+  });
+
+  // Upload project files
+  app.post('/api/projects/:id/files', upload.array('files'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const projectId = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      // Check if project exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      // Check if user is project owner or admin
+      if (project.clientId !== userId && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'You do not have permission to upload files to this project' });
+      }
+
+      const uploadedFiles = req.files as Express.Multer.File[];
+      if (!uploadedFiles || uploadedFiles.length === 0) {
+        return res.status(400).json({ message: 'No files uploaded' });
+      }
+
+      const savedFiles = [];
+      for (const file of uploadedFiles) {
+        const fileData = {
+          userId,
+          projectId,
+          filename: file.filename,
+          originalName: file.originalname,
+          mimeType: file.mimetype,
+          size: file.size
+        };
+
+        const savedFile = await storage.uploadFile(fileData);
+        savedFiles.push(savedFile);
+      }
+
+      res.status(201).json(savedFiles);
+    } catch (error: any) {
+      console.error('Error uploading project files:', error);
+      res.status(500).json({ message: 'Failed to upload files', error: error.message });
+    }
+  });
+
+  // Get file for download
+  app.get('/api/files/:id/download', async (req, res) => {
+    try {
+      const fileId = parseInt(req.params.id);
+      const files = Array.from(storage.files.values());
+      const file = files.find(f => f.id === fileId);
+      
+      if (!file) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+      
+      const filePath = path.join(process.cwd(), 'uploads', file.filename);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: 'File not found on server' });
+      }
+      
+      res.download(filePath, file.originalName);
+    } catch (error: any) {
+      console.error('Error downloading file:', error);
+      res.status(500).json({ message: 'Failed to download file' });
+    }
+  });
+
+  // Delete file
+  app.delete('/api/files/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const fileId = parseInt(req.params.id);
+      const files = Array.from(storage.files.values());
+      const file = files.find(f => f.id === fileId);
+      
+      if (!file) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+      
+      // Check if user is file owner or admin
+      if (file.userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'You do not have permission to delete this file' });
+      }
+      
+      // Get the project to check permissions
+      if (file.projectId) {
+        const project = await storage.getProjectById(file.projectId);
+        // Only allow project owner or admin to delete project files
+        if (project && project.clientId !== req.user.id && req.user.role !== 'admin') {
+          return res.status(403).json({ message: 'You do not have permission to delete this file' });
+        }
+      }
+      
+      // Delete the file from storage
+      const filePath = path.join(process.cwd(), 'uploads', file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      // Remove from database
+      storage.files.delete(fileId);
+      
+      res.json({ message: 'File deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting file:', error);
+      res.status(500).json({ message: 'Failed to delete file' });
+    }
+  });
 
   return httpServer;
 }

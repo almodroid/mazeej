@@ -58,7 +58,7 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
       <div className="mt-4 pt-4 border-t border-neutral-200">
         {user?.role === 'freelancer' ? (
           <Button className="w-full bg-primary hover:bg-primary-dark" asChild>
-            <Link href={`/projects/${project.id}/proposal`}>
+            <Link href={`/projects/${project.id}/proposals/new`}>
               <a>{t('projects.submitProposal')}</a>
             </Link>
           </Button>
