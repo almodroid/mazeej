@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { format } from "date-fns";
-import { ArrowLeft, User, Clock, Calendar, DollarSign, Edit, Trash, Loader2, Paperclip, Download, X, Upload, File as FileIcon, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, Clock, DollarSign, Edit, Trash, Loader2, Paperclip, Download, X, Upload, File as FileIcon, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -42,6 +42,18 @@ import {
 import { Project, Proposal } from "@shared/schema";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
+// Import our new components
+import {
+  ProjectHeader,
+  ProjectDetails,
+  ProjectFiles,
+  ProposalTabs,
+  ProposalCard,
+  SafeProposal,
+  ProjectFile,
+} from "@/components/projects";
 
 interface ApiProjectResponse {
   id: number;
@@ -66,63 +78,14 @@ interface ApiProposalResponse {
   status: 'pending' | 'accepted' | 'rejected' | null;
 }
 
-interface SafeProposal extends Omit<Proposal, 'createdAt' | 'status'> {
-  createdAt: Date;
-  status: 'pending' | 'accepted' | 'rejected';
-  description: string;
-  price: number;
-  deliveryTime: number;
-}
-
-// Map status to badge color
-const getStatusBadge = (status: string | null) => {
-  switch (status ?? 'draft') {
-    case 'open':
-      return <Badge className="bg-green-500">{status}</Badge>;
-    case 'in_progress':
-      return <Badge className="bg-blue-500">{status}</Badge>;
-    case 'completed':
-      return <Badge className="bg-purple-500">{status}</Badge>;
-    case 'cancelled':
-      return <Badge className="bg-red-500">{status}</Badge>;
-    default:
-      return <Badge>{status ?? 'draft'}</Badge>;
-  }
-};
-
-// Map proposal status to badge color
-const getProposalStatusBadge = (status: string) => {
-  switch (status) {
-    case 'pending':
-      return <Badge variant="outline">{status}</Badge>;
-    case 'accepted':
-      return <Badge className="bg-green-500">{status}</Badge>;
-    case 'rejected':
-      return <Badge className="bg-red-500">{status}</Badge>;
-    default:
-      return <Badge>{status}</Badge>;
-  }
-};
-
 // Type guard functions
 function isValidStatus(status: string | null): status is 'pending' | 'accepted' | 'rejected' {
   return status === 'pending' || status === 'accepted' || status === 'rejected';
 }
 
-// Add interface for File type
-interface ProjectFile {
-  id: number;
-  projectId: number;
-  userId: number;
-  filename: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  uploadedAt: Date;
-}
-
 export default function ProjectDetailsPage() {
   const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
   const { user } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -434,8 +397,8 @@ export default function ProjectDetailsPage() {
   // Update user permissions
   const isClient = user?.role === 'client';
   const isFreelancer = user?.role === 'freelancer';
-  const isAdmin = user?.role === 'admin';
-  const isProjectOwner = project && user?.id === project.clientId;
+  const isAdmin = user?.role === 'admin' || false;
+  const isProjectOwner = project ? user?.id === project.clientId : false;
   // Allow only freelancers who haven't already submitted a proposal
   const canSubmitProposal = isFreelancer && project?.status === 'open' && !hasSubmittedProposal;
   // Show proposals to everyone - clients need to see them to approve
@@ -608,11 +571,11 @@ export default function ProjectDetailsPage() {
   };
 
   // Handle file upload
-  const handleFileUpload = () => {
-    if (filesToUpload.length === 0) return;
+  const handleFileUpload = (files: File[]) => {
+    if (files.length === 0) return;
     
     setIsUploadingFile(true);
-    uploadFileMutation.mutate(filesToUpload);
+    uploadFileMutation.mutate(files);
   };
 
   // Handle file delete
@@ -658,6 +621,31 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  // Edit project
+  const handleEditProject = () => {
+    if (!project) return;
+    
+    setProjectEditData({
+      title: project.title,
+      description: project.description,
+      budget: project.budget,
+      category: project.category,
+      deadline: project.deadline
+    });
+    setShowProjectEditForm(true);
+  };
+
+  // Delete project
+  const handleDeleteProject = () => {
+    setShowProjectDeleteDialog(true);
+  };
+
+  // Navigate to submit proposal
+  const navigateToSubmitProposal = () => {
+    if (!projectId) return;
+    navigate(`/projects/${projectId}/proposals/new`);
+  };
+
   if (isLoadingProject || isLoadingProposals || isLoadingFiles) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -697,44 +685,6 @@ export default function ProjectDetailsPage() {
   const projectDeadline = project?.deadline ? new Date(project.deadline) : new Date();
   const projectCategory = project?.category || "Uncategorized";
 
-  // Transform proposals to safe proposals before rendering
-  const renderProposalCard = (proposal: Proposal) => {
-    const safeProposal: SafeProposal = {
-      ...proposal,
-      createdAt: proposal.createdAt ? new Date(proposal.createdAt) : new Date(),
-      status: proposal.status ?? 'pending',
-      description: proposal.description || '',
-      price: proposal.price,
-      deliveryTime: proposal.deliveryTime
-    };
-
-    // Determine if current user is the proposal owner
-    const isProposalOwner = user?.id === proposal.freelancerId;
-
-    return (
-      <ProposalCard 
-        key={proposal.id} 
-        proposal={safeProposal} 
-        projectStatus={project?.status ?? 'draft'}
-        onAccept={handleAcceptProposal}
-        onReject={handleRejectProposal}
-        onNavigateToChat={navigateToChat}
-        onEdit={isProposalOwner && proposal.status === 'pending' ? () => handleEditProposal(proposal) : undefined}
-        onDelete={isProposalOwner && proposal.status === 'pending' ? () => handleDeleteProposal(proposal) : undefined}
-        showActions={(isProjectOwner || isAdmin) && proposal.status === 'pending'}
-      />
-    );
-  };
-
-  // Check if the project has any proposals
-  const hasProposals = proposals && proposals.length > 0;
-  
-  // Check if the client can edit/delete the project (owner + no proposals)
-  const canEditProject = isProjectOwner && !hasProposals;
-
-  // Check if the user can upload files (project owner or admin)
-  const canUploadFiles = isProjectOwner || isAdmin;
-
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -742,312 +692,69 @@ export default function ProjectDetailsPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex items-center mb-6">
             <Button variant="ghost" className="p-2 mr-2" onClick={() => navigate("/projects")}>
-              <ArrowLeft className="h-5 w-5" />
+              {isRTL ? (
+                <ArrowRight className="h-5 w-5" />
+              ) : (
+                <ArrowLeft className="h-5 w-5" />
+              )}
             </Button>
             <h1 className="text-2xl font-bold">{t("projects.details")}</h1>
           </div>
           
+          {/* Project Header */}
+          <ProjectHeader
+            project={project}
+            hasSubmittedProposal={hasSubmittedProposal}
+            canSubmitProposal={canSubmitProposal}
+            canEditProject={isProjectOwner && !proposals.length}
+            isFreelancer={isFreelancer}
+            onNavigateToSubmitProposal={navigateToSubmitProposal}
+            onEditProposal={() => {
+              const userProposal = proposals.find((p: Proposal) => p.freelancerId === user?.id);
+              if (userProposal) handleEditProposal(userProposal);
+            }}
+            onDeleteProposal={() => {
+              const userProposal = proposals.find((p: Proposal) => p.freelancerId === user?.id);
+              if (userProposal) handleDeleteProposal(userProposal);
+            }}
+            onEditProject={handleEditProject}
+            onDeleteProject={handleDeleteProject}
+          />
+          
           <Card className="mb-8">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-2xl">{project.title}</CardTitle>
-                  <CardDescription className="mt-2">
-                    {getStatusBadge(project.status)} 
-                    <span className="mx-2">•</span>
-                    {t("projects.postedOn")} {formattedCreatedAt}
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  {canSubmitProposal ? (
-                    <Button onClick={() => navigate(`/projects/${project.id}/proposals/new`)}>
-                      {t("proposals.submitProposal")}
-                    </Button>
-                  ) : isFreelancer && hasSubmittedProposal && (
-                    <>
-                      <div className="mr-2 flex items-center text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-md">
-                        <span className="mr-2">{t("proposals.alreadySubmitted")}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => {
-                            const userProposal = proposals.find((p: Proposal) => p.freelancerId === user?.id);
-                            if (userProposal) handleEditProposal(userProposal);
-                          }}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          {t("proposals.edit")}
-                    </Button>
-                        <Button 
-                          variant="outline" 
-                          className="text-red-500" 
-                          onClick={() => {
-                            const userProposal = proposals.find((p: Proposal) => p.freelancerId === user?.id);
-                            if (userProposal) handleDeleteProposal(userProposal);
-                          }}
-                        >
-                          <Trash className="h-4 w-4 mr-2" />
-                          {t("proposals.delete")}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                  
-                  {/* Add Edit/Delete buttons for project owner if no proposals */}
-                  {canEditProject && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        title={t("common.edit")}
-                        onClick={() => {
-                          setProjectEditData({
-                            title: project.title,
-                            description: project.description,
-                            budget: project.budget,
-                            category: project.category,
-                            deadline: project.deadline
-                          });
-                          setShowProjectEditForm(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="text-red-500"
-                        title={t("common.delete")}
-                        onClick={() => setShowProjectDeleteDialog(true)}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div className="flex items-center">
-                  <DollarSign className="h-5 w-5 text-muted-foreground mr-2 rtl:mr-0 rtl:ml-2" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">{t("projects.budget")}</p>
-                    <p className="font-medium">${project.budget}</p>
-                  </div>
-                </div>
-                {project.deadline && (
-                  <div className="flex items-center">
-                    <Calendar className="h-5 w-5 text-muted-foreground mr-2 rtl:mr-0 rtl:ml-2" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("projects.deadline")}</p>
-                      <p className="font-medium">
-                        {formattedDeadline}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center">
-                  <User className="h-5 w-5 text-muted-foreground mr-2 rtl:mr-0 rtl:ml-2" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">{t("projects.client")}</p>
-                    <p className="font-medium">
-                      {isProjectOwner ? t("common.you") : `Client #${project.clientId}`}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">{t("projects.description")}</h3>
-                <p className="whitespace-pre-wrap">{project.description}</p>
-              </div>
-              
-              {/* Add attachments section */}
-              <div className="mt-8 border-t pt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">
-                    <div className="flex items-center">
-                      <Paperclip className="h-5 w-5 mr-2" />
-                      {t("projects.attachments", { defaultValue: "Attachments" })}
-                    </div>
-                  </h3>
-                  {canUploadFiles && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowFileUploadDialog(true)}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {t("projects.uploadFiles", { defaultValue: "Upload Files" })}
-                    </Button>
-                  )}
-                </div>
-                
-                {isLoadingFiles ? (
-                  <div className="text-center py-6">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      {t("common.loading", { defaultValue: "Loading..." })}
-                    </p>
-                  </div>
-                ) : projectFiles.length === 0 ? (
-                  <div className="text-center py-6 border rounded-md bg-muted/10">
-                    <Paperclip className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      {t("projects.noAttachments", { defaultValue: "No attachments available" })}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {projectFiles.map((file) => (
-                      <div 
-                        key={file.id} 
-                        className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/5"
-                      >
-                        <div className="flex items-center">
-                          <FileIcon className="h-5 w-5 text-primary mr-3" />
-                          <div>
-                            <p className="font-medium text-sm">{file.originalName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatFileSize(file.size)} • {file.mimeType} • {format(new Date(file.uploadedAt), "MMM d, yyyy")}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => downloadFile(file)}
-                            title={t("common.download", { defaultValue: "Download" })}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          {canUploadFiles && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive"
-                              onClick={() => handleFileDelete(file.id)}
-                              title={t("common.delete", { defaultValue: "Delete" })}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
+            {/* Project Details */}
+            <ProjectDetails
+              project={project}
+              isProjectOwner={isProjectOwner}
+            />
+            
+            {/* Project Files */}
+            <ProjectFiles
+              files={files}
+              canUploadFiles={isProjectOwner || isAdmin}
+              isLoadingFiles={isLoadingFiles}
+              onUploadFiles={handleFileUpload}
+              onDownloadFile={downloadFile}
+              onDeleteFile={handleFileDelete}
+              isUploadingFile={isUploadingFile}
+            />
           </Card>
           
-          {/* Proposals Section (Show proposals based on user permissions) */}
+          {/* Proposals Tabs */}
           {canViewProposals && (
-            <Tabs defaultValue="all" className="mb-8">
-              <TabsList className="mb-4">
-                <TabsTrigger value="all">{t("proposals.all")}</TabsTrigger>
-                {isProjectOwner && (
-                  <>
-                <TabsTrigger value="pending">{t("proposals.pending")}</TabsTrigger>
-                <TabsTrigger value="accepted">{t("proposals.accepted")}</TabsTrigger>
-                <TabsTrigger value="rejected">{t("proposals.rejected")}</TabsTrigger>
-                  </>
-                )}
-              </TabsList>
-              
-              <TabsContent value="all">
-                {isLoadingProposals ? (
-                  <div className="text-center py-10">
-                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="mt-4">{t("common.loading")}</p>
-                  </div>
-                ) : proposals.length === 0 ? (
-                  <Card>
-                    <CardContent className="text-center py-10">
-                      <p>{t("proposals.noProposals")}</p>
-                      <p className="mt-4 text-sm text-muted-foreground">
-                        {isFreelancer ? 
-                          "As a freelancer, you can only see your own proposals for this project. Submit a proposal to see it here." : 
-                          "No proposals have been submitted for this project yet."}
-                      </p>
-                      
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Show freelancer info message if applicable */}
-                    {isFreelancer && !isProjectOwner && !isAdmin && proposals.length > 0 && (
-                      <div className="bg-blue-50 p-4 rounded-md text-blue-700 mb-4">
-                        <p className="font-medium">{t("proposals.freelancerVisibilityInfo", { defaultValue: "As a freelancer, you can only see your own proposals for this project." })}</p>
-                        <p className="text-sm mt-1">{t("proposals.freelancerProposalAcceptanceInfo", { defaultValue: "You can view other proposals once the client accepts your proposal." })}</p>
-                      </div>
-                    )}
-                    {/* Show all proposals to everyone */}
-                    {proposals.map(renderProposalCard)}
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="pending">
-                {isLoadingProposals ? (
-                  <div className="text-center py-10">
-                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="mt-4">{t("common.loading")}</p>
-                  </div>
-                ) : proposals.filter((p: Proposal) => p.status === 'pending').length === 0 ? (
-                  <Card>
-                    <CardContent className="text-center py-10">
-                      <p>{t("proposals.noPendingProposals")}</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {proposals.filter((p: Proposal) => p.status === 'pending').map(renderProposalCard)}
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="accepted">
-                {isLoadingProposals ? (
-                  <div className="text-center py-10">
-                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="mt-4">{t("common.loading")}</p>
-                  </div>
-                ) : proposals.filter((p: Proposal) => p.status === 'accepted').length === 0 ? (
-                  <Card>
-                    <CardContent className="text-center py-10">
-                      <p>{t("proposals.noAcceptedProposals")}</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {proposals.filter((p: Proposal) => p.status === 'accepted').map(renderProposalCard)}
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="rejected">
-                {isLoadingProposals ? (
-                  <div className="text-center py-10">
-                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="mt-4">{t("common.loading")}</p>
-                  </div>
-                ) : proposals.filter((p: Proposal) => p.status === 'rejected').length === 0 ? (
-                  <Card>
-                    <CardContent className="text-center py-10">
-                      <p>{t("proposals.noRejectedProposals")}</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {proposals.filter((p: Proposal) => p.status === 'rejected').map(renderProposalCard)}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+            <ProposalTabs
+              proposals={proposals}
+              isLoadingProposals={isLoadingProposals}
+              projectStatus={project.status}
+              isProjectOwner={isProjectOwner}
+              isFreelancer={isFreelancer}
+              isAdmin={isAdmin}
+              onAcceptProposal={handleAcceptProposal}
+              onRejectProposal={handleRejectProposal}
+              onNavigateToChat={navigateToChat}
+              onEditProposal={handleEditProposal}
+              onDeleteProposal={handleDeleteProposal}
+            />
           )}
         </div>
       </main>
@@ -1246,207 +953,6 @@ export default function ProjectDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Add file upload dialog */}
-      <Dialog open={showFileUploadDialog} onOpenChange={setShowFileUploadDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{t("projects.uploadFiles", { defaultValue: "Upload Files" })}</DialogTitle>
-            <DialogDescription>
-              {t("projects.uploadFilesDescription", { defaultValue: "Add files to your project. Max file size: 5MB." })}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div 
-              className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                multiple
-                onChange={handleFileChange}
-              />
-              <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm font-medium">
-                {t("projects.dragAndDrop", { defaultValue: "Drag and drop files, or click to select" })}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("projects.supportedFormats", { defaultValue: "PDF, Word, Excel, Images, etc." })}
-              </p>
-            </div>
-            
-            {filesToUpload.length > 0 && (
-              <div className="space-y-2 mt-4">
-                <p className="text-sm font-medium">
-                  {t("projects.selectedFiles", { defaultValue: "Selected Files" })} ({filesToUpload.length})
-                </p>
-                <div className="max-h-40 overflow-y-auto space-y-2">
-                  {filesToUpload.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded-md">
-                      <div className="flex items-center overflow-hidden">
-                        <FileIcon className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
-                        <p className="text-sm truncate">{file.name}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFilesToUpload(prev => prev.filter((_, i) => i !== index));
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowFileUploadDialog(false)}>
-              {t("common.cancel", { defaultValue: "Cancel" })}
-            </Button>
-            <Button 
-              onClick={handleFileUpload}
-              disabled={filesToUpload.length === 0 || isUploadingFile}
-            >
-              {isUploadingFile ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("common.uploading", { defaultValue: "Uploading..." })}</>
-              ) : (
-                t("common.upload", { defaultValue: "Upload" })
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
-  );
-}
-
-// Update ProposalCard component props interface
-interface ProposalCardProps {
-  proposal: SafeProposal;
-  projectStatus: string;
-  onAccept: (proposal: SafeProposal) => void;
-  onReject: (proposal: SafeProposal) => void;
-  onNavigateToChat: (freelancerId: number) => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  showActions: boolean;
-}
-
-// Proposal Card Component with strict typing
-function ProposalCard({ 
-  proposal, 
-  projectStatus,
-  onAccept,
-  onReject,
-  onNavigateToChat,
-  onEdit,
-  onDelete,
-  showActions
-}: ProposalCardProps) {
-  const { t } = useTranslation();
-  const { user } = useAuth();
-  
-  const canTakeAction = projectStatus === 'open' && proposal.status === 'pending';
-  const formattedDate = format(proposal.createdAt, "PPpp");
-  const isProposalOwner = user?.id === proposal.freelancerId;
-  const isClient = user?.role === 'client';
-  const isAdmin = user?.role === 'admin';
-
-  return (
-    <Card className={isProposalOwner ? "border-2 border-primary" : ""}>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div className="flex items-center">
-            <Avatar className="h-10 w-10 mr-4 rtl:mr-0 rtl:ml-4">
-              <AvatarFallback>
-                {proposal.freelancerId.toString().substring(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="font-semibold">
-                {isProposalOwner ? (
-                  <span className="text-primary">{t("proposals.yourProposal")}</span>
-                ) : (
-                  `${t("proposals.freelancer")} #${proposal.freelancerId}`
-                )}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {formattedDate}
-              </div>
-            </div>
-          </div>
-          {getProposalStatusBadge(proposal.status)}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="mb-4 whitespace-pre-wrap">{proposal.description}</p>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-sm text-muted-foreground">{t("proposals.proposedPrice")}</div>
-            <div className="font-medium">${proposal.price}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">{t("proposals.deliveryTime")}</div>
-            <div className="font-medium">
-              {proposal.deliveryTime} {t("proposals.days")}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-        <CardFooter className="flex justify-end space-x-2 rtl:space-x-reverse">
-        {/* Show edit/delete buttons to proposal owner if proposal is pending */}
-        {isProposalOwner && proposal.status === 'pending' && (
-          <>
-          {onEdit && (
-            <Button variant="outline" onClick={onEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-              {t("proposals.edit")}
-            </Button>
-          )}
-          {onDelete && (
-              <Button variant="outline" className="text-red-500" onClick={onDelete}>
-                <Trash className="h-4 w-4 mr-2" />
-              {t("proposals.delete")}
-            </Button>
-          )}
-          </>
-        )}
-        
-        {/* Show accept/reject buttons to client/admin if proposal is pending */}
-        {showActions && proposal.status === 'pending' && (
-          <>
-          <Button variant="outline" onClick={() => onReject(proposal)}>
-            {t("proposals.reject")}
-          </Button>
-          <Button onClick={() => onAccept(proposal)}>
-            {t("proposals.accept")}
-          </Button>
-          {(isClient || isAdmin) && !isProposalOwner && (
-            <Button variant="outline" onClick={() => onNavigateToChat(proposal.freelancerId)}>
-              <MessageSquare className="h-4 w-4 mr-2" />
-              {t("proposals.contactFreelancer")}
-            </Button>
-          )}
-          </>
-        )}
-        
-        {/* Show contact button for accepted proposals */}
-        {proposal.status === 'accepted' && (
-          <Button onClick={() => onNavigateToChat(proposal.freelancerId)}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {t("proposals.contactFreelancer")}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
   );
 }

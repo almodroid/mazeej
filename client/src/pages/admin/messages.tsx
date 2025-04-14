@@ -84,7 +84,7 @@ interface Conversation {
   participants: User[];
   lastMessage?: {
     content: string;
-    timestamp: Date;
+    timestamp: string; // Changed from Date to string
   };
   unreadCount: number;
   isFlagged: boolean;
@@ -212,8 +212,17 @@ export default function AdminMessagesPage() {
   });
   
   // Format date helper
-  const formatDate = (date: Date) => {
-    return format(new Date(date), "PPpp", { locale });
+  const formatDate = (date: string | Date) => {
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid date';
+      }
+      return format(dateObj, "PPpp", { locale });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   // Handle message flag toggle
@@ -326,7 +335,7 @@ export default function AdminMessagesPage() {
                             </h4>
                             {conversation.lastMessage && (
                               <span className="text-xs text-muted-foreground">
-                                {format(new Date(conversation.lastMessage.timestamp), "p", { locale })}
+                                {formatDate(conversation.lastMessage.timestamp)}
                               </span>
                             )}
                           </div>
@@ -434,19 +443,22 @@ export default function AdminMessagesPage() {
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="mt-1 rounded-md bg-muted p-3">
-                                  {message.content}
+                                <div className={cn(
+                                  "mt-1 rounded-md p-3",
+                                  message.isFlagged ? "bg-red-50 dark:bg-red-950" : "bg-muted"
+                                )}>
+                                  <p className="text-sm" dir="auto">{message.content}</p>
+                                  {message.supervisorNotes && (
+                                    <div className="mt-2 rounded-md bg-yellow-50 dark:bg-yellow-950 p-3 border-l-2 border-yellow-500">
+                                      <div className="font-medium text-xs text-yellow-700 dark:text-yellow-300">
+                                        {t("admin.messages.supervisorNotes")}:
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {message.supervisorNotes}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                {message.supervisorNotes && (
-                                  <div className="mt-2 rounded-md bg-yellow-50 dark:bg-yellow-950 p-3 border-l-2 border-yellow-500">
-                                    <div className="font-medium text-xs text-yellow-700 dark:text-yellow-300">
-                                      {t("admin.messages.supervisorNotes")}:
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">
-                                      {message.supervisorNotes}
-                                    </div>
-                                  </div>
-                                )}
                               </div>
                             </div>
                             <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">

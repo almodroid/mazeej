@@ -160,54 +160,7 @@ export default function LoginForm() {
           )}
         </Button>
         
-        <div className="relative mt-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="px-2 bg-background text-muted-foreground">
-              {t("auth.orContinueWith")}
-            </span>
-          </div>
-        </div>
         
-        <div className="mt-6 grid grid-cols-3 gap-3">
-          <Button 
-            variant="outline" 
-            type="button" 
-            className="w-full hover-lift"
-            size="sm"
-          >
-            <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12.0003 2C6.47731 2 2.00031 6.477 2.00031 12C2.00031 16.991 5.65731 21.128 10.4383 21.879V14.89H7.89831V12H10.4383V9.797C10.4383 7.291 11.9313 5.907 14.2153 5.907C15.3093 5.907 16.4543 6.102 16.4543 6.102V8.562H15.1913C13.9513 8.562 13.5623 9.333 13.5623 10.124V12H16.3363L15.8923 14.89H13.5623V21.879C18.3433 21.129 22.0003 16.99 22.0003 12C22.0003 6.477 17.5233 2 12.0003 2Z" />
-            </svg>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            type="button" 
-            className="w-full hover-lift"
-            size="sm"
-          >
-            <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            type="button" 
-            className="w-full hover-lift"
-            size="sm"
-          >
-            <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M11.9999 2C17.5229 2 21.9999 6.477 21.9999 12c0 5.523-4.477 10-10.0001 10-5.5229 0-9.99995-4.477-9.99995-10C1.99995 6.477 6.47695 2 11.9999 2zm-.8437 6.8347c-2.27454 0-4.1251 1.8507-4.1251 4.1253 0 2.2747 1.85056 4.1252 4.1251 4.1252 2.2746 0 4.1252-1.8505 4.1252-4.1252 0-2.2746-1.8506-4.1253-4.1252-4.1253zm0 1.4996c1.4439 0 2.6256 1.1816 2.6256 2.6257 0 1.444-1.1817 2.6256-2.6256 2.6256-1.444 0-2.6257-1.1816-2.6257-2.6256 0-1.4441 1.1817-2.6257 2.6257-2.6257z"/>
-            </svg>
-          </Button>
-        </div>
       </form>
     </Form>
   );

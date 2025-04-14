@@ -20,7 +20,7 @@ export default function DashboardFooter() {
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className={cn(
           "flex flex-col sm:flex-row justify-between items-center gap-2",
-          isRTL && "sm:flex-row-reverse"
+          isRTL && "sm:flex-row"
         )}>
           <p className="text-sm text-muted-foreground">
             &copy; {currentYear} {t("common.appName")}
@@ -29,7 +29,7 @@ export default function DashboardFooter() {
           <nav aria-label="Footer Navigation">
             <ul className={cn(
               "flex flex-wrap items-center gap-x-4 gap-y-1 text-sm",
-              isRTL && "flex-row-reverse"
+              isRTL && "flex-row"
             )}>
               {footerLinks.map((link) => (
                 <li key={link.key}>

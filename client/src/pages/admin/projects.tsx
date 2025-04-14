@@ -396,7 +396,7 @@ export default function AdminProjectsPage() {
                                   <DropdownMenuSeparator />
                                   
                                   <DropdownMenuItem 
-                                    className={cn(isRTL && "flex-row-reverse")}
+                                    className={cn(isRTL && "flex-row")}
                                     onClick={() => handleEditProject(project)}
                                   >
                                     <Edit className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
@@ -404,7 +404,7 @@ export default function AdminProjectsPage() {
                                   </DropdownMenuItem>
                                   
                                   <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger className={cn(isRTL && "flex-row-reverse")}>
+                                    <DropdownMenuSubTrigger className={cn(isRTL && "flex-row")}>
                                       <ClipboardList className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                                       <span>{t("common.status")}</span>
                                     </DropdownMenuSubTrigger>
@@ -447,7 +447,7 @@ export default function AdminProjectsPage() {
                                   </DropdownMenuSub>
                                   
                                   <DropdownMenuItem 
-                                    className={cn("text-destructive", isRTL && "flex-row-reverse")}
+                                    className={cn("text-destructive", isRTL && "flex-row")}
                                     onClick={() => setProjectToDelete(project.id)}
                                   >
                                     <Trash className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />

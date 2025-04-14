@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="logoGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3498db" />
+      <stop offset="100%" stop-color="#2980b9" />
+    </linearGradient>
+    <linearGradient id="logoGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5b5fcd" />
+      <stop offset="100%" stop-color="#403f94" />
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke-width="40">
+    <path d="M 150,300 C 150,150 250,100 300,150 C 350,100 450,150 450,300 C 450,450 350,500 300,450 C 250,500 150,450 150,300 Z" 
+          stroke="url(#logoGradient2)" stroke-linecap="round" />
+    <path d="M 150,300 C 150,200 250,150 300,200 C 350,150 450,200 450,300" 
+          stroke="url(#logoGradient1)" stroke-linecap="round" />
+    <line x1="300" y1="200" x2="300" y2="150" stroke="white" stroke-width="30" />
+    <line x1="300" y1="400" x2="300" y2="450" stroke="white" stroke-width="30" />
+    <line x1="320" y1="250" x2="430" y2="250" stroke="white" stroke-width="30" />
+    <line x1="170" y1="350" x2="280" y2="350" stroke="white" stroke-width="30" />
+  </g>
+</svg> 

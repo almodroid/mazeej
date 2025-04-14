@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/use-auth";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
-import ChatWidget from "@/components/chat/chat-widget";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -197,7 +196,7 @@ export default function EarningsPage() {
         </main>
       </div>
       <Footer />
-      <ChatWidget isOpen={chatOpen} setIsOpen={setChatOpen} />
+      
     </div>
   );
 }

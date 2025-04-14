@@ -15,7 +15,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useChat } from "@/hooks/use-chat";
 
 export function NotificationsDropdown() {
   const { 
@@ -25,7 +24,6 @@ export function NotificationsDropdown() {
     markAsReadMutation,
     deleteNotificationMutation
   } = useNotifications();
-  const { setActiveContact, contacts } = useChat();
   const { t } = useTranslation();
   const [, navigate] = useLocation();
 
@@ -54,13 +52,8 @@ export function NotificationsDropdown() {
         navigate(`/projects/${notification.relatedId}`);
         break;
       case 'message':
-        // Open chat with user
-        const contactId = notification.relatedId;
-        const contact = contacts.find(c => c.id === contactId);
-        if (contact) {
-          setActiveContact(contact);
-          navigate('/chat');
-        }
+        // Navigate to messages with user
+        navigate(`/messages?userId=${notification.relatedId}`);
         break;
       case 'review':
         // Navigate to reviews

@@ -11,6 +11,9 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   isRead: boolean;
+  supervisedBy: number | null;
+  isFlagged: boolean | null;
+  supervisorNotes: string | null;
 }
 
 interface Client {
@@ -20,11 +23,23 @@ interface Client {
     with: number;
     type: "audio" | "video";
   };
+  lastSeen: Date;
 }
 
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
   const clients: Client[] = [];
+
+  // Function to check if a user is online
+  const isUserOnline = (userId: number) => {
+    return clients.some(client => client.userId === userId && client.socket.readyState === WebSocket.OPEN);
+  };
+
+  // Function to get user's last seen time
+  const getUserLastSeen = (userId: number) => {
+    const client = clients.find(c => c.userId === userId);
+    return client?.lastSeen || new Date();
+  };
 
   wss.on('connection', (ws: WebSocket) => {
     let userId: number | null = null;
@@ -43,30 +58,34 @@ export function setupWebSocketServer(server: Server) {
             clients.splice(existingClientIndex, 1);
           }
           
-          // Fix type issue: Ensure userId is a number
-          clients.push({ userId: Number(userId), socket: ws });
+          // Add new client with current timestamp
+          clients.push({ 
+            userId: Number(userId), 
+            socket: ws,
+            lastSeen: new Date()
+          });
+          
           ws.send(JSON.stringify({ type: 'auth_success' }));
           return;
         }
         
-        // Ensure user is authenticated before allowing other operations
-        if (!userId) {
-          ws.send(JSON.stringify({ type: 'error', message: 'You must authenticate first' }));
-          return;
-        }
-
         // Handle chat messages
-        if (data.type === 'message') {
-          const messageData: InsertMessage = {
+        if (data.type === 'message' && userId) {
+          const messageData = {
+            senderId: userId,
             receiverId: data.receiverId,
             content: data.content,
+            isRead: false,
+            supervisedBy: null,
+            isFlagged: false,
+            supervisorNotes: null
           };
           
           // Store message in database
           const savedMessage = await storage.createMessage(messageData, userId);
           
           // Prepare message for sending to clients
-          const chatMessage: ChatMessage = {
+          const chatMessage = {
             type: 'message',
             id: savedMessage.id,
             senderId: userId,
@@ -74,32 +93,46 @@ export function setupWebSocketServer(server: Server) {
             content: data.content,
             timestamp: savedMessage.createdAt || new Date(),
             isRead: false,
+            supervisedBy: null,
+            isFlagged: false,
+            supervisorNotes: null
           };
           
           // Send to sender to confirm receipt
           ws.send(JSON.stringify(chatMessage));
           
-          // Send to receiver if online
+          // Check if receiver is online
           const receiverClient = clients.find(client => client.userId === data.receiverId);
           if (receiverClient && receiverClient.socket.readyState === WebSocket.OPEN) {
+            // Send message directly if online
             receiverClient.socket.send(JSON.stringify(chatMessage));
-          }
-          
-          // Create a notification for the receiver
-          try {
-            const sender = await storage.getUser(userId);
-            if (sender) {
-              const notificationData: InsertNotification = {
-                userId: data.receiverId,
-                type: 'message',
-                title: `New message from ${sender.fullName || sender.username}`,
-                content: data.content.length > 30 ? data.content.substring(0, 30) + '...' : data.content,
-                relatedId: userId,
-              };
-              await storage.createNotification(notificationData);
+          } else {
+            // Create notification for offline user
+            if (userId !== null && !isNaN(userId)) {
+              try {
+                const sender = await storage.getUser(userId);
+                if (sender) {
+                  const notificationData = {
+                    userId: data.receiverId,
+                    type: 'message' as const,
+                    title: `New message from ${sender.fullName || sender.username}`,
+                    content: data.content.length > 30 ? data.content.substring(0, 30) + '...' : data.content,
+                    relatedId: userId,
+                  };
+                  await storage.createNotification(notificationData);
+                }
+              } catch (notifError) {
+                console.error('Failed to create notification:', notifError);
+              }
             }
-          } catch (notifError) {
-            console.error('Failed to create notification:', notifError);
+          }
+        }
+
+        // Handle user status updates
+        if (data.type === 'status_update' && userId) {
+          const client = clients.find(c => c.userId === userId);
+          if (client) {
+            client.lastSeen = new Date();
           }
         }
         
@@ -267,6 +300,12 @@ export function setupWebSocketServer(server: Server) {
 
     ws.on('close', () => {
       if (userId) {
+        // Update last seen time before removing
+        const client = clients.find(c => c.userId === userId);
+        if (client) {
+          client.lastSeen = new Date();
+        }
+        
         // Remove client from the array
         const index = clients.findIndex(client => client.userId === userId);
         if (index !== -1) {

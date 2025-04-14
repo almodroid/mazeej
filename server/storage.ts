@@ -102,6 +102,8 @@ export interface IStorage {
   uploadFile(file: InsertFile): Promise<File>;
   getFilesByUser(userId: number): Promise<File[]>;
   getFilesByProject(projectId: number): Promise<File[]>;
+  getFileById(id: number): Promise<File | undefined>;
+  deleteFile(id: number): Promise<boolean>;
   
   // Notification operations
   getUserNotifications(userId: number): Promise<Notification[]>;
@@ -543,6 +545,9 @@ export class MemStorage implements IStorage {
       senderId,
       isRead: false,
       createdAt: now,
+      supervisedBy: null,
+      isFlagged: false,
+      supervisorNotes: null
     };
     this.messages.set(id, newMessage);
     return newMessage;
@@ -619,6 +624,14 @@ export class MemStorage implements IStorage {
     return Array.from(this.files.values()).filter(
       (file) => file.projectId === projectId
     );
+  }
+
+  async getFileById(id: number): Promise<File | undefined> {
+    return this.files.get(id);
+  }
+
+  async deleteFile(id: number): Promise<boolean> {
+    return this.files.delete(id);
   }
 
   // Notification operations

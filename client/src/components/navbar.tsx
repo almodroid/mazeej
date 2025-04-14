@@ -171,7 +171,7 @@ export default function Navbar() {
                   <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary"></span>
                 </Button>
 
-                <DropdownMenu>
+                <DropdownMenu dir={isRTL ? "rtl" : "ltr"}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"

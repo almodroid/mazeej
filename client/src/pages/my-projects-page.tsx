@@ -92,7 +92,7 @@ export default function MyProjectsPage() {
     <DashboardLayout>
       <div className={cn(
         "flex flex-col md:flex-row md:items-center md:justify-between mb-6",
-        isRTL && "md:flex-row-reverse"
+        isRTL && "md:flex-row"
       )}>
         <h1 className="text-3xl font-cairo font-bold mb-4 md:mb-0">
           {t("myProjects.title")}
@@ -100,7 +100,7 @@ export default function MyProjectsPage() {
         <Link href="/projects/create">
           <Button className={cn(
             "flex items-center",
-            isRTL && "flex-row-reverse"
+            isRTL && "flex-row"
           )}>
             <Plus className={isRTL ? "ml-2" : "mr-2"} size={16} />
             {t("myProjects.createNew")}
@@ -127,7 +127,7 @@ export default function MyProjectsPage() {
       </div>
 
       <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab} dir={isRTL ? "rtl" : "ltr"}>
-        <TabsList className={cn("mb-6", isRTL && "flex-row-reverse")}>
+        <TabsList className={cn("mb-6", isRTL && "flex-row")}>
           <TabsTrigger value="all">{t("myProjects.all")}</TabsTrigger>
           <TabsTrigger value="open">{t("myProjects.open")}</TabsTrigger>
           <TabsTrigger value="in_progress">{t("myProjects.inProgress")}</TabsTrigger>
@@ -157,7 +157,7 @@ export default function MyProjectsPage() {
                       <div className="block p-4 hover:bg-neutral-50 transition-colors">
                         <div className={cn(
                           "flex justify-between items-start mb-2",
-                          isRTL && "flex-row-reverse"
+                          isRTL && "flex-row"
                         )}>
                           <h3 className="font-medium text-neutral-900">{project.title}</h3>
                           {project.status && getStatusBadge(project.status)}
@@ -167,7 +167,7 @@ export default function MyProjectsPage() {
                         </p>
                         <div className={cn(
                           "flex justify-between items-center text-sm text-neutral-500",
-                          isRTL && "flex-row-reverse"
+                          isRTL && "flex-row"
                         )}>
                           <span>${project.budget}</span>
                           <span>{project.createdAtDisplay}</span>

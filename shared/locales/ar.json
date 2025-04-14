@@ -12,6 +12,7 @@
     "profile": "الملف الشخصي",
     "settings": "الإعدادات",
     "messages": "الرسائل",
+    "online" :"متصل",
     "notifications": "الإشعارات",
     "search": "بحث",
     "submit": "إرسال",
@@ -25,6 +26,8 @@
     "previous": "السابق",
     "confirm": "تأكيد",
     "loading": "جاري التحميل...",
+    "reset" : "اعادة التعيين",
+    "you" : "أنت",
 
     "warning": "تحذير",
     "info": "معلومات",
@@ -84,6 +87,9 @@
     "error": "خطأ",
     "light": "فاتح",
     "dark": "داكن",
+    "hr" : "ساعة",
+    "from" : "يبدأ من",
+    "hireMe" : "وظفني",
     "system": "النظام",
     "comingSoon": "قريباً",
     "active": "نشط",
@@ -142,7 +148,7 @@
     "loginSubtitle": "سجل دخولك للوصول إلى حسابك",
     "joinCommunity": "انضم إلى مجتمعنا!",
     "registerSubtitle": "أنشئ حسابًا للبدء",
-    "platformFeatures": "لماذا تختار منصة خبراء؟",
+    "platformFeatures": "لماذا تختار منصة مزيج؟",
     "platformDescription": "نربط المستقلين المهرة بالعملاء الباحثين عن عمل عالي الجودة في مختلف المجالات",
     "trustedPlatform": "موثوق به من قبل آلاف المستخدمين حول العالم",
     "users": "مستخدم",
@@ -189,7 +195,7 @@
     "badge": "مستقلين مميزين",
     "webDevelopment": "تطوير ويب",
     "contentCreation": "إنشاء محتوى",
-    "UI/UX design": "تصميم UI/UX",
+    "design": "تصميم",
     "freelancers": "مستقلون",
     "projects": "مشاريع",
     "categories": "فئات",
@@ -201,10 +207,10 @@
     "global": "جودة عالمية"
   },
   "howItWorks": {
-    "title": "كيف تعمل منصة خبراء",
+    "title": "كيف تعمل منصة مزيج",
     "subtitle": "خطوات بسيطة للوصول إلى النتائج التي تريدها",
     "step1Title": "نشر المشروع",
-    "step1Description": "وصف احتياجاتك بالتفٵيل وحدد ميزانيتك والمهارات المطلوبة",
+    "step1Description": "وصف احتياجاتك بالتفصيل وحدد ميزانيتك والمهارات المطلوبة",
     "step2Title": "اختيار العروض",
     "step2Description": "راجع عروض المستقلين واختر الأفضل لمشروعك",
     "step3Title": "استلام العمل",
@@ -223,6 +229,7 @@
   "projects": {
     "title": "أحدث المشاريع",
     "viewAll": "عرض الكل",
+    "details" : "تفاصيل المشروع",
     "budget": "ميزانية",
     "posted": "نشر منذ",
     "days": "أيام",
@@ -251,7 +258,12 @@
     "createdSuccess": "تم إنشاء المشروع بنجاح",
     "createdSuccessDescription": "تم إنشاء مشروعك وهو الآن متاح للمستقلين للتقديم",
     "creationError": "حدث خطأ أثناء إنشاء المشروع",
-    "notFound": "المشروع غير موجود"
+    "notFound": "المشروع غير موجود",
+    "client" :"العميل",
+    "uploadFiles" : "رفع ملف",
+    "attachments" :"المرفقات",
+    "postedOn" : "نشر في"
+
   },
   "categories": {
     "title": "استكشف الفئات",
@@ -341,7 +353,7 @@
   },
   "videoCall": {
     "connecting": "جاري الاتصال بمكالمة الفيديو...",
-    "waitingForParticipant": "بانتظار انضمام {{name}} إلى المكالمة...",
+    "waitingForParticipant": "في انتظار انضمام {{name}} إلى المكالمة...",
     "callEnded": "انتهت مكالمة الفيديو",
     "callFailed": "فشل الاتصال بمكالمة الفيديو",
     "backToChat": "العودة إلى المحادثة",
@@ -350,7 +362,7 @@
     "microphoneOff": "الميكروفون متوقف",
     "cameraOn": "الكاميرا تعمل",
     "cameraOff": "الكاميرا متوقفة",
-    "joinCall": "انضمام للمكالمة",
+    "joinCall": "الانضمام إلى المكالمة",
     "reconnecting": "إعادة الاتصال...",
     "poor": "اتصال ضعيف",
     "good": "اتصال جيد",
@@ -358,16 +370,6 @@
     "screenShare": "مشاركة الشاشة",
     "stopScreenShare": "إيقاف المشاركة",
     "callDuration": "مدة المكالمة: {{duration}}",
-    "createMeeting": "إنشاء اجتماع",
-    "joinMeeting": "انضمام لاجتماع",
-    "meetingTopic": "موضوع الاجتماع",
-    "inviteParticipants": "دعوة مشاركين",
-    "meetingLink": "رابط الاجتماع",
-    "copyLink": "نسخ الرابط",
-    "linkCopied": "تم نسخ الرابط إلى الحافظة",
-    "startMeeting": "بدء الاجتماع",
-    "meetingPassword": "كلمة المرور",
-    "enterPassword": "أدخل كلمة مرور الاجتماع",
     "callWith": "في مكالمة مع {{name}}"
   },
   "profile": {
@@ -404,7 +406,16 @@
     "advanced": "متقدم",
     "contentCreator": "منشئ محتوى",
     "expert": "خبير",
-    "updateSuccess": "تم تحديث الملف الشخصي بنجاح"
+    "updateSuccess": "تم تحديث الملف الشخصي بنجاح",
+    "verified" :"موثق",
+    "completion" : "اكتمال المشاريع",
+    "projects" :"المشاريع",
+    "defaultBio" : "الوصف",
+    "professionalInfo" : "المعلومات احترافية",
+    "professionalInfoDesc" : "قم بتحديث المعلومات الاحترافية",
+    "freelancerLevel" : "",
+    "personalInfo" : "البيانات الشخصية",
+    "personalInfoDesc" : "قم بتحديث المعلومات الشخصية"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -509,7 +520,8 @@
     "contactFreelancer": "التواصل مع المستقل",
     "freelancer": "مستقل",
     "proposedPrice": "السعر المقترح",
-    "processing": "جارٍ المعالجة"
+    "processing": "جارٍ المعالجة",
+    "all" :"الكل"
   },
   "reviews": {
     "title": "التقييمات",
@@ -672,7 +684,8 @@
   "proposal": {
     "statusPending": "قيد الانتظار",
     "statusAccepted": "مقبول",
-    "statusRejected": "مرفوض"
+    "statusRejected": "مرفوض",
+    "all" : "الكل"
   },
   "myProjects": {
     "title": "مشاريعي",
@@ -699,6 +712,8 @@
   },
   "messages": {
     "title": "الرسائل",
+    "empty": "لا توجد رسائل",
+    "viewAll": "عرض كل الرسائل",
     "searchConversations": "البحث في المحادثات...",
     "noConversationsFound": "لا توجد محادثات",
     "selectConversation": "اختر محادثة للبدء في الدردشة",
@@ -707,7 +722,25 @@
     "yesterday": "أمس",
     "newMessage": "رسالة جديدة",
     "online": "متصل",
-    "offline": "غير متصل"
+    "offline": "غير متصل",
+    "startConversation": "ابدأ المحادثة بإرسال رسالة",
+    "uploadMedia": "رفع وسائط",
+    "addCaption": "إضافة وصف (اختياري)",
+    "captionPlaceholder": "أضف وصفاً للوسائط...",
+    "sendImage": "إرسال صورة",
+    "sendDocument": "إرسال مستند",
+    "uploadMediaError": "فشل في رفع الوسائط",
+    "videoCall": "مكالمة فيديو",
+    "videoCallWith": "مكالمة فيديو مع {{name}}",
+    "endCall": "إنهاء المكالمة",
+    "zoomCallError": "فشل في بدء مكالمة الفيديو",
+    "connectingCall": "جاري الاتصال...",
+    "zoomConfigError": "حدث خطأ في إعداد مكالمة الفيديو.",
+    "backToChat": "العودة إلى المحادثة",
+    "supervisedByAdmin": "تحت إشراف المسؤول",
+    "fetchConversationsError": "فشل في تحميل المحادثات",
+    "fetchMessagesError": "فشل في تحميل الرسائل",
+    "sendMessageError": "فشل في إرسال الرسالة"
   },
   "help": {
     "title": "المساعدة والدعم",

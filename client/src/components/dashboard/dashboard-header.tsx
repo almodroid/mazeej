@@ -6,7 +6,6 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { 
   Bell, 
-  MessageSquare, 
   Menu, 
   Search, 
   User,
@@ -17,7 +16,7 @@ import {
   Languages
 } from "lucide-react";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
-import ChatDropdown from "@/components/chat/chat-dropdown";
+import { MessagesDropdown } from "@/components/messages/messages-dropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,6 +31,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
+import LogoSVG from "@/assets/images/logo.svg";
 
 interface DashboardHeaderProps {
   onMobileMenuOpen?: () => void;
@@ -86,7 +86,8 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
         
         {/* Logo for medium screens and above */}
         <div className="hidden md:flex items-center">
-          <Link href="/dashboard">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <img src={LogoSVG} alt="Mazeej Logo" className="h-9 w-auto" />
             <h2 className="text-xl font-cairo font-bold text-primary cursor-pointer">
               {t("common.appName")}
             </h2>
@@ -164,7 +165,7 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <ChatDropdown />
+          <MessagesDropdown />
           <NotificationsDropdown />
           
           <DropdownMenu>
@@ -193,14 +194,14 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem 
-                  className={cn("cursor-pointer", isRTL && "flex-row-reverse text-right")}
+                  className={cn("cursor-pointer", isRTL && "flex-row text-right")}
                   onClick={() => navigate("/profile")}
                 >
                   <User className={isRTL ? "ml-2" : "mr-2"} size={16} />
                   <span>{t("common.profile")}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className={cn("cursor-pointer", isRTL && "flex-row-reverse text-right")}
+                  className={cn("cursor-pointer", isRTL && "flex-row text-right")}
                   onClick={() => navigate("/settings")}
                 >
                   <User className={isRTL ? "ml-2" : "mr-2"} size={16} />
@@ -209,7 +210,7 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                className={cn("cursor-pointer", isRTL && "flex-row-reverse text-right")}
+                className={cn("cursor-pointer", isRTL && "flex-row text-right")}
                 onClick={handleLogout}
               >
                 <LogOut className={isRTL ? "ml-2" : "mr-2"} size={16} />

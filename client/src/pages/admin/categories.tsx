@@ -151,7 +151,7 @@ export default function AdminCategoriesPage() {
               )}>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className={cn("gap-1", isRTL && "flex-row-reverse")}>
+                    <Button size="sm" className={cn("gap-1", isRTL && "flex-row")}>
                       <Plus className="h-4 w-4" />
                       <span>{t("common.add")}</span>
                     </Button>

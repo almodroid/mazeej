@@ -476,6 +476,21 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(files.uploadedAt));
   }
 
+  async getFileById(id: number): Promise<File | undefined> {
+    const [file] = await db
+      .select()
+      .from(files)
+      .where(eq(files.id, id));
+    return file;
+  }
+
+  async deleteFile(id: number): Promise<boolean> {
+    const result = await db
+      .delete(files)
+      .where(eq(files.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
   // Notification operations
   async getUserNotifications(userId: number): Promise<Notification[]> {
     return await db
@@ -763,5 +778,126 @@ export class DatabaseStorage implements IStorage {
       console.error("Error deleting transactions:", error);
       return false;
     }
+  }
+
+  // Message supervision methods
+  async getAllConversations(): Promise<any[]> {
+    // Get all unique conversation pairs
+    const conversations = await db
+      .select({
+        senderId: messages.senderId,
+        receiverId: messages.receiverId,
+        lastMessage: messages.content,
+        lastMessageTime: messages.createdAt,
+        isFlagged: messages.isFlagged,
+        supervisedBy: messages.supervisedBy,
+        supervisorNotes: messages.supervisorNotes
+      })
+      .from(messages)
+      .orderBy(desc(messages.createdAt));
+
+    // Group by conversation pairs
+    const conversationMap = new Map<string, {
+      id: string;
+      participants: number[];
+      lastMessage: string;
+      lastMessageTime: Date | null;
+      isFlagged: boolean | null;
+      supervisedBy: number | null;
+      supervisorNotes: string | null;
+    }>();
+
+    conversations.forEach(msg => {
+      const key = [msg.senderId, msg.receiverId].sort().join('-');
+      if (!conversationMap.has(key)) {
+        conversationMap.set(key, {
+          id: key,
+          participants: [msg.senderId, msg.receiverId],
+          lastMessage: msg.lastMessage,
+          lastMessageTime: msg.lastMessageTime,
+          isFlagged: msg.isFlagged,
+          supervisedBy: msg.supervisedBy,
+          supervisorNotes: msg.supervisorNotes
+        });
+      }
+    });
+
+    // Get user details for participants
+    const allUserIds = new Set<number>();
+    conversationMap.forEach(conv => {
+      conv.participants.forEach(id => allUserIds.add(id));
+    });
+
+    const userDetails = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        fullName: users.fullName,
+        profileImage: users.profileImage,
+        role: users.role
+      })
+      .from(users)
+      .where(inArray(users.id, Array.from(allUserIds)));
+
+    // Map user details to conversations
+    return Array.from(conversationMap.values()).map(conv => ({
+      ...conv,
+      participants: conv.participants.map(id => 
+        userDetails.find(u => u.id === id)
+      )
+    }));
+  }
+
+  async getMessagesByConversation(conversationId: string): Promise<any[]> {
+    const [userId1, userId2] = conversationId.split('-').map(Number);
+    
+    return await db
+      .select({
+        id: messages.id,
+        senderId: messages.senderId,
+        receiverId: messages.receiverId,
+        content: messages.content,
+        createdAt: messages.createdAt,
+        isRead: messages.isRead,
+        isFlagged: messages.isFlagged,
+        supervisedBy: messages.supervisedBy,
+        supervisorNotes: messages.supervisorNotes
+      })
+      .from(messages)
+      .where(
+        or(
+          and(
+            eq(messages.senderId, userId1),
+            eq(messages.receiverId, userId2)
+          ),
+          and(
+            eq(messages.senderId, userId2),
+            eq(messages.receiverId, userId1)
+          )
+        )
+      )
+      .orderBy(asc(messages.createdAt));
+  }
+
+  async updateMessageFlag(messageId: number, isFlagged: boolean): Promise<void> {
+    await db
+      .update(messages)
+      .set({ isFlagged })
+      .where(eq(messages.id, messageId));
+  }
+
+  async updateMessageSupervision(
+    messageId: number, 
+    supervisorNotes: string, 
+    supervisedBy: number
+  ): Promise<void> {
+    await db
+      .update(messages)
+      .set({ 
+        supervisorNotes,
+        supervisedBy,
+        isFlagged: true // Automatically flag when supervised
+      })
+      .where(eq(messages.id, messageId));
   }
 }

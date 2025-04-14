@@ -17,7 +17,6 @@ import CreateProjectPage from "@/pages/create-project-page";
 import ProjectDetailsPage from "@/pages/project-details-page";
 import SubmitProposalPage from "@/pages/submit-proposal-page";
 import CategoriesPage from "@/pages/categories-page";
-import ChatPage from "@/pages/chat-page";
 import VerificationPage from "@/pages/verification-page";
 import ProfilePage from "@/pages/profile-page";
 import SettingsPage from "@/pages/settings-page";
@@ -32,7 +31,6 @@ import HelpPage from "@/pages/help-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { NotificationsProvider } from "./hooks/use-notifications";
-import { ChatProvider } from "./hooks/use-chat";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SettingsProvider } from "./contexts/settings-context";
 import { Redirect } from "wouter";
@@ -90,11 +88,6 @@ function Router() {
       </Route>
       <Route path="/categories">
         <CategoriesPage />
-      </Route>
-      <Route path="/chat">
-        <ProtectedRoute>
-          <ChatPage />
-        </ProtectedRoute>
       </Route>
       <Route path="/messages">
         <ProtectedRoute>
@@ -212,10 +205,8 @@ function App() {
         <AuthProvider>
           <SettingsProvider>
             <NotificationsProvider>
-              <ChatProvider>
-                <Router />
-                <Toaster />
-              </ChatProvider>
+              <Router />
+              <Toaster />
             </NotificationsProvider>
           </SettingsProvider>
         </AuthProvider>

@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import DashboardHeader from "@/components/dashboard/dashboard-header";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
 import DashboardFooter from "@/components/dashboard/dashboard-footer";
-import ChatWidget from "@/components/chat/chat-widget";
 import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
@@ -15,7 +14,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user } = useAuth();
   const { i18n } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   
   // Determine if RTL
   const isRTL = i18n.language === 'ar';
@@ -45,7 +43,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <DashboardFooter />
         </main>
       </div>
-      <ChatWidget isOpen={chatOpen} setIsOpen={setChatOpen} />
     </div>
   );
 } 

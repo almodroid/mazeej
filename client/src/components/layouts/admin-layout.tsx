@@ -181,7 +181,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           variant={isPathActive(item.href) ? "secondary" : "ghost"}
                           className={cn(
                             "justify-start gap-3 text-base",
-                            isRTL && "flex-row-reverse"
+                            isRTL && "flex-row"
                           )}
                           onClick={() => handleNavigation(item.href)}
                         >
@@ -206,7 +206,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   size="sm"
                   className={cn(
                     "gap-2",
-                    isRTL && "flex-row-reverse"
+                    isRTL && "flex-row"
                   )}
                   onClick={() => handleNavigation(item.href)}
                 >

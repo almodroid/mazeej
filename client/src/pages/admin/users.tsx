@@ -21,7 +21,8 @@ import {
   User,
   AlertCircle,
   Ban,
-  Check
+  Check,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,17 +74,32 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { freelancerLevelEnum, freelancerTypeEnum } from "@shared/schema";
 
-// Define interface for User data
+interface CategoryWithSkills {
+  id: number;
+  name: string;
+  skills: {
+    id: number;
+    name: string;
+  }[];
+}
+
 interface User {
-  id: string;
-  username: string;
+  id: number;
   email: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  fullName: string;
   role: string;
-  createdAt?: string;
-  fullName?: string;
-  profileImage?: string;
+  freelancerLevel?: 'beginner' | 'intermediate' | 'advanced';
+  freelancerType?: 'content_creator' | 'expert';
+  hourlyRate?: number;
+  skills?: number[];
+  createdAt: string;
   isBlocked: boolean;
+  profileImage?: string;
 }
 
 // Define form schema
@@ -104,6 +120,10 @@ const userSchema = z.object({
   role: z.enum(["admin", "client", "freelancer"], {
     required_error: "Please select a role.",
   }),
+  freelancerLevel: z.enum(freelancerLevelEnum.enumValues).optional(),
+  freelancerType: z.enum(freelancerTypeEnum.enumValues).optional(),
+  hourlyRate: z.number().min(0).optional(),
+  skills: z.array(z.number()).optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -123,6 +143,10 @@ const editUserSchema = z.object({
   role: z.enum(["admin", "client", "freelancer"], {
     required_error: "Please select a role.",
   }),
+  freelancerLevel: z.enum(freelancerLevelEnum.enumValues).optional(),
+  freelancerType: z.enum(freelancerTypeEnum.enumValues).optional(),
+  hourlyRate: z.number().min(0).optional(),
+  skills: z.array(z.number()).optional(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -197,6 +221,10 @@ export default function AdminUsersPage() {
       confirmPassword: "",
       fullName: "",
       role: "client",
+      freelancerLevel: "intermediate",
+      freelancerType: "content_creator",
+      hourlyRate: 0,
+      skills: [],
     },
   });
   
@@ -208,6 +236,10 @@ export default function AdminUsersPage() {
       email: "",
       fullName: "",
       role: "client",
+      freelancerLevel: "intermediate",
+      freelancerType: "content_creator",
+      hourlyRate: 0,
+      skills: [],
     },
   });
   
@@ -217,8 +249,12 @@ export default function AdminUsersPage() {
       editForm.reset({
         username: userToEdit.username,
         email: userToEdit.email,
-        fullName: userToEdit.fullName || "",
+        fullName: userToEdit.fullName,
         role: userToEdit.role as "admin" | "client" | "freelancer",
+        freelancerLevel: userToEdit.freelancerLevel,
+        freelancerType: userToEdit.freelancerType,
+        hourlyRate: userToEdit.hourlyRate,
+        skills: userToEdit.skills || [],
       });
     }
   }, [userToEdit, editForm]);
@@ -288,7 +324,7 @@ export default function AdminUsersPage() {
   // Edit form submission handler
   const onEditSubmit = (data: EditUserFormValues) => {
     if (userToEdit) {
-      editUserMutation.mutate({ userId: userToEdit.id, userData: data });
+      editUserMutation.mutate({ userId: userToEdit.id.toString(), userData: data });
     }
   };
 
@@ -353,6 +389,11 @@ export default function AdminUsersPage() {
     }
   });
 
+  // Add categories query
+  const { data: categories = [] } = useQuery<CategoryWithSkills[]>({
+    queryKey: ["/api/categories"],
+  });
+
   return (
     <AdminLayout>
       <div className="flex flex-col space-y-6 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto py-6">
@@ -389,7 +430,7 @@ export default function AdminUsersPage() {
               <CardTitle>{t("auth.admin.users")}</CardTitle>
               <div className={cn(
                 "flex items-center gap-2",
-                isRTL && "flex-row-reverse"
+                isRTL && "flex-row"
               )}>
                 <div className="relative">
                   <Search className={cn(
@@ -405,7 +446,7 @@ export default function AdminUsersPage() {
                 </div>
                 <Button 
                   size="sm" 
-                  className={cn("gap-1", isRTL && "flex-row-reverse")}
+                  className={cn("gap-1", isRTL && "flex-row")}
                   onClick={() => setIsAddUserOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
@@ -513,14 +554,14 @@ export default function AdminUsersPage() {
                                   <DropdownMenuLabel className={cn(isRTL && "text-right")}>{t("common.actions")}</DropdownMenuLabel>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem 
-                                    className={cn(isRTL && "flex-row-reverse")}
+                                    className={cn(isRTL && "flex-row")}
                                     onClick={() => setUserToEdit(userData)}
                                   >
                                     <Edit className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                                     {t("common.edit")}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    className={cn(isRTL && "flex-row-reverse")}
+                                    className={cn(isRTL && "flex-row")}
                                     onClick={() => setUserToBlock(userData)}
                                   >
                                     {userData.isBlocked ? (
@@ -536,8 +577,8 @@ export default function AdminUsersPage() {
                                     )}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    className={cn("text-destructive", isRTL && "flex-row-reverse")}
-                                    onClick={() => setUserToDelete(userData.id)}
+                                    className={cn("text-destructive", isRTL && "flex-row")}
+                                    onClick={() => setUserToDelete(userData.id.toString())}
                                   >
                                     <Trash className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                                     {t("common.delete")}
@@ -574,9 +615,9 @@ export default function AdminUsersPage() {
         <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{t("admin.addUser", { defaultValue: "Add New User" })}</DialogTitle>
+              <DialogTitle>{t("admin.addUser")}</DialogTitle>
               <DialogDescription>
-                {t("admin.addUserDesc", { defaultValue: "Create a new user account on the platform." })}
+                {t("admin.addUserDesc")}
               </DialogDescription>
             </DialogHeader>
             
@@ -666,7 +707,7 @@ export default function AdminUsersPage() {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={t("auth.selectAccountType", { defaultValue: "Select account type" })} />
+                            <SelectValue placeholder={t("auth.selectAccountType")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -679,6 +720,141 @@ export default function AdminUsersPage() {
                     </FormItem>
                   )}
                 />
+                
+                {form.watch("role") === "freelancer" && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="freelancerLevel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("profile.level")}</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("profile.selectLevel")} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="beginner">{t("profile.beginner")}</SelectItem>
+                              <SelectItem value="intermediate">{t("profile.intermediate")}</SelectItem>
+                              <SelectItem value="advanced">{t("profile.advanced")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="freelancerType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("profile.type")}</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("profile.selectType")} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="content_creator">{t("profile.contentCreator")}</SelectItem>
+                              <SelectItem value="expert">{t("profile.expert")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="hourlyRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("profile.hourlyRate")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="skills"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("profile.skills")}</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              const skillId = parseInt(value);
+                              const currentSkills = field.value || [];
+                              if (!currentSkills.includes(skillId)) {
+                                field.onChange([...currentSkills, skillId]);
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("profile.addSkill")} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <div key={category.id}>
+                                  <div className="px-2 py-1.5 text-sm font-semibold">
+                                    {category.name}
+                                  </div>
+                                  {category.skills?.map((skill) => (
+                                    <SelectItem key={skill.id} value={skill.id.toString()}>
+                                      {skill.name}
+                                    </SelectItem>
+                                  ))}
+                                </div>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {(field.value || []).map((skillId) => {
+                              const skill = categories
+                                .flatMap(c => c.skills || [])
+                                .find(s => s.id === skillId);
+                              return skill ? (
+                                <Badge key={skillId} variant="outline" className="flex items-center gap-1">
+                                  {skill.name}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      field.onChange(field.value?.filter(id => id !== skillId));
+                                    }}
+                                    className="hover:text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
                 
                 <DialogFooter className="mt-6">
                   <Button
@@ -708,9 +884,9 @@ export default function AdminUsersPage() {
         <Dialog open={!!userToEdit} onOpenChange={(open) => !open && setUserToEdit(null)}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{t("admin.editUser", { defaultValue: "Edit User" })}</DialogTitle>
+              <DialogTitle>{t("admin.editUser")}</DialogTitle>
               <DialogDescription>
-                {t("admin.editUserDesc", { defaultValue: "Update the user information." })}
+                {t("admin.editUserDesc")}
               </DialogDescription>
             </DialogHeader>
             
@@ -770,7 +946,7 @@ export default function AdminUsersPage() {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={t("auth.selectAccountType", { defaultValue: "Select account type" })} />
+                            <SelectValue placeholder={t("auth.selectAccountType")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -783,6 +959,141 @@ export default function AdminUsersPage() {
                     </FormItem>
                   )}
                 />
+                
+                {editForm.watch("role") === "freelancer" && (
+                  <>
+                    <FormField
+                      control={editForm.control}
+                      name="freelancerLevel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("profile.level")}</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("profile.selectLevel")} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="beginner">{t("profile.beginner")}</SelectItem>
+                              <SelectItem value="intermediate">{t("profile.intermediate")}</SelectItem>
+                              <SelectItem value="advanced">{t("profile.advanced")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="freelancerType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("profile.type")}</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("profile.selectType")} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="content_creator">{t("profile.contentCreator")}</SelectItem>
+                              <SelectItem value="expert">{t("profile.expert")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="hourlyRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("profile.hourlyRate")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="skills"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("profile.skills")}</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              const skillId = parseInt(value);
+                              const currentSkills = field.value || [];
+                              if (!currentSkills.includes(skillId)) {
+                                field.onChange([...currentSkills, skillId]);
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("profile.addSkill")} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <div key={category.id}>
+                                  <div className="px-2 py-1.5 text-sm font-semibold">
+                                    {category.name}
+                                  </div>
+                                  {category.skills?.map((skill) => (
+                                    <SelectItem key={skill.id} value={skill.id.toString()}>
+                                      {skill.name}
+                                    </SelectItem>
+                                  ))}
+                                </div>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {(field.value || []).map((skillId) => {
+                              const skill = categories
+                                .flatMap(c => c.skills || [])
+                                .find(s => s.id === skillId);
+                              return skill ? (
+                                <Badge key={skillId} variant="outline" className="flex items-center gap-1">
+                                  {skill.name}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      field.onChange(field.value?.filter(id => id !== skillId));
+                                    }}
+                                    className="hover:text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
                 
                 <DialogFooter className="mt-6">
                   <Button
@@ -867,7 +1178,7 @@ export default function AdminUsersPage() {
                 variant={userToBlock?.isBlocked ? "default" : "destructive"}
                 disabled={toggleBlockUserMutation.isPending}
                 onClick={() => userToBlock && toggleBlockUserMutation.mutate({ 
-                  userId: userToBlock.id, 
+                  userId: userToBlock.id.toString(), 
                   blocked: !userToBlock.isBlocked 
                 })}
               >

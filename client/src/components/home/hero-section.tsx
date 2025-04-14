@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowRight, Search, Briefcase, Star, Users, Globe } from "lucide-react";
+import { ArrowRight, Search, Briefcase, Star, Users, Globe, ArrowLeft } from "lucide-react";
 
 export default function HeroSection() {
   const { t, i18n } = useTranslation();
@@ -51,19 +51,21 @@ export default function HeroSection() {
               </div>
             </div>
             
-            <div className={`flex flex-col sm:flex-row justify-center lg:justify-start ${isRTL ? 'lg:justify-end' : ''} gap-4`}>
-              <Button 
-                size="lg" 
-                className="hover-lift rounded-full group gap-2 px-6"
-                asChild
-              >
-                <Link href="/auth?register=true&role=client">
-                  <a>
-                    {t("hero.clientButton")}
-                    <ArrowRight className={`h-4 w-4 transition-transform group-hover:${isRTL ? 'translate-x-1' : 'translate-x-1'}`} />
-                  </a>
-                </Link>
-              </Button>
+            <div className={`flex flex-col sm:flex-row justify-center lg:justify-start ${isRTL ? 'lg:justify-start' : ''} gap-4`}>
+            <Button 
+              size="lg" 
+              className="hover-lift rounded-full group gap-2 px-6" 
+              asChild
+            >
+              <Link href="/auth?register=true&role=client">
+                {t("hero.clientButton")}
+                {isRTL ? (
+                  <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                ) : (
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                )}
+              </Link>
+            </Button>
               <Button
                 size="lg"
                 variant="outline"
@@ -102,7 +104,7 @@ export default function HeroSection() {
             <div className="absolute -inset-10 bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur-3xl opacity-30"></div>
             <div className="relative bg-white p-4 rounded-2xl shadow-2xl rotate-1 hover:rotate-0 transition-transform duration-500 max-w-lg">
               <img
-                src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+                src="https://h.top4top.io/p_339165u5j1.jpg"
                 className="rounded-lg w-full"
                 alt={t("hero.title")}
               />

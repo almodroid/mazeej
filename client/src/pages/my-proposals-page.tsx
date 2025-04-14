@@ -384,7 +384,7 @@ export default function MyProposalsPage() {
                         </p>
                         <div className={cn(
                           "flex justify-between items-center text-sm text-neutral-500",
-                          isRTL && "flex-row-reverse"
+                          isRTL && "flex-row"
                         )}>
                           <span>${proposal.price} • {proposal.deliveryTime} {t("common.days")}</span>
                           <span>{proposal.createdAtDisplay}</span>

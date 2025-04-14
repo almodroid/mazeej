@@ -403,7 +403,7 @@ export default function AdminPaymentsPage() {
             
             <div className={cn(
               "flex items-center gap-2",
-              isRTL && "flex-row-reverse"
+              isRTL && "flex-row"
             )}>
               <div className="relative">
                 <Search className={cn(
@@ -419,7 +419,7 @@ export default function AdminPaymentsPage() {
               </div>
               <Button 
                 size="sm" 
-                className={cn("gap-1", isRTL && "flex-row-reverse")}
+                className={cn("gap-1", isRTL && "flex-row")}
                 onClick={() => setIsAddPaymentOpen(true)}
               >
                 <Plus className="h-4 w-4" />
@@ -507,12 +507,12 @@ export default function AdminPaymentsPage() {
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuLabel className={cn(isRTL && "text-right")}>{t("common.actions")}</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className={cn(isRTL && "flex-row-reverse")}>
+                                    <DropdownMenuItem className={cn(isRTL && "flex-row")}>
                                       <Edit className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                                       {t("common.edit")}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 
-                                      className={cn("text-destructive", isRTL && "flex-row-reverse")}
+                                      className={cn("text-destructive", isRTL && "flex-row")}
                                       onClick={() => setPaymentToDelete(payment.id)}
                                     >
                                       <Trash className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />

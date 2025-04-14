@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
       <div className="flex flex-col space-y-8 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto py-6">
           <div className={cn(
             "flex flex-col md:flex-row justify-between items-start md:items-center gap-4",
-            isRTL && "md:flex-row-reverse"
+            isRTL && "md:flex-row"
           )}>
             <div>
               <h1 className="text-3xl font-cairo font-bold mb-2 text-foreground">
