@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle } from 'lucide-react';
+import DashboardLayout from '@/components/layouts/dashboard-layout';
 
 export default function VerificationPage() {
   const { user, isLoading } = useAuth();
@@ -25,9 +26,9 @@ export default function VerificationPage() {
     return null;
   }
 
-  if (user.role === 'client' || user.role === 'admin') {
-    return (
-      <div className="container mx-auto py-8 px-4">
+  const renderContent = () => {
+    if (user.role === 'client' || user.role === 'admin') {
+      return (
         <Card>
           <CardHeader>
             <CardTitle>{t('verification.notAvailable')}</CardTitle>
@@ -43,36 +44,42 @@ export default function VerificationPage() {
             </CardContent>
           )}
         </Card>
-      </div>
+      );
+    }
+
+    // For freelancers
+    return (
+      <>
+        <h1 className="text-3xl font-bold mb-6">{t('verification.verificationTitle')}</h1>
+        <p className="text-gray-600 mb-8">{t('verification.verificationDescription')}</p>
+
+        {user.isVerified ? (
+          <Alert className="mb-8 bg-green-50 border-green-200">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <AlertTitle>{t('verification.verified')}</AlertTitle>
+            <AlertDescription>{t('verification.verifiedDesc')}</AlertDescription>
+          </Alert>
+        ) : (
+          <Tabs defaultValue="request" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="request">{t('verification.newRequest')}</TabsTrigger>
+              <TabsTrigger value="history">{t('verification.requestHistory')}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="request">
+              <VerificationRequestForm />
+            </TabsContent>
+            <TabsContent value="history">
+              <VerificationRequestList />
+            </TabsContent>
+          </Tabs>
+        )}
+      </>
     );
-  }
+  };
 
-  // For freelancers
   return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">{t('verification.verificationTitle')}</h1>
-      <p className="text-gray-600 mb-8">{t('verification.verificationDescription')}</p>
-
-      {user.isVerified ? (
-        <Alert className="mb-8 bg-green-50 border-green-200">
-          <CheckCircle className="h-5 w-5 text-green-600" />
-          <AlertTitle>{t('verification.verified')}</AlertTitle>
-          <AlertDescription>{t('verification.verifiedDesc')}</AlertDescription>
-        </Alert>
-      ) : (
-        <Tabs defaultValue="request" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="request">{t('verification.newRequest')}</TabsTrigger>
-            <TabsTrigger value="history">{t('verification.requestHistory')}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="request">
-            <VerificationRequestForm />
-          </TabsContent>
-          <TabsContent value="history">
-            <VerificationRequestList />
-          </TabsContent>
-        </Tabs>
-      )}
-    </div>
+    <DashboardLayout>
+      {renderContent()}
+    </DashboardLayout>
   );
 }

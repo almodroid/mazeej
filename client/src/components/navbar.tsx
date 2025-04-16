@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import LogoPng from "@/assets/images/logo.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,14 +98,8 @@ export default function Navbar() {
             <div className="flex-shrink-0 flex items-center">
               <Link href="/">
                 <div className="flex items-center gap-2 animate-fade-in">
-                  <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-                    <span className="text-lg font-cairo font-bold text-white">
-                      F
-                    </span>
-                  </div>
-                  <span className="text-xl font-cairo font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    {t("common.appName")}
-                  </span>
+                <img src={LogoPng} alt="Mazeej Logo" className="h-8 w-auto" />
+                  
                 </div>
               </Link>
             </div>

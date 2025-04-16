@@ -24,7 +24,8 @@ export function NotificationsDropdown() {
     markAsReadMutation,
     deleteNotificationMutation
   } = useNotifications();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
   const [, navigate] = useLocation();
 
   const handleMarkAsRead = (id: number) => {
@@ -79,7 +80,7 @@ export function NotificationsDropdown() {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu dir={isRTL ? "rtl" : "ltr"}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Bell className="h-5 w-5" />

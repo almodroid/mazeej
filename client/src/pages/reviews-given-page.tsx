@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, Calendar } from "lucide-react";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
-import { apiRequest } from "@/lib/queryClient";
+import { reviewApi } from "@/lib/api";
 
 interface Review {
   id: number;
@@ -31,11 +31,7 @@ export default function ReviewsGivenPage() {
   const { data: reviews = [], isLoading, error } = useQuery<Review[]>({
     queryKey: ['/api/users/reviews/given'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/users/reviews/given');
-      if (!response.ok) {
-        throw new Error('Failed to fetch reviews');
-      }
-      return response.json();
+      return await reviewApi.getReviewsGiven();
     }
   });
 
@@ -87,22 +83,22 @@ export default function ReviewsGivenPage() {
 
   return (
     <DashboardLayout>
-      <h1 className="text-3xl font-cairo font-bold mb-6">
+      <h1 className={`text-3xl font-cairo font-bold mb-6 ${isRTL ? 'text-right' : 'text-left'}`}>
         {t("reviews.givenReviews")}
       </h1>
 
       <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <div className="flex flex-col md:flex-row items-center justify-between">
-          <div className="flex items-center mb-4 md:mb-0">
-            <div className="bg-primary/10 p-4 rounded-full mr-4">
+        <div className={`flex flex-col md:flex-row items-center justify-between ${isRTL ? 'md:flex-row-reverse' : ''}`}>
+          <div className={`flex items-center mb-4 md:mb-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={`bg-primary/10 p-4 rounded-full ${isRTL ? 'ml-4' : 'mr-4'}`}>
               <Star size={24} className="text-primary" />
             </div>
-            <div>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <h2 className="text-2xl font-bold">{averageRating.toFixed(1)}</h2>
               <p className="text-neutral-500">{t("reviews.averageRating")}</p>
             </div>
           </div>
-          <div className="flex space-x-8 text-center">
+          <div className={`flex ${isRTL ? 'space-x-reverse space-x-8' : 'space-x-8'} text-center`}>
             <div>
               <p className="text-2xl font-bold">{reviews.length}</p>
               <p className="text-neutral-500">{t("reviews.totalReviews")}</p>
@@ -127,28 +123,28 @@ export default function ReviewsGivenPage() {
             <Card key={review.id}>
               <CardContent className="p-6">
                 <div className="flex flex-col space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center">
-                      <Avatar className="h-10 w-10 mr-3">
+                  <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <Avatar className={`h-10 w-10 ${isRTL ? 'ml-3' : 'mr-3'}`}>
                         <AvatarImage src={review.freelancerAvatar} alt={review.freelancerName} />
                         <AvatarFallback>{review.freelancerName.substring(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className={isRTL ? 'text-right' : 'text-left'}>
                         <h3 className="font-medium">{review.freelancerName}</h3>
                         <p className="text-sm text-neutral-500">{review.projectTitle}</p>
                       </div>
                     </div>
-                    <div className="flex items-center">
-                      <div className="flex mr-2">
+                    <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <div className={`flex ${isRTL ? 'ml-2' : 'mr-2'}`}>
                         {renderStars(review.rating)}
                       </div>
-                      <div className="flex items-center text-sm text-neutral-500">
-                        <Calendar size={14} className="mr-1" />
+                      <div className={`flex items-center text-sm text-neutral-500 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <Calendar size={14} className={isRTL ? 'ml-1' : 'mr-1'} />
                         {formatDate(review.createdAt)}
                       </div>
                     </div>
                   </div>
-                  <p className="text-neutral-700">{review.comment}</p>
+                  <p className={`text-neutral-700 ${isRTL ? 'text-right' : 'text-left'}`}>{review.comment}</p>
                 </div>
               </CardContent>
             </Card>

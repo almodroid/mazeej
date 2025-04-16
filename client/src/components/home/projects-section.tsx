@@ -13,7 +13,7 @@ export default function ProjectsSection() {
   });
 
   // Fetch proposals counts (this would be implemented differently in a real app)
-  const proposalsCounts = { 1: 8, 2: 12 }; // Mock data
+  const proposalsCounts: Record<number, number> = { 1: 8, 2: 12 }; // Mock data
 
   return (
     <section className="py-12 bg-white">

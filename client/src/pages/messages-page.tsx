@@ -67,6 +67,7 @@ export default function MessagesPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesPollingRef = useRef<(() => void) | null>(null);
   const isRTL = i18n.language === "ar";
   
   // Media upload state
@@ -85,7 +86,8 @@ export default function MessagesPage() {
   const { 
     sendMessageMutation, 
     sendMediaMutation, 
-    startZoomCallMutation 
+    startZoomCallMutation,
+    getMessages
   } = useMessages();
 
   // Fetch conversations
@@ -116,14 +118,23 @@ export default function MessagesPage() {
   const fetchMessages = async (partnerId: number) => {
     try {
       setIsLoadingMessages(true);
-      const response = await apiRequest("GET", `/api/messages/${partnerId}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fetch messages");
-      }
       
-      const data = await response.json();
-      setMessages(data);
+      // Use the getMessages function from the useMessages hook
+      const messageData = await getMessages(partnerId);
+      setMessages(messageData);
+      
+      // Setup polling for new messages while this conversation is active
+      const intervalId = setInterval(async () => {
+        try {
+          const updatedMessages = await getMessages(partnerId);
+          setMessages(updatedMessages);
+        } catch (error) {
+          console.error("Error in message polling:", error);
+        }
+      }, 10000); // Poll every 10 seconds as a fallback to socket updates
+      
+      // Save interval ID for cleanup
+      messagesPollingRef.current = () => clearInterval(intervalId);
     } catch (error) {
       console.error("Error fetching messages:", error);
       toast({
@@ -318,6 +329,14 @@ export default function MessagesPage() {
   const selectConversation = (convId: string, partnerId: number) => {
     setSelectedConversation(convId);
     setSelectedPartnerId(partnerId);
+    
+    // Clean up previous polling interval if any
+    if (typeof messagesPollingRef.current === 'function') {
+      messagesPollingRef.current();
+      messagesPollingRef.current = null;
+    }
+    
+    // Set up new fetching
     fetchMessages(partnerId);
   };
 
@@ -349,6 +368,16 @@ export default function MessagesPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Clean up polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof messagesPollingRef.current === 'function') {
+        messagesPollingRef.current();
+        messagesPollingRef.current = null;
+      }
+    };
+  }, []);
 
   // Ensure the document has the correct RTL direction
   useEffect(() => {
@@ -690,12 +719,12 @@ export default function MessagesPage() {
       
       {/* Media Upload Dialog */}
       <Dialog open={mediaUploadOpen} onOpenChange={setMediaUploadOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby="media-upload-description">
           <DialogHeader>
             <DialogTitle>{t("messages.uploadMedia")}</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4" id="media-upload-description">
             {uploadingFile && (
               <div className="flex items-center justify-between border rounded p-3">
                 <div className="flex items-center space-x-3">

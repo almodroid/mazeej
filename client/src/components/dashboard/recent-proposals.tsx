@@ -63,7 +63,7 @@ export default function RecentProposals({ proposals }: RecentProposalsProps) {
                   <h3 className="font-medium text-neutral-900">
                     {t("proposals.projectProposal")} #{proposal.projectId}
                   </h3>
-                  {getStatusBadge(proposal.status)}
+                  {getStatusBadge(proposal.status || '')}
                 </div>
                 <p className="text-neutral-600 text-sm line-clamp-2 mb-2">
                   {proposal.description}

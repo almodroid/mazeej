@@ -285,4 +285,112 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
   return originalFetch(input, init);
 };
 
-export { apiRequest }; 
+export { apiRequest };
+
+// Project and Review API functions
+export const projectApi = {
+  // Update project status
+  updateProjectStatus: async (projectId: number, status: string) => {
+    const response = await apiRequest(
+      'PATCH', 
+      `/api/projects/${projectId}/status`,
+      { status }
+    );
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to update project status');
+    }
+    
+    return response.json();
+  },
+  
+  // Get project details
+  getProject: async (projectId: number) => {
+    const response = await apiRequest('GET', `/api/projects/${projectId}`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to get project details');
+    }
+    
+    return response.json();
+  }
+};
+
+export const reviewApi = {
+  // Submit a review
+  submitReview: async (reviewData: {
+    projectId: number;
+    revieweeId: number;
+    rating: number;
+    comment: string;
+  }) => {
+    console.log("API: Submitting review data:", reviewData);
+    
+    try {
+      const response = await apiRequest('POST', '/api/reviews', reviewData);
+      console.log("API: Review submission response status:", response.status);
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to submit review";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error("API: Review submission error details:", errorData);
+        } catch (parseError) {
+          console.error("API: Could not parse error response", parseError);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      try {
+        const result = await response.json();
+        console.log("API: Review submission success data:", result);
+        return result;
+      } catch (parseError) {
+        console.error("API: Error parsing success response", parseError);
+        return { success: true }; // Return minimal success object if parsing fails
+      }
+    } catch (error) {
+      console.error("API: Review submission request error:", error);
+      throw error;
+    }
+  },
+  
+  // Get reviews for a project
+  getProjectReviews: async (projectId: number) => {
+    const response = await apiRequest('GET', `/api/projects/${projectId}/reviews`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to get project reviews');
+    }
+    
+    return response.json();
+  },
+  
+  // Get reviews given by the current user
+  getReviewsGiven: async () => {
+    const response = await apiRequest('GET', `/api/users/reviews/given`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to get reviews given');
+    }
+    
+    return response.json();
+  },
+  
+  // Get reviews received by the current user
+  getReviewsReceived: async () => {
+    const response = await apiRequest('GET', `/api/users/reviews/received`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to get reviews received');
+    }
+    
+    return response.json();
+  }
+}; 

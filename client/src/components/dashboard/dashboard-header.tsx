@@ -31,7 +31,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import LogoSVG from "@/assets/images/logo.svg";
+import { useSocket } from "@/hooks/useSocket";
 
 interface DashboardHeaderProps {
   onMobileMenuOpen?: () => void;
@@ -44,6 +44,26 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
   const [scrolled, setScrolled] = useState(false);
   const [, navigate] = useLocation();
   const isRTL = i18n.language === "ar";
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleNewMessage = () => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(t('notifications.newMessage'), {
+          body: t('notifications.newMessageBody'),
+          icon: '/favicon.ico'
+        });
+      }
+    };
+    
+    socket.on('newMessage', handleNewMessage);
+    
+    return () => {
+      socket.off('newMessage', handleNewMessage);
+    };
+  }, [socket, t]);
 
   const handleLanguageChange = (language: string) => {
     i18n.changeLanguage(language);
@@ -86,8 +106,7 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
         
         {/* Logo for medium screens and above */}
         <div className="hidden md:flex items-center">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <img src={LogoSVG} alt="Mazeej Logo" className="h-9 w-auto" />
+          <Link href="/dashboard">
             <h2 className="text-xl font-cairo font-bold text-primary cursor-pointer">
               {t("common.appName")}
             </h2>
@@ -117,7 +136,7 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
           isRTL && "ml-0 mr-auto"
         )}>
           {/* Language Switcher */}
-          <DropdownMenu>
+          <DropdownMenu dir={isRTL ? "rtl" : "ltr"}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 <Languages className="h-[1.2rem] w-[1.2rem]" />
@@ -134,7 +153,7 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
           </DropdownMenu>
 
           {/* Theme Switcher */}
-          <DropdownMenu>
+          <DropdownMenu dir={isRTL ? "rtl" : "ltr"}> 
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 {theme === "light" && <Sun className="h-[1.2rem] w-[1.2rem]" />}
@@ -148,17 +167,18 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
               <DropdownMenuRadioGroup 
                 value={theme} 
                 onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}
+                
               >
                 <DropdownMenuRadioItem value="light">
-                  <Sun className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                  <Sun className={cn("h-4 w-4", isRTL ? "mr-2" : "ml-2")} />
                   <span>{t("settings.light")}</span>
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="dark">
-                  <Moon className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                  <Moon className={cn("h-4 w-4", isRTL ? "mr-2" : "ml-2")} />
                   <span>{t("settings.dark")}</span>
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="system">
-                  <Laptop className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                  <Laptop className={cn("h-4 w-4", isRTL ? "mr-2" : "ml-2")} />
                   <span>{t("settings.system")}</span>
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>

@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -93,6 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+
+  useEffect(() => {
+    if (user && 'Notification' in window) {
+      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+      }
+    }
+  }, [user]);
 
   return (
     <AuthContext.Provider

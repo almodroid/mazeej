@@ -137,8 +137,11 @@ const editUserSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  fullName: z.string().min(2, {
-    message: "Full name must be at least 2 characters.",
+  firstName: z.string().min(2, {
+    message: "First name must be at least 2 characters.",
+  }),
+  lastName: z.string().min(2, {
+    message: "Last name must be at least 2 characters.",
   }),
   role: z.enum(["admin", "client", "freelancer"], {
     required_error: "Please select a role.",
@@ -147,6 +150,7 @@ const editUserSchema = z.object({
   freelancerType: z.enum(freelancerTypeEnum.enumValues).optional(),
   hourlyRate: z.number().min(0).optional(),
   skills: z.array(z.number()).optional(),
+  profileImage: z.string().url().optional().or(z.literal("")),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -234,12 +238,14 @@ export default function AdminUsersPage() {
     defaultValues: {
       username: "",
       email: "",
-      fullName: "",
+      firstName: "",
+      lastName: "",
       role: "client",
       freelancerLevel: "intermediate",
       freelancerType: "content_creator",
       hourlyRate: 0,
       skills: [],
+      profileImage: "",
     },
   });
   
@@ -249,12 +255,14 @@ export default function AdminUsersPage() {
       editForm.reset({
         username: userToEdit.username,
         email: userToEdit.email,
-        fullName: userToEdit.fullName,
+        firstName: userToEdit.firstName || "",
+        lastName: userToEdit.lastName || "",
         role: userToEdit.role as "admin" | "client" | "freelancer",
-        freelancerLevel: userToEdit.freelancerLevel,
-        freelancerType: userToEdit.freelancerType,
-        hourlyRate: userToEdit.hourlyRate,
+        freelancerLevel: userToEdit.freelancerLevel || "intermediate",
+        freelancerType: userToEdit.freelancerType || "content_creator",
+        hourlyRate: userToEdit.hourlyRate || 0,
         skills: userToEdit.skills || [],
+        profileImage: userToEdit.profileImage || "",
       });
     }
   }, [userToEdit, editForm]);
@@ -920,14 +928,44 @@ export default function AdminUsersPage() {
                   )}
                 />
                 
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editForm.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("profile.firstName")}</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={editForm.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("profile.lastName")}</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
                 <FormField
                   control={editForm.control}
-                  name="fullName"
+                  name="profileImage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("profile.fullName")}</FormLabel>
+                      <FormLabel>{t("profile.profileImage")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder="https://example.com/avatar.jpg" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

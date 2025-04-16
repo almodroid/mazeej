@@ -63,7 +63,7 @@ export default function RecentProjects({ projects }: RecentProjectsProps) {
               <a className="block p-4 hover:bg-neutral-50 transition-colors">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-medium text-neutral-900">{project.title}</h3>
-                  {getStatusBadge(project.status)}
+                  {getStatusBadge(project.status || '')}
                 </div>
                 <p className="text-neutral-600 text-sm line-clamp-2 mb-2">
                   {project.description}

@@ -47,6 +47,20 @@ export interface CreateTransactionParams {
   description?: string;
 }
 
+export interface Message {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+  isFlagged?: boolean;
+  supervisedBy?: number;
+  supervisorNotes?: string;
+  mediaUrl?: string;
+  mediaType?: string;
+}
+
 // Define the storage interface
 export interface IStorage {
   // User operations
@@ -96,7 +110,9 @@ export interface IStorage {
   
   // Review operations
   getReviewsByUser(userId: number): Promise<Review[]>;
+  getReviewsByReviewer(userId: number): Promise<Review[]>;
   createReview(review: InsertReview, reviewerId: number): Promise<Review>;
+  getProjectReviews(projectId: number): Promise<Review[]>;
   
   // File operations
   uploadFile(file: InsertFile): Promise<File>;
@@ -544,10 +560,12 @@ export class MemStorage implements IStorage {
       id,
       senderId,
       isRead: false,
-      createdAt: now,
+      createdAt: now.toISOString(),
       supervisedBy: null,
       isFlagged: false,
-      supervisorNotes: null
+      supervisorNotes: null,
+      mediaUrl: null,
+      mediaType: null
     };
     this.messages.set(id, newMessage);
     return newMessage;
@@ -574,6 +592,12 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getReviewsByReviewer(userId: number): Promise<Review[]> {
+    return Array.from(this.reviews.values()).filter(
+      (review) => review.reviewerId === userId
+    );
+  }
+
   async createReview(review: InsertReview, reviewerId: number): Promise<Review> {
     const id = this.reviewId++;
     const now = new Date();
@@ -591,6 +615,12 @@ export class MemStorage implements IStorage {
     
     this.reviews.set(id, newReview);
     return newReview;
+  }
+
+  async getProjectReviews(projectId: number): Promise<Review[]> {
+    return Array.from(this.reviews.values()).filter(
+      (review) => review.projectId === projectId
+    );
   }
 
   // File operations

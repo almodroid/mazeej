@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, Calendar } from "lucide-react";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
-import { apiRequest } from "@/lib/queryClient";
+import { reviewApi } from "@/lib/api";
 
 interface Review {
   id: number;
@@ -28,11 +28,7 @@ export default function ReviewsReceivedPage() {
   const { data: reviews = [], isLoading, error } = useQuery<Review[]>({
     queryKey: ['/api/users/reviews/received'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/users/reviews/received');
-      if (!response.ok) {
-        throw new Error('Failed to fetch reviews');
-      }
-      return response.json();
+      return await reviewApi.getReviewsReceived();
     }
   });
 

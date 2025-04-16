@@ -139,19 +139,25 @@ export function setupWebSocketServer(server: Server) {
         // Handle message history requests
         if (data.type === 'get_messages') {
           const { otherUserId } = data;
-          const messages = await storage.getMessages(userId, otherUserId);
-          
-          ws.send(JSON.stringify({
-            type: 'message_history',
-            messages: messages.map(msg => ({
-              id: msg.id,
-              senderId: msg.senderId,
-              receiverId: msg.receiverId,
-              content: msg.content,
-              timestamp: msg.createdAt,
-              isRead: msg.isRead,
-            })),
-          }));
+          // Ensure userId is not null before proceeding
+          if (userId) {
+            const messages = await storage.getMessages(userId, otherUserId);
+            
+            ws.send(JSON.stringify({
+              type: 'message_history',
+              messages: messages.map(msg => ({
+                id: msg.id,
+                senderId: msg.senderId,
+                receiverId: msg.receiverId,
+                content: msg.content,
+                timestamp: msg.createdAt,
+                isRead: msg.isRead,
+              })),
+            }));
+          } else {
+            console.error('User ID not found for get_messages request');
+            ws.send(JSON.stringify({ type: 'error', message: 'Authentication required' }));
+          }
         }
         
         // Handle marking messages as read

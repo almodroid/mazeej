@@ -116,6 +116,8 @@ export const messages = pgTable("messages", {
   supervisedBy: integer("supervised_by").references(() => users.id),
   isFlagged: boolean("is_flagged").default(false),
   supervisorNotes: text("supervisor_notes"),
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type"),
 });
 
 // Reviews table

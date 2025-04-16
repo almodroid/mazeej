@@ -176,7 +176,10 @@
       "categories": "إدارة الفئات",
       "reports": "التقارير والتحليلات",
       "payments": "نظرة عامة على المدفوعات",
-      "settings": "إعدادات المنصة"
+      "settings": "إعدادات المنصة",
+      "dashboard" :"لوحة التحكم",
+      "dashboardDescription" : "تابع المنصة عن طريق لوحة التحكم الهاصة بك",
+      "messages":"تتبع المراسلات"
     }
   },
   "hero": {
@@ -442,7 +445,9 @@
     "projectStatus": "حالة المشروع",
     "projectStatusDescription": "توزيع المشاريع حسب الحالة",
     "newUsers": "تسجيلات المستخدمين الجدد",
-    "newUsersDescription": "اتجاهات تسجيل المستخدمين الجدد أسبوعياً"
+    "newUsersDescription": "اتجاهات تسجيل المستخدمين الجدد أسبوعياً",
+    "userRegistration" : "عمليات التسجيل",
+    "userRegistrationDescription" : "تتبع عمليات التسجيل"
   },
   "notification": {
     "title": "الإشعارات",
@@ -672,14 +677,46 @@
     "waitingForReview": "طلب التوثيق الخاص بك في انتظار المراجعة",
     "alreadyVerified": "تم التحقق من حسابك بالفعل",
     "resubmit": "تقديم طلب جديد",
-    "previouslyRejected": "تم رفض طلب التوثيق السابق الخاص بك"
+    "previouslyRejected": "تم رفض طلب التوثيق السابق الخاص بك",
+    "verified": "تم التحقق",
+    "verifiedDesc": "تم التحقق من حسابك. يمكنك الآن الوصول إلى جميع الميزات.",
+    "verificationTitle": "توثيق الحساب",
+    "verificationDescription": "تحقق من هويتك لبناء الثقة مع العملاء وفتح المزيد من الفرص.",
+    "newRequest": "طلب جديد",
+    "requestHistory": "سجل الطلبات",
+    "notAvailable": "التوثيق غير متاح",
+    "notAvailableForClient": "كعميل، لا تحتاج إلى توثيق حسابك.",
+    "adminVerificationTab": "يمكنك استخدام لوحة الإدارة لمراجعة طلبات التوثيق.",
+    "verificationRequests": "طلبات التوثيق",
+    "yourVerificationRequests": "طلبات التوثيق الخاصة بك",
+    "adminVerificationDesc": "مراجعة ومعالجة طلبات التوثيق من المستقلين.",
+    "userVerificationDesc": "تتبع حالة طلبات التوثيق الخاصة بك.",
+    "noPendingRequests": "لا توجد طلبات توثيق معلقة.",
+    "noApprovedRequests": "لا توجد طلبات توثيق تمت الموافقة عليها.",
+    "noRejectedRequests": "لا توجد طلبات توثيق مرفوضة.",
+    "viewDocument": "عرض الوثيقة",
+    "reviewRequest": "مراجعة طلب التوثيق",
+    "reviewRequestDesc": "راجع طلب التوثيق وقم بالموافقة عليه أو رفضه.",
+    "selectDocumentType": "اختر نوع الوثيقة",
+    "documentFile": "ملف الوثيقة",
+    "dragAndDrop": "اسحب وأفلت الملف هنا أو انقر للتصفح",
+    "fileSizeLimit": "الحد الأقصى لحجم الملف: 5 ميجابايت (JPG، PNG، PDF)",
+    "requestVerification": "طلب التوثيق",
+    "requestDescription": "قم بتقديم وثائق الهوية الخاصة بك لتوثيق حسابك. هذا يساعد في بناء الثقة مع العملاء.",
+    "requestSubmitted": "تم إرسال الطلب",
+    "requestSubmittedDesc": "تم تقديم طلب التوثيق الخاص بك وستتم مراجعته قريبًا.",
+    "statusUpdated": "تم تحديث الحالة",
+    "statusUpdatedDesc": "تم تحديث حالة طلب التوثيق بنجاح.",
+    "errorFetchingRequests": "حدث خطأ أثناء جلب طلبات التوثيق.",
+    "reviewNotesPlaceholder": "أضف ملاحظات حول سبب موافقتك أو رفضك لهذا الطلب..."
   },
   "project": {
     "statusOpen": "مفتوح",
     "statusInProgress": "قيد التنفيذ",
     "statusCompleted": "مكتمل",
     "statusCancelled": "ملغي",
-    "statusPending": "في انتظار الموافقة"
+    "statusPending": "في انتظار الموافقة",
+    "statusIn_progress" :" قيد التنفيذ"
   },
   "proposal": {
     "statusPending": "قيد الانتظار",
@@ -697,7 +734,24 @@
     "completed": "مكتمل",
     "cancelled": "ملغي",
     "projectsCount": "{{count}} مشروع",
-    "noProjects": "ليس لديك أي مشاريع حتى الآن"
+    "noProjects": "ليس لديك أي مشاريع حتى الآن",
+    "finalizeProject": "إنهاء المشروع",
+    "statusUpdated": "تم تحديث حالة المشروع",
+    "projectCompleted": "تم تحديد المشروع كمكتمل",
+    "errorUpdatingStatus": "حدث خطأ أثناء تحديث حالة المشروع",
+    "reviewDialog": {
+      "title": "تقييم المستقل",
+      "description": "شارك تجربتك في العمل مع المستقل للمشروع: {{projectTitle}}",
+      "rating": "التقييم",
+      "comment": "التعليق",
+      "commentPlaceholder": "صف تجربتك مع هذا المستقل...",
+      "submit": "إرسال التقييم",
+      "success": "تم إرسال التقييم",
+      "successDescription": "شكراً على ملاحظاتك!",
+      "errorSubmitting": "حدث خطأ أثناء إرسال التقييم",
+      "validationError": "خطأ في التحقق من التقييم",
+      "ratingRequired": "يرجى تقديم تقييم قبل الإرسال"
+    }
   },
   "myProposals": {
     "title": "عروضي",

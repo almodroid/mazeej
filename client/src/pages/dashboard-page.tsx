@@ -5,29 +5,78 @@ import { useAuth } from "@/hooks/use-auth";
 import StatCard from "@/components/dashboard/stat-card";
 import RecentProjects from "@/components/dashboard/recent-projects";
 import RecentProposals from "@/components/dashboard/recent-proposals";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import DashboardNotifications from "@/components/dashboard/dashboard-notifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project, Proposal } from "@shared/schema";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [debug, setDebug] = useState<Record<string, any>>({});
 
-  // Fetch data based on user role
-  const { data: projects = [] } = useQuery<Project[]>({
+  // Fetch all projects (for both clients and freelancers)
+  const { data: allProjects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/projects");
+      if (!response.ok) {
+        throw new Error("Failed to fetch projects");
+      }
+      const data = await response.json();
+      setDebug((prev: Record<string, any>) => ({ ...prev, allProjects: data }));
+      return data;
+    },
     enabled: !!user,
   });
 
-  const { data: clientProjects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-    enabled: !!user && user.role === "client",
+  // Filter projects by client ID for client users
+  const clientProjects = user?.role === 'client' 
+    ? allProjects.filter(p => p.clientId === user.id)
+    : [];
+
+  // Fetch user's proposals (for freelancers)
+  const { data: freelancerProposals = [] } = useQuery<Proposal[]>({
+    queryKey: ["/api/proposals/my"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/proposals/my");
+      if (!response.ok) {
+        throw new Error("Failed to fetch freelancer proposals");
+      }
+      const data = await response.json();
+      setDebug((prev: Record<string, any>) => ({ ...prev, freelancerProposals: data }));
+      return data;
+    },
+    enabled: !!user && user.role === "freelancer",
   });
 
-  const { data: freelancerProposals = [] } = useQuery<Proposal[]>({
-    queryKey: ["/api/proposals/freelancer"],
+  // Fetch financial data if user is a freelancer
+  const { data: earnings = { total: 0, pending: 0 } } = useQuery({
+    queryKey: ["/api/earnings"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/earnings");
+      if (!response.ok) {
+        throw new Error("Failed to fetch earnings");
+      }
+      return response.json();
+    },
     enabled: !!user && user.role === "freelancer",
+  });
+
+  // Fetch payment data if user is a client
+  const { data: payments = { total: 0, pending: 0 } } = useQuery({
+    queryKey: ["/api/payments"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/payments");
+      if (!response.ok) {
+        throw new Error("Failed to fetch payments");
+      }
+      return response.json();
+    },
+    enabled: !!user && user.role === "client",
   });
 
   // Ensure the document has the correct RTL direction
@@ -38,13 +87,21 @@ export default function DashboardPage() {
   // Define RTL state based on language
   const isRTL = i18n.language === "ar";
 
+ 
   // Calculate stats
-  const activeProjects = projects.filter(p => p.status === "in_progress").length;
-  const completedProjects = projects.filter(p => p.status === "completed").length;
+  const activeProjects = user?.role === "client" 
+    ? clientProjects.filter(p => p.status === "in_progress").length
+    : allProjects.filter(p => p.status === "in_progress").length;
+    
+  const completedProjects = user?.role === "client"
+    ? clientProjects.filter(p => p.status === "completed").length
+    : allProjects.filter(p => p.status === "completed").length;
+    
   const pendingProposals = freelancerProposals.filter(p => p.status === "pending").length;
-  const totalEarnings = freelancerProposals
-    .filter(p => p.status === "accepted")
-    .reduce((sum, proposal) => sum + proposal.price, 0);
+  
+  const totalEarnings = user?.role === "freelancer" 
+    ? earnings.total
+    : payments.total;
 
   if (!user) {
     return null;
@@ -58,7 +115,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
-          title={t("dashboard.activeProjects")} 
+          title={user.role === "client" ? t("dashboard.activeProjects") : t("dashboard.availableProjects")} 
           value={activeProjects.toString()} 
           icon="briefcase" 
           trend="up" 
@@ -70,13 +127,13 @@ export default function DashboardPage() {
           trend="neutral" 
         />
         <StatCard 
-          title={t("dashboard.pendingProposals")} 
-          value={pendingProposals.toString()} 
+          title={user.role === "freelancer" ? t("dashboard.pendingProposals") : t("dashboard.pendingRequests")} 
+          value={user.role === "freelancer" ? pendingProposals.toString() : "0"} 
           icon="file-text" 
-          trend="down" 
+          trend={pendingProposals > 0 ? "up" : "down"} 
         />
         <StatCard 
-          title={t("dashboard.totalEarnings")} 
+          title={user.role === "freelancer" ? t("dashboard.totalEarnings") : t("dashboard.totalSpending")} 
           value={`$${totalEarnings}`} 
           icon="dollar-sign" 
           trend="up" 
@@ -87,31 +144,28 @@ export default function DashboardPage() {
         <div className="lg:col-span-2">
           <Tabs defaultValue="projects" className="w-full" dir={isRTL ? "rtl" : "ltr"}>
             <TabsList>
-              <TabsTrigger value="projects">{t("dashboard.recentProjects")}</TabsTrigger>
-              <TabsTrigger value="proposals">{t("dashboard.recentProposals")}</TabsTrigger>
+              <TabsTrigger value="projects">
+                {user.role === "client" ? t("dashboard.myProjects") : t("dashboard.recentProjects")}
+              </TabsTrigger>
+              {user.role === "freelancer" && (
+                <TabsTrigger value="proposals">{t("dashboard.recentProposals")}</TabsTrigger>
+              )}
             </TabsList>
             <TabsContent value="projects" className="mt-4">
-              <RecentProjects projects={clientProjects.slice(0, 5)} />
+              <RecentProjects projects={user.role === "client" ? clientProjects.slice(0, 5) : allProjects.slice(0, 5)} />
             </TabsContent>
-            <TabsContent value="proposals" className="mt-4">
-              <RecentProposals proposals={freelancerProposals.slice(0, 5)} />
-            </TabsContent>
+            {user.role === "freelancer" && (
+              <TabsContent value="proposals" className="mt-4">
+                <RecentProposals proposals={freelancerProposals.slice(0, 5)} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
         <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("dashboard.notifications")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* This would show notifications in a real implementation */}
-              <div className="text-center py-8 text-neutral-500">
-                <p>{t("dashboard.noNotifications")}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <DashboardNotifications />
         </div>
       </div>
+      
     </DashboardLayout>
   );
 }

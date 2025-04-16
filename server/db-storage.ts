@@ -440,6 +440,24 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reviews.createdAt));
   }
 
+  // Get reviews given by a user (as reviewer)
+  async getReviewsByReviewer(userId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.reviewerId, userId))
+      .orderBy(desc(reviews.createdAt));
+  }
+
+  // Get all reviews for a specific project
+  async getProjectReviews(projectId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.projectId, projectId))
+      .orderBy(desc(reviews.createdAt));
+  }
+
   async createReview(review: InsertReview, reviewerId: number): Promise<Review> {
     const [newReview] = await db
       .insert(reviews)

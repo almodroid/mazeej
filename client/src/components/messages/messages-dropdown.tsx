@@ -25,9 +25,10 @@ export function MessagesDropdown() {
     markAsReadMutation,
     refetchConversations
   } = useMessages();
-  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { socket } = useSocket();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
 
   useEffect(() => {
     if (!socket) return;
@@ -58,7 +59,7 @@ export function MessagesDropdown() {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu dir={isRTL ? "rtl" : "ltr"}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <MessageSquare className="h-5 w-5" />
@@ -93,7 +94,13 @@ export function MessagesDropdown() {
               >
                 <div className="flex justify-between w-full">
                   <div className="font-medium">
-                    {conversation.otherUser.fullName || conversation.otherUser.username}
+                    {conversation.otherUser 
+                      ? (conversation.otherUser.fullName || conversation.otherUser.username) 
+                      : conversation.participant 
+                        ? (conversation.participant.fullName || conversation.participant.username)
+                        : conversation.participantName 
+                          ? conversation.participantName
+                          : t('messages.unknownUser', 'Unknown User')}
                   </div>
                   {conversation.unreadCount > 0 && (
                     <Badge variant="secondary">

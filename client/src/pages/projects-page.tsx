@@ -35,8 +35,13 @@ export default function ProjectsPage() {
     queryKey: ["/api/categories"],
   });
 
-  // Fetch proposals counts (this would be implemented differently in a real app)
-  const proposalsCounts = { 1: 8, 2: 12 }; // Mock data
+  // Add more mock projects if needed
+  const mockProjects: Project[] = [
+    // ... existing projects ...
+  ];
+
+  // Mock proposals counts - replace with actual data fetching
+  const proposalsCounts: Record<number, number> = { 1: 8, 2: 12 }; // Mock data
 
   // Ensure the document has the correct RTL direction
   useEffect(() => {

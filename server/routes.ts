@@ -13,66 +13,27 @@ import fs from "fs";
 import crypto from "crypto";
 import { eq, and, or, desc } from "drizzle-orm";
 
-// Define upload directories
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
-const AVATARS_DIR = path.join(UPLOADS_DIR, 'avatars');
-const DOCUMENTS_DIR = path.join(UPLOADS_DIR, 'documents');
-const PROJECT_FILES_DIR = path.join(UPLOADS_DIR, 'projects');
-
-// Ensure directories exist
-[UPLOADS_DIR, AVATARS_DIR, DOCUMENTS_DIR, PROJECT_FILES_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
-// Configure multer storage
-const createMulterStorage = (destination: string) => {
-  return multer.diskStorage({
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, destination);
+      const uploadDir = path.join(process.cwd(), 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       cb(null, uniqueSuffix + path.extname(file.originalname));
     }
-  });
-};
-
-// Multer instances
-const avatarUpload = multer({
-  storage: createMulterStorage(AVATARS_DIR),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for avatars
-  fileFilter: (req, file, cb) => {
-    // Allow only image files
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed!'));
-    }
+  }),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
   }
 });
 
-const documentUpload = multer({
-  storage: createMulterStorage(DOCUMENTS_DIR),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for documents
-});
-
-const projectFileUpload = multer({
-  storage: createMulterStorage(PROJECT_FILES_DIR),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit for project files
-});
-
-// Generic file upload (deprecated or for other types)
-const genericUpload = multer({
-  storage: createMulterStorage(UPLOADS_DIR),
-  limits: { fileSize: 10 * 1024 * 1024 }
-});
-
 export function registerRoutes(app: Express): Server {
-  // Serve uploaded files statically
-  app.use('/uploads', express.static(UPLOADS_DIR));
-
   // Setup authentication routes (/api/register, /api/login, /api/logout, /api/user)
   setupAuth(app);
 
@@ -225,11 +186,35 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: 'Receiver not found' });
       }
       
-      // Create the message
+      // Create the message with valid properties
+      // Note: isRead is handled by the storage layer and defaults to false
       const message = await storage.createMessage({
         receiverId: receiverIdNum,
         content: content.trim()
       }, userId);
+      
+      // Create a notification for the receiver
+      await storage.createNotification({
+        userId: receiverIdNum,
+        type: 'message',
+        title: `New message from ${req.user.fullName || req.user.username}`,
+        content: content.length > 30 ? content.substring(0, 30) + '...' : content,
+        relatedId: message.id
+      });
+      
+      // Emit a WebSocket event to notify connected clients
+      if (req.app.get('wss')) {
+        const wss = req.app.get('wss');
+        // Use proper typing for WebSocket clients
+        wss.clients.forEach((client: any) => {
+          if (client.userId === receiverIdNum && client.readyState === 1) { // WebSocket.OPEN = 1
+            client.send(JSON.stringify({
+              type: 'newMessage',
+              message
+            }));
+          }
+        });
+      }
       
       res.status(201).json(message);
     } catch (error: any) {
@@ -238,6 +223,94 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Send a media message
+  app.post('/api/messages/media', upload.single('file'), async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to send messages' });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const { receiverId, caption } = req.body;
+      
+      if (!receiverId || !req.file) {
+        return res.status(400).json({ message: 'Receiver ID and file are required' });
+      }
+      
+      // Validate receiverId is a number
+      const receiverIdNum = parseInt(receiverId);
+      if (isNaN(receiverIdNum)) {
+        return res.status(400).json({ message: 'Invalid receiver ID' });
+      }
+      
+      // Validate receiver exists
+      const receiver = await storage.getUser(receiverIdNum);
+      if (!receiver) {
+        return res.status(404).json({ message: 'Receiver not found' });
+      }
+      
+      // Create uploads directory if it doesn't exist
+      const uploadDir = path.join(process.cwd(), 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      // Determine media type
+      let mediaType = 'document';
+      if (req.file.mimetype.startsWith('image/')) {
+        mediaType = 'image';
+      } else if (req.file.mimetype.startsWith('video/')) {
+        mediaType = 'video';
+      }
+      
+      // Create file entry
+      const fileData = {
+        userId: userId,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+      };
+      
+      const savedFile = await storage.uploadFile(fileData);
+      
+      // Create the message
+      const message = await storage.createMessage({
+        receiverId: receiverIdNum,
+        content: caption || 'Sent a file',
+        mediaUrl: `/uploads/${req.file.filename}`,
+        mediaType: mediaType
+      }, userId);
+      
+      // Create a notification for the receiver
+      await storage.createNotification({
+        userId: receiverIdNum,
+        type: 'message',
+        title: `New ${mediaType} from ${req.user.fullName || req.user.username}`,
+        content: caption || `Sent a ${mediaType}`,
+        relatedId: message.id
+      });
+      
+      // Emit a WebSocket event to notify connected clients
+      if (req.app.get('wss')) {
+        const wss = req.app.get('wss');
+        wss.clients.forEach((client: any) => {
+          if (client.userId === receiverIdNum && client.readyState === 1) {
+            client.send(JSON.stringify({
+              type: 'newMessage',
+              message
+            }));
+          }
+        });
+      }
+      
+      res.status(201).json(message);
+    } catch (error: any) {
+      console.error('Error sending media message:', error);
+      res.status(500).json({ message: 'Failed to send media message' });
+    }
+  });
+
   // Get user by ID
   app.get('/api/users/:id', async (req, res) => {
     try {
@@ -251,13 +324,6 @@ export function registerRoutes(app: Express): Server {
       
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
-      }
-      
-      // Ensure profileImage path starts with /uploads/avatars if it exists
-      if (user.profileImage && !user.profileImage.startsWith('/uploads/avatars/')) {
-        // Attempt to correct path (assuming it might be just filename or old path)
-        const filename = path.basename(user.profileImage);
-        user.profileImage = `/uploads/avatars/${filename}`;
       }
       
       const { password, ...userWithoutPassword } = user;
@@ -850,191 +916,17 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // --- File Upload Routes ---
-
-  // Upload Avatar Route
-  app.post('/api/upload/avatar', avatarUpload.single('avatar'), async (req, res) => {
+  // File Upload Route
+  app.post('/api/upload', upload.single('file'), async (req, res) => {
     try {
-      console.log('Avatar upload request received');
-      
       if (!req.isAuthenticated()) {
-        console.log('Authentication check failed');
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      console.log('Authentication successful, user:', req.user.id);
-
-      if (!req.file) {
-        console.log('No file uploaded or file rejected by multer');
-        return res.status(400).json({ message: 'No avatar file uploaded or file type not allowed' });
-      }
-      
-      console.log('File uploaded successfully:', {
-        filename: req.file.filename,
-        originalname: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype
-      });
-      
-      // Verify the file was actually saved
-      const fullPath = path.join(AVATARS_DIR, req.file.filename);
-      if (!fs.existsSync(fullPath)) {
-        console.error(`File was not saved properly. Path does not exist: ${fullPath}`);
-        return res.status(500).json({ message: 'File upload failed - file not saved' });
-      }
-      
-      console.log(`File exists at ${fullPath}`);
-      
-      // Return the path to the uploaded avatar
-      const avatarPath = `/uploads/avatars/${req.file.filename}`;
-      console.log(`Returning avatar path: ${avatarPath}`);
-      
-      // Save the file metadata to the database
-      try {
-        const fileData = {
-          userId: req.user.id,
-          filename: req.file.filename,
-          originalName: req.file.originalname,
-          mimeType: req.file.mimetype,
-          size: req.file.size
-        };
-        
-        // Only call storage.uploadFile if it exists and we need to track files in the DB
-        if (typeof storage.uploadFile === 'function') {
-          const savedFile = await storage.uploadFile(fileData);
-          console.log('File metadata saved to database');
-        }
-      } catch (dbError) {
-        // Log the error but continue - we don't want to fail the upload if DB save fails
-        console.error('Error saving file metadata to database:', dbError);
-      }
-      
-      // Return success response
-      res.status(201).json({ filePath: avatarPath });
-    } catch (error: any) {
-      console.error('Avatar upload error:', error);
-      
-      if (error instanceof multer.MulterError) {
-        console.error('Multer error:', error.code, error.field);
-        return res.status(400).json({ message: `Multer error: ${error.message}`, code: error.code });
-      } else if (error.message === 'Only image files are allowed!') {
-        return res.status(400).json({ message: error.message });
-      }
-      
-      // For any other errors
-      console.error('Unexpected error during avatar upload:', error);
-      res.status(500).json({ message: 'Failed to upload avatar', error: error.message });
-    }
-  });
-
-  // Upload Verification Document Route (Uses documentUpload middleware)
-  app.post('/api/verification-requests', documentUpload.single('document'), async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-        // Delete uploaded file if authentication fails
-        if (req.file) fs.unlinkSync(req.file.path); 
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-      
-      // ... (rest of verification request logic) ...
-
-      // Handle file upload - use the correct path
-      if (!req.file) {
-        return res.status(400).json({ message: 'Document file is required' });
-      }
-      const documentUrl = `/uploads/documents/${req.file.filename}`;
-
-      // Save file record (optional, if you need metadata in db)
-      // const file = await storage.uploadFile({ ... });
-
-      // Create verification request
-      const requestData = {
-        userId: req.user.id,
-        documentType: req.body.documentType,
-        documentUrl: documentUrl, // Use the correct path
-        additionalInfo: req.body.additionalInfo
-      };
-
-      // ... (rest of the function, validation, saving, notifications) ...
-      const validatedData = insertVerificationRequestSchema.parse(requestData);
-      const verificationRequest = await storage.createVerificationRequest(validatedData);
-
-      // ... (notifications) ...
-
-      res.status(201).json(verificationRequest);
-    } catch (error: any) {
-      // Delete uploaded file if validation or other errors occur
-      if (req.file) fs.unlinkSync(req.file.path); 
-      
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: 'Validation error', errors: error.errors });
-      }
-      console.error('Error creating verification request:', error);
-      res.status(500).json({ message: 'Failed to create verification request', error: error instanceof Error ? error.message : 'Unknown error' });
-    }
-  });
-
-  // Upload Project Files Route (Uses projectFileUpload middleware)
-  app.post('/api/projects/:id/files', projectFileUpload.array('files'), async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-        // Delete uploaded files if auth fails
-        if (req.files) (req.files as Express.Multer.File[]).forEach(f => fs.unlinkSync(f.path));
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-
-      const projectId = parseInt(req.params.id);
-      const userId = req.user.id;
-      
-      // ... (project and permission checks) ...
-
-      const uploadedFiles = req.files as Express.Multer.File[];
-      if (!uploadedFiles || uploadedFiles.length === 0) {
-        return res.status(400).json({ message: 'No files uploaded' });
-      }
-
-      const savedFiles = [];
-      for (const file of uploadedFiles) {
-        const filePath = `/uploads/projects/${file.filename}`; 
-        const fileData = {
-          userId,
-          projectId,
-          filename: file.filename, // Store just the filename
-          originalName: file.originalname,
-          mimeType: file.mimetype,
-          size: file.size,
-          filePath: filePath // Store the full path for easy retrieval
-        };
-
-        // Assuming storage.uploadFile saves this data to DB
-        const savedFile = await storage.uploadFile(fileData); 
-        savedFiles.push({ ...savedFile, url: filePath }); // Return URL too
-      }
-
-      res.status(201).json(savedFiles);
-    } catch (error: any) {
-      // Delete uploaded files on error
-      if (req.files) (req.files as Express.Multer.File[]).forEach(f => fs.unlinkSync(f.path));
-      console.error('Error uploading project files:', error);
-      res.status(500).json({ message: 'Failed to upload files', error: error.message });
-    }
-  });
-  
-  // Generic File Upload Route (Consider removing or restricting)
-  // Keep the old /api/upload for now, but maybe phase it out
-  app.post('/api/upload', genericUpload.single('file'), async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-         if (req.file) fs.unlinkSync(req.file.path);
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-      
       if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
       }
       
-      // Save metadata (adjust path as needed)
-      const filePath = `/uploads/${req.file.filename}`;
       const fileData = {
         userId: req.user.id,
         projectId: req.body.projectId ? parseInt(req.body.projectId) : null,
@@ -1042,20 +934,16 @@ export function registerRoutes(app: Express): Server {
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         size: req.file.size,
-        filePath: filePath
       };
       
-      // const savedFile = await storage.uploadFile(fileData);
-      // For now, just return the path
-      res.status(201).json({ filePath: filePath /*, file: savedFile */ });
-    } catch (error: any) {
-       if (req.file) fs.unlinkSync(req.file.path);
-       console.error('Error uploading generic file:', error);
-       res.status(500).json({ message: 'Failed to upload file' });
+      const savedFile = await storage.uploadFile(fileData);
+      res.status(201).json(savedFile);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to upload file' });
     }
   });
 
-  // User Profile Update Route - Accepts profileImage path
+  // User Profile Update Route
   app.patch('/api/users/profile', async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -1068,13 +956,10 @@ export function registerRoutes(app: Express): Server {
         'phone', 'hourlyRate', 'freelancerLevel', 'freelancerType'
       ];
       
+      // Filter out only allowed fields
       const updateData: any = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
-          if (field === 'profileImage' && req.body[field] && !req.body[field].startsWith('/uploads/avatars/')) {
-            console.warn(`Invalid profile image path received: ${req.body[field]}`);
-            continue;
-          }
           updateData[field] = req.body[field];
         }
       }
@@ -1088,64 +973,1053 @@ export function registerRoutes(app: Express): Server {
       // Remove password from response
       const { password, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update profile' });
+    }
+  });
+
+  // Notification Routes
+  // Contacts API for the chat system
+  app.get('/api/contacts', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Get all users except the current user as potential contacts
+      const freelancers = await storage.getFreelancers();
+      const contacts = freelancers
+        .filter(user => user.id !== req.user?.id)
+        .map(({ password, ...rest }) => {
+          // Add some mock data for demo purposes
+          return {
+            ...rest,
+            isOnline: Math.random() > 0.5, // Random online status
+            lastSeen: new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000)), // Random last seen in last 24 hours
+            unreadCount: Math.floor(Math.random() * 5), // Random unread count between 0-4
+            lastMessage: Math.random() > 0.3 ? {
+              content: 'This is a sample message from the contact.',
+              timestamp: new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000))
+            } : null
+          };
+        });
+      
+      res.json(contacts);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch contacts' });
+    }
+  });
+
+  app.get('/api/notifications', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const notifications = await storage.getUserNotifications(req.user.id);
+      res.json(notifications);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch notifications' });
+    }
+  });
+
+  app.post('/api/notifications', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Admin can create notifications for any user
+      if (req.user.role !== 'admin' && req.body.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to create notifications for other users' });
+      }
+
+      const validatedData = insertNotificationSchema.parse(req.body);
+      const notification = await storage.createNotification(validatedData);
+      res.status(201).json(notification);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create notification' });
+    }
+  });
+
+  app.patch('/api/notifications/:id/read', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const notificationId = parseInt(req.params.id);
+      
+      // Get the notification to check ownership
+      const notifications = await storage.getUserNotifications(req.user.id);
+      const notification = notifications.find(n => n.id === notificationId);
+      
+      if (!notification) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+
+      // Check if this notification belongs to the current user
+      if (notification.userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to update this notification' });
+      }
+
+      const updatedNotification = await storage.markNotificationAsRead(notificationId);
+      res.json(updatedNotification);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to mark notification as read' });
+    }
+  });
+
+  app.delete('/api/notifications/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const notificationId = parseInt(req.params.id);
+      
+      // Get the notification to check ownership
+      const notifications = await storage.getUserNotifications(req.user.id);
+      const notification = notifications.find(n => n.id === notificationId);
+      
+      if (!notification) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+
+      // Check if this notification belongs to the current user
+      if (notification.userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to delete this notification' });
+      }
+
+      const success = await storage.deleteNotification(notificationId);
+      
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(404).json({ message: 'Notification not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete notification' });
+    }
+  });
+
+  // Zoom video call routes
+  // Endpoint to check if required secrets are available
+  app.post('/api/check-secrets', async (req, res) => {
+    try {
+      const { secretKeys } = req.body;
+      
+      if (!Array.isArray(secretKeys) || secretKeys.length === 0) {
+        return res.status(400).json({ message: 'secretKeys must be a non-empty array' });
+      }
+      
+      // Check if all required secrets are available
+      const missingSecrets = secretKeys.filter(key => !process.env[key]);
+      const hasSecrets = missingSecrets.length === 0;
+      
+      res.json({ 
+        hasSecrets,
+        missingSecrets: hasSecrets ? [] : missingSecrets
+      });
     } catch (error: any) {
-      console.error('Error updating profile:', error);
-      res.status(500).json({ message: 'Failed to update profile', error: error.message });
+      console.error('Error checking secrets:', error);
+      res.status(500).json({ message: 'Failed to check secrets', error: error.message });
     }
   });
   
-   // Get file for download
-   app.get('/api/files/:id/download', async (req, res) => {
-     try {
-       // Optional: Add auth check if files aren't public
-       // if (!req.isAuthenticated()) { 
-       //   return res.status(401).json({ message: 'Authentication required' });
-       // }
-       
-       const fileId = parseInt(req.params.id);
-       const file = await storage.getFileById(fileId); // Fetch the file record
-       
-       // Check if file record and filename exist
-       if (!file || !file.filename) { 
-         return res.status(404).json({ message: 'File record not found or filename missing' });
-       }
-       
-       // Determine the correct directory based on file context (improved logic)
-       let fileDir = UPLOADS_DIR; // Default to base uploads directory
-       if (file.projectId) {
-         fileDir = PROJECT_FILES_DIR; // Assume project files are in projects dir
-       } else if (file.mimeType?.startsWith('image/')) {
-         // Check if it *might* be an avatar (heuristic, better if DB stores type)
-         const isPotentiallyAvatar = !file.projectId; // Simplistic check
-         if (isPotentiallyAvatar) {
-           fileDir = AVATARS_DIR;
-         }
-       } else if (file.mimeType?.startsWith('application/')) { 
-         // Might be a verification document (heuristic)
-         const isPotentiallyDoc = !file.projectId; 
-         if (isPotentiallyDoc) {
-            fileDir = DOCUMENTS_DIR;
-         }
-       }
-       // A more robust solution stores the intended directory or type in the File DB record.
-       
-       const primaryPath = path.join(fileDir, file.filename);
-       let fullPath = primaryPath;
-       
-       if (!fs.existsSync(fullPath)) {
-         // Fallback check in default uploads dir if not found in guessed/specific dir
-         const fallbackPath = path.join(UPLOADS_DIR, file.filename);
-         if (fs.existsSync(fallbackPath)) {
-             console.warn(`File ${file.filename} found in fallback directory ${UPLOADS_DIR}, downloading from there.`);
-             fullPath = fallbackPath; // Use fallback path
-         } else {
-             console.error(`File not found on server at primary path: ${primaryPath} or fallback path: ${fallbackPath} (DB filename: ${file.filename})`);
-        return res.status(404).json({ message: 'File not found on server' });
-         }
+  app.post('/api/zoom/token', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
       }
       
-       // Download the file using the determined fullPath
-       res.download(fullPath, file.originalName || file.filename);
+      const { receiverId } = req.body;
+      
+      if (!receiverId) {
+        return res.status(400).json({ message: 'Receiver ID is required' });
+      }
+      
+      // Check if ZOOM credentials are configured
+      if (!process.env.ZOOM_SDK_KEY || !process.env.ZOOM_SDK_SECRET) {
+        return res.status(503).json({ 
+          message: 'Zoom SDK is not configured', 
+          missingKeys: ['ZOOM_SDK_KEY', 'ZOOM_SDK_SECRET']
+        });
+      }
+      
+      // Import here to avoid errors if the ZOOM credentials are not set
+      const { generateZoomToken } = await import('./zoom');
+      
+      // Generate a token with the user's ID
+      const token = generateZoomToken(req.user.id.toString());
+      
+      res.json({ 
+        token,
+        sdkKey: process.env.ZOOM_SDK_KEY,
+        userId: req.user.id,
+        userName: req.user.fullName || req.user.username,
+        // For simplicity, we'll use a combination of both user IDs as the meeting ID
+        // In a real app, you might want to store meetings in the database
+        meetingId: `${Math.min(req.user.id, receiverId)}-${Math.max(req.user.id, receiverId)}`
+      });
+    } catch (error) {
+      console.error('Error generating Zoom token:', error);
+      res.status(500).json({ message: 'Failed to generate Zoom token', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Serve attached assets directly
+  app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
+
+  // Admin routes
+  app.get('/api/users', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      // Get all users - we need to implement this method in the storage class
+      const allUsers = await storage.getAllUsers();
+      
+      // Set proper content type
+      res.setHeader('Content-Type', 'application/json');
+      res.json(allUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: 'Failed to fetch users', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin user creation endpoint
+  app.post('/api/users', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const { username, email, password, fullName, role } = req.body;
+      
+      // Validate required fields
+      if (!username || !email || !password || !fullName || !role) {
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+      
+      // Check if username or email already exists
+      const existingUserByUsername = await storage.getUserByUsername(username);
+      if (existingUserByUsername) {
+        return res.status(400).json({ message: 'Username already exists' });
+      }
+      
+      const existingUserByEmail = await storage.getUserByEmail(email);
+      if (existingUserByEmail) {
+        return res.status(400).json({ message: 'Email already exists' });
+      }
+      
+      // Hash the password
+      const hashedPassword = await hashPassword(password);
+      
+      // Create the user
+      const newUser = await storage.createUser({
+        username,
+        email,
+        fullName,
+        password: hashedPassword,
+        role,
+        confirmPassword: password, // This field is just for validation, not stored
+      });
+      
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = newUser;
+      
+      // Set proper content type and return the created user
+      res.setHeader('Content-Type', 'application/json');
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ message: 'Failed to create user', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin delete user endpoint
+  app.delete('/api/users/:id', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const userId = parseInt(req.params.id);
+      
+      // Check if the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Prevent deleting admin users
+      if (user.role === 'admin') {
+        return res.status(403).json({ message: 'Admin users cannot be deleted' });
+      }
+      
+      // Delete the user
+      const success = await storage.deleteUser(userId);
+      
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(500).json({ message: 'Failed to delete user' });
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: 'Failed to delete user', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin update user status endpoint (block/unblock)
+  app.patch('/api/users/:id/status', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const userId = parseInt(req.params.id);
+      const { blocked } = req.body;
+      
+      if (typeof blocked !== 'boolean') {
+        return res.status(400).json({ message: 'Blocked status must be a boolean' });
+      }
+      
+      // Check if the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Prevent blocking admin users
+      if (user.role === 'admin') {
+        return res.status(403).json({ message: 'Admin users cannot be blocked' });
+      }
+      
+      // Update the user's blocked status
+      const updatedUser = await storage.updateUser(userId, { isBlocked: blocked });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: 'Failed to update user status' });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      res.status(500).json({ message: 'Failed to update user status', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Verification Routes
+  // Submit a verification request (for freelancers)
+  app.post('/api/verification-requests', upload.single('document'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Only freelancers can submit verification requests
+      if (req.user.role !== 'freelancer') {
+        return res.status(403).json({ message: 'Only freelancers can submit verification requests' });
+      }
+
+      // Check if user is already verified
+      if (req.user.isVerified) {
+        return res.status(400).json({ message: 'User is already verified' });
+      }
+
+      // Check if the user has a pending verification request
+      const existingRequests = await storage.getVerificationRequestsForUser(req.user.id);
+      const pendingRequest = existingRequests.find(request => request.status === 'pending');
+      
+      if (pendingRequest) {
+        return res.status(400).json({ 
+          message: 'You already have a pending verification request',
+          request: pendingRequest
+        });
+      }
+
+      // Handle file upload
+      if (!req.file) {
+        return res.status(400).json({ message: 'Document file is required' });
+      }
+
+      // Save file record
+      const file = await storage.uploadFile({
+        userId: req.user.id,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size
+      });
+
+      // Create verification request
+      const requestData = {
+        userId: req.user.id,
+        documentType: req.body.documentType,
+        documentUrl: `/uploads/${file.filename}`,
+        additionalInfo: req.body.additionalInfo
+      };
+
+      const validatedData = insertVerificationRequestSchema.parse(requestData);
+      const verificationRequest = await storage.createVerificationRequest(validatedData);
+
+      // Create a notification for the user
+      await storage.createNotification({
+        userId: req.user.id,
+        title: 'تم استلام طلب التحقق',
+        content: 'تم استلام طلب التحقق الخاص بك وسيتم مراجعته قريبًا',
+        type: 'verification_request'
+      });
+
+      // Notify admins about the new verification request
+      const adminUsers = Array.from((await storage.getFreelancers())).filter(user => user.role === 'admin');
+      for (const admin of adminUsers) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: 'طلب تحقق جديد',
+          content: `قام ${req.user.fullName} بتقديم طلب تحقق جديد`,
+          type: 'admin_alert',
+          relatedId: verificationRequest.id
+        });
+      }
+
+      res.status(201).json(verificationRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error creating verification request:', error);
+      res.status(500).json({ message: 'Failed to create verification request', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin - Get all verification requests
+  app.get('/api/verification-requests', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const rawStatus = req.query.status as string | undefined;
+      // Validate and convert the status to the expected type
+      let status: "pending" | "approved" | "rejected" | undefined = undefined;
+      
+      if (rawStatus) {
+        if (["pending", "approved", "rejected"].includes(rawStatus)) {
+          status = rawStatus as "pending" | "approved" | "rejected";
+        } else {
+          return res.status(400).json({ message: 'Invalid status parameter' });
+        }
+      }
+      
+      const requests = await storage.getVerificationRequests(status);
+      
+      // Enrich requests with user information
+      const enrichedRequests = await Promise.all(requests.map(async (request) => {
+        const user = await storage.getUser(request.userId);
+        return {
+          ...request,
+          user: user ? { 
+            id: user.id, 
+            fullName: user.fullName, 
+            username: user.username,
+            email: user.email,
+            profileImage: user.profileImage
+          } : null
+        };
+      }));
+
+      res.json(enrichedRequests);
+    } catch (error) {
+      console.error('Error fetching verification requests:', error);
+      res.status(500).json({ message: 'Failed to fetch verification requests', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Get user's verification requests (for freelancers)
+  app.get('/api/my-verification-requests', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const requests = await storage.getVerificationRequestsForUser(req.user.id);
+      res.json(requests);
+    } catch (error) {
+      console.error('Error fetching user verification requests:', error);
+      res.status(500).json({ message: 'Failed to fetch verification requests', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Get a specific verification request
+  app.get('/api/verification-requests/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const requestId = parseInt(req.params.id);
+      const request = await storage.getVerificationRequestById(requestId);
+      
+      if (!request) {
+        return res.status(404).json({ message: 'Verification request not found' });
+      }
+
+      // Only admins or the request owner can view it
+      if (req.user.role !== 'admin' && request.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to view this verification request' });
+      }
+
+      // If admin is viewing, include user details
+      if (req.user.role === 'admin') {
+        const user = await storage.getUser(request.userId);
+        return res.json({
+          ...request,
+          user: user ? { 
+            id: user.id, 
+            fullName: user.fullName, 
+            username: user.username,
+            email: user.email,
+            profileImage: user.profileImage
+          } : null
+        });
+      }
+
+      res.json(request);
+    } catch (error) {
+      console.error('Error fetching verification request:', error);
+      res.status(500).json({ message: 'Failed to fetch verification request', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Update verification request status (for admin)
+  app.patch('/api/verification-requests/:id/status', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update verification request status' });
+      }
+
+      const requestId = parseInt(req.params.id);
+      const { status, reviewNotes } = req.body;
+      
+      // Validate status
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status. Must be "approved" or "rejected"' });
+      }
+      
+      // Get the verification request
+      const request = await storage.getVerificationRequestById(requestId);
+      if (!request) {
+        return res.status(404).json({ message: 'Verification request not found' });
+      }
+      
+      // Update the status
+      const updatedRequest = await storage.updateVerificationRequestStatus(
+        requestId, 
+        status, 
+        req.user.id, 
+        reviewNotes
+      );
+      
+      if (!updatedRequest) {
+        return res.status(500).json({ message: 'Failed to update verification request' });
+      }
+
+      // Create a notification for the user
+      const notificationTitle = status === 'approved' 
+        ? 'تم الموافقة على طلب التحقق' 
+        : 'تم رفض طلب التحقق';
+      
+      const notificationContent = status === 'approved'
+        ? 'تهانينا! تم الموافقة على طلب التحقق الخاص بك. الآن يمكنك الاستفادة من مميزات المستخدمين المتحقق منهم.'
+        : `تم رفض طلب التحقق الخاص بك. ${reviewNotes ? `السبب: ${reviewNotes}` : 'يرجى التواصل مع الدعم لمزيد من المعلومات.'}`;
+      
+      await storage.createNotification({
+        userId: request.userId,
+        title: notificationTitle,
+        content: notificationContent,
+        type: 'verification_update',
+        relatedId: request.id
+      });
+
+      // If approved, update the user mail settings here (would require SendGrid)
+      // This part would require the SendGrid API key, so we'll comment it for now
+      // if (status === 'approved') {
+      //   const user = await storage.getUser(request.userId);
+      //   if (user && user.email) {
+      //     try {
+      //       // Send verification confirmation email 
+      //       // Implementation would go here
+      //     } catch (emailError) {
+      //       console.error('Error sending verification email:', emailError);
+      //     }
+      //   }
+      // }
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error('Error updating verification request:', error);
+      res.status(500).json({ message: 'Failed to update verification request', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Video Call Routes
+  // Store active meetings in memory
+  const activeVideoMeetings = new Map<string, {
+    meetingId: string;
+    hostId: number;
+    participants: number[];
+    createdAt: Date;
+  }>();
+
+  // Generate a video call token
+  app.post('/api/video/token', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const userId = req.user.id;
+      const targetUserId = req.body.targetUserId;
+      
+      if (!targetUserId) {
+        return res.status(400).json({ message: 'Target user ID is required' });
+      }
+      
+      // Generate a meeting ID (either new or existing)
+      let meetingId: string;
+      
+      // Check if these users already have an active meeting
+      const existingMeeting = Array.from(activeVideoMeetings.values()).find(meeting => 
+        (meeting.hostId === userId && meeting.participants.includes(targetUserId)) ||
+        (meeting.hostId === targetUserId && meeting.participants.includes(userId))
+      );
+      
+      if (existingMeeting) {
+        // Use existing meeting
+        meetingId = existingMeeting.meetingId;
+      } else {
+        // Create a new meeting ID
+        meetingId = crypto.randomUUID();
+        
+        // Store the new meeting
+        activeVideoMeetings.set(meetingId, {
+          meetingId,
+          hostId: userId,
+          participants: [targetUserId],
+          createdAt: new Date()
+        });
+        
+        // Create notification for target user
+        const targetUser = await storage.getUser(targetUserId);
+        if (targetUser) {
+          await storage.createNotification({
+            userId: targetUserId,
+            title: 'دعوة مكالمة فيديو',
+            content: `${req.user.fullName || req.user.username} يدعوك إلى مكالمة فيديو`,
+            type: 'message',
+            relatedId: userId
+          });
+        }
+      }
+      
+      // Generate a Zoom token
+      const token = generateZoomToken(userId.toString());
+      
+      res.json({ token, meetingId });
+    } catch (error: any) {
+      console.error('Error generating video token:', error);
+      res.status(500).json({ message: 'Failed to generate video token', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+  
+  // Create a Zoom meeting
+  app.post('/api/video/meetings', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const { topic, participantIds } = req.body;
+      
+      if (!topic || !participantIds || !Array.isArray(participantIds) || participantIds.length === 0) {
+        return res.status(400).json({ message: 'Topic and participant IDs are required' });
+      }
+      
+      // Create a Zoom meeting
+      const meetingOptions: ZoomMeetingOptions = {
+        topic,
+        type: 1, // Instant meeting (1=instant, 2=scheduled, 3=recurring no fixed time, 8=recurring fixed time)
+        duration: 60, // 60 minutes
+        timezone: 'UTC',
+        password: crypto.randomBytes(3).toString('hex').toUpperCase(),
+        agenda: `Meeting between ${req.user.fullName || req.user.username} and invited participants`
+      };
+      
+      // Create the meeting via Zoom API
+      const meeting = await createZoomMeeting(meetingOptions);
+      
+      // Store meeting information
+      const meetingId = meeting.id;
+      activeVideoMeetings.set(meetingId, {
+        meetingId,
+        hostId: req.user.id,
+        participants: participantIds,
+        createdAt: new Date()
+      });
+      
+      // Create notifications for all participants
+      for (const participantId of participantIds) {
+        const participant = await storage.getUser(participantId);
+        if (participant) {
+          await storage.createNotification({
+            userId: participantId,
+            title: 'دعوة مكالمة فيديو',
+            content: `${req.user.fullName || req.user.username} دعاك إلى مكالمة فيديو بعنوان: ${topic}`,
+            type: 'message',
+            relatedId: req.user.id
+          });
+        }
+      }
+      
+      res.json({
+        meetingId,
+        joinUrl: meeting.join_url,
+        hostUrl: meeting.start_url
+      });
+    } catch (error: any) {
+      console.error('Error creating Zoom meeting:', error);
+      res.status(500).json({ message: 'Failed to create meeting', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Cleanup old meetings (run every hour)
+  setInterval(() => {
+    const now = new Date();
+    // Convert entries to array and then iterate
+    Array.from(activeVideoMeetings.entries()).forEach(([id, meeting]) => {
+      // Remove meetings older than 24 hours
+      const meetingAge = now.getTime() - meeting.createdAt.getTime();
+      if (meetingAge > 24 * 60 * 60 * 1000) {
+        activeVideoMeetings.delete(id);
+      }
+    });
+  }, 60 * 60 * 1000);
+
+  // Add endpoint to get current user's proposals
+  app.get('/api/proposals/my', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Only freelancers can have proposals
+      if (req.user.role !== 'freelancer') {
+        return res.status(403).json({ message: 'Only freelancers can view their proposals' });
+      }
+      
+      const proposals = await storage.getProposalsByFreelancer(req.user.id);
+      res.json(proposals);
+    } catch (error: any) {
+      console.error('Error fetching user proposals:', error);
+      res.status(500).json({ message: 'Failed to fetch proposals' });
+    }
+  });
+
+  // Get all payments (admin only)
+  app.get('/api/payments', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      // Get all payments with user information joined
+      const payments = await storage.getAllPayments();
+      
+      // Return the payments
+      return res.json(payments);
+    } catch (error) {
+      console.error('Error getting payments:', error);
+      return res.status(500).json({ message: 'Failed to get payments' });
+    }
+  });
+
+  // Create a new payment (admin only)
+  app.post('/api/payments', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const { userId, amount, type, projectId, status, description } = req.body;
+      
+      // Validate required fields
+      if (!userId || !amount || !type || !status) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+      
+      // Validate amount is positive
+      if (amount <= 0) {
+        return res.status(400).json({ message: 'Amount must be positive' });
+      }
+      
+      // Validate user exists
+      const userExists = await storage.getUser(parseInt(userId));
+      if (!userExists) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // If project payment, validate project exists
+      if (type === 'project_payment' && projectId) {
+        const projectExists = await storage.getProjects(parseInt(projectId));
+        if (!projectExists) {
+          return res.status(404).json({ message: 'Project not found' });
+        }
+      }
+      
+      // Create the payment
+      const payment = await storage.createPayment({
+        userId: parseInt(userId),
+        amount,
+        type,
+        projectId: projectId ? parseInt(projectId) : undefined,
+        status,
+        description,
+      });
+      
+      // If payment is completed, create a transaction record for platform fee
+      if (status === 'completed' && payment) {
+        const platformFee = amount * 0.05; // 5% platform fee
+        
+        await storage.createTransaction({
+          paymentId: payment.id,
+          userId: parseInt(userId),
+          amount: platformFee,
+          type: 'fee',
+          status: 'completed',
+          description: `Platform fee for payment #${payment.id}`,
+        });
+      }
+      
+      return res.status(201).json(payment);
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      return res.status(500).json({ message: 'Failed to create payment' });
+    }
+  });
+
+  // Delete a payment (admin only)
+  app.delete('/api/payments/:id', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const paymentId = parseInt(req.params.id);
+      
+      // Check if payment exists
+      const payment = await storage.getPayment(paymentId);
+      if (!payment) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
+      
+      // Delete associated transactions first
+      await storage.deleteTransactionsByPaymentId(paymentId);
+      
+      // Delete the payment
+      const success = await storage.deletePayment(paymentId);
+      
+      if (success) {
+        return res.status(200).json({ message: 'Payment deleted successfully' });
+      } else {
+        return res.status(500).json({ message: 'Failed to delete payment' });
+      }
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      return res.status(500).json({ message: 'Failed to delete payment' });
+    }
+  });
+
+  // Get all transactions (admin only)
+  app.get('/api/transactions', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      // Get all transactions with user information joined
+      const transactions = await storage.getAllTransactions();
+      
+      // Return the transactions
+      return res.json(transactions);
+    } catch (error) {
+      console.error('Error getting transactions:', error);
+      return res.status(500).json({ message: 'Failed to get transactions' });
+    }
+  });
+
+  app.patch('/api/projects/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can edit projects' });
+      }
+
+      const projectId = parseInt(req.params.id);
+      const { title, description, budget, category } = req.body;
+      
+      // Get the project to make sure it exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Update project
+      const updatedProject = await storage.updateProject(projectId, {
+        title,
+        description,
+        budget,
+        category
+      });
+      
+      res.json(updatedProject);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update project' });
+    }
+  });
+
+  // Add file upload endpoints
+  // Get project files
+  app.get('/api/projects/:id/files', async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const files = await storage.getFilesByProject(projectId);
+      res.json(files);
+    } catch (error: any) {
+      console.error('Error fetching project files:', error);
+      res.status(500).json({ message: 'Failed to fetch project files' });
+    }
+  });
+
+  // Upload project files
+  app.post('/api/projects/:id/files', upload.array('files'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const projectId = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      // Check if project exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      // Check if user is project owner or admin
+      if (project.clientId !== userId && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'You do not have permission to upload files to this project' });
+      }
+
+      const uploadedFiles = req.files as Express.Multer.File[];
+      if (!uploadedFiles || uploadedFiles.length === 0) {
+        return res.status(400).json({ message: 'No files uploaded' });
+      }
+
+      const savedFiles = [];
+      for (const file of uploadedFiles) {
+        const fileData = {
+          userId,
+          projectId,
+          filename: file.filename,
+          originalName: file.originalname,
+          mimeType: file.mimetype,
+          size: file.size
+        };
+
+        const savedFile = await storage.uploadFile(fileData);
+        savedFiles.push(savedFile);
+      }
+
+      res.status(201).json(savedFiles);
+    } catch (error: any) {
+      console.error('Error uploading project files:', error);
+      res.status(500).json({ message: 'Failed to upload files', error: error.message });
+    }
+  });
+
+  // Get file for download
+  app.get('/api/files/:id/download', async (req, res) => {
+    try {
+      const fileId = parseInt(req.params.id);
+      const file = await storage.getFileById(fileId);
+      
+      if (!file) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+      
+      const filePath = path.join(process.cwd(), 'uploads', file.filename);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: 'File not found on server' });
+      }
+      
+      res.download(filePath, file.originalName);
     } catch (error: any) {
       console.error('Error downloading file:', error);
       res.status(500).json({ message: 'Failed to download file' });
@@ -1160,80 +2034,277 @@ export function registerRoutes(app: Express): Server {
       }
       
       const fileId = parseInt(req.params.id);
-       const file = await storage.getFileById(fileId); // Fetch file record
-       
-       // Check if file record and filename exist
-       if (!file || !file.filename) { 
-         return res.status(404).json({ message: 'File record not found' });
-       }
-       
-       // ... (Permission checks using file.userId, req.user.id, file.projectId etc.) ...
-        let canDelete = false;
-        if (file.userId === req.user.id || req.user.role === 'admin') {
-          canDelete = true;
-        } else if (file.projectId) {
-          const project = await storage.getProjectById(file.projectId);
-          if (project && project.clientId === req.user.id) {
-            canDelete = true; // Allow project owner to delete project files
-          }
-        }
-        
-        if (!canDelete) {
+      const file = await storage.getFileById(fileId);
+      
+      if (!file) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+      
+      // Check if user is file owner or admin
+      if (file.userId !== req.user.id && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'You do not have permission to delete this file' });
       }
       
-       // Determine directory and construct potential paths (similar to download)
-       let fileDir = UPLOADS_DIR; // Default
+      // Get the project to check permissions
       if (file.projectId) {
-         fileDir = PROJECT_FILES_DIR;
-       } else if (file.mimeType?.startsWith('image/')) {
-         const isPotentiallyAvatar = !file.projectId;
-         if (isPotentiallyAvatar) fileDir = AVATARS_DIR;
-       } else if (file.mimeType?.startsWith('application/')) {
-         const isPotentiallyDoc = !file.projectId;
-         if (isPotentiallyDoc) fileDir = DOCUMENTS_DIR;
-       }
-       
-       const primaryPath = path.join(fileDir, file.filename);
-       const fallbackPath = path.join(UPLOADS_DIR, file.filename);
-
-       // Delete the physical file (try primary path, then fallback)
-       let deletedPhysically = false;
-       if (fs.existsSync(primaryPath)) {
-         fs.unlinkSync(primaryPath);
-         deletedPhysically = true;
-         console.log(`Deleted file at: ${primaryPath}`);
-       } else if (fs.existsSync(fallbackPath)) {
-         // Only delete from fallback if it wasn't the same as primary
-         if (primaryPath !== fallbackPath) {
-           fs.unlinkSync(fallbackPath);
-           deletedPhysically = true;
-           console.log(`Deleted file at fallback path: ${fallbackPath}`);
-         }
-       }
-       
-       if (!deletedPhysically) {
-         console.warn(`File not found for physical deletion at path: ${primaryPath} or ${fallbackPath} (DB filename: ${file.filename}). Proceeding with DB deletion.`);
-       }
-       
-       // Remove from database regardless of physical file presence
+        const project = await storage.getProjectById(file.projectId);
+        // Only allow project owner or admin to delete project files
+        if (project && project.clientId !== req.user.id && req.user.role !== 'admin') {
+          return res.status(403).json({ message: 'You do not have permission to delete this file' });
+        }
+      }
+      
+      // Delete the file from storage
+      const filePath = path.join(process.cwd(), 'uploads', file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      // Remove from database
       await storage.deleteFile(fileId);
       
-       res.json({ message: 'File delete processed successfully' }); // Changed message slightly
+      res.json({ message: 'File deleted successfully' });
     } catch (error: any) {
       console.error('Error deleting file:', error);
       res.status(500).json({ message: 'Failed to delete file' });
     }
   });
 
-  // ... (rest of existing routes: notifications, zoom, admin, verification, video call, proposals/my, payments, transactions etc.) ...
+  // Message supervision endpoints
+  app.get('/api/admin/conversations', async (req, res) => {
+    try {
+      const conversations = await storage.getAllConversations();
+      res.json(conversations);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch conversations' });
+    }
+  });
+
+  app.get('/api/admin/conversations/:conversationId/messages', async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const messages = await storage.getMessagesByConversation(conversationId);
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  app.patch('/api/admin/messages/:messageId/flag', async (req, res) => {
+    try {
+      const { messageId } = req.params;
+      const { isFlagged } = req.body;
+      await storage.updateMessageFlag(parseInt(messageId), isFlagged);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update message flag' });
+    }
+  });
+
+  app.patch('/api/admin/messages/:messageId/supervise', async (req, res) => {
+    try {
+      const { messageId } = req.params;
+      const { supervisorNotes, supervisedBy } = req.body;
+      await storage.updateMessageSupervision(parseInt(messageId), supervisorNotes, supervisedBy);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update message supervision' });
+    }
+  });
+
+  // Get freelancer earnings
+  app.get('/api/earnings', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to view earnings' });
+    }
+    
+    try {
+      const userId = req.user.id;
+      
+      // Get all accepted proposals for this freelancer
+      const proposals = await storage.getProposalsByFreelancer(userId);
+      const acceptedProposals = proposals.filter(p => p.status === 'accepted');
+      
+      // Calculate total earnings
+      const total = acceptedProposals.reduce((sum, proposal) => sum + proposal.price, 0);
+      
+      // Calculate pending earnings (projects still in progress)
+      // First get all related projects
+      const projectIds = acceptedProposals.map(p => p.projectId);
+      const projects = await Promise.all(projectIds.map(id => storage.getProjectById(id)));
+      
+      // Now filter for in-progress projects and calculate pending earnings
+      const pendingProposals = acceptedProposals.filter(proposal => 
+        projects.some(p => p && p.id === proposal.projectId && p.status === 'in_progress')
+      );
+      const pending = pendingProposals.reduce((sum, proposal) => sum + proposal.price, 0);
+      
+      // Get recent transactions
+      const recentTransactions = await storage.getUserTransactions(userId);
+      const lastFiveTransactions = recentTransactions.slice(0, 5);
+      
+      res.json({
+        total,
+        pending,
+        available: total - pending,
+        recentTransactions: lastFiveTransactions
+      });
+    } catch (error: any) {
+      console.error('Error fetching earnings:', error);
+      res.status(500).json({ message: 'Failed to fetch earnings data' });
+    }
+  });
+
+  // Reviews API Routes
+  
+  // Submit a review
+  app.post('/api/reviews', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to submit reviews' });
+    }
+
+    try {
+      const userId = req.user.id;
+      const { projectId, revieweeId, rating, comment } = req.body;
+      
+      console.log("Review submission received:", { projectId, revieweeId, rating, comment });
+      
+      // Validate required fields
+      if (!projectId || !revieweeId || !rating) {
+        return res.status(400).json({ 
+          message: 'Project ID, reviewee ID, and rating are required',
+          received: { projectId, revieweeId, rating, comment }
+        });
+      }
+      
+      // Check if project exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Verify the user is related to this project (as client or freelancer)
+      const isClient = project.clientId === userId;
+      
+      // For now, only clients can leave reviews
+      if (!isClient) {
+        return res.status(403).json({ message: 'Only clients can submit reviews for now' });
+      }
+      
+      // Create the review
+      const review = await storage.createReview({
+        projectId,
+        revieweeId,
+        rating,
+        comment: comment || ""
+      }, userId);
+      
+      // Create a notification for the reviewee
+      await storage.createNotification({
+        userId: revieweeId,
+        type: 'review',
+        title: 'New Review Received',
+        content: `You have received a ${rating}-star review for project "${project.title}"`,
+        relatedId: review.id
+      });
+      
+      res.status(201).json(review);
+    } catch (error: any) {
+      console.error('Error submitting review:', error);
+      res.status(500).json({ message: 'Failed to submit review', error: error.message });
+    }
+  });
+  
+  // Get reviews for a project
+  app.get('/api/projects/:projectId/reviews', async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: 'Invalid project ID' });
+      }
+      
+      // Check if project exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Get reviews for the project
+      const reviews = await storage.getProjectReviews(projectId);
+      
+      res.json(reviews);
+    } catch (error: any) {
+      console.error('Error fetching project reviews:', error);
+      res.status(500).json({ message: 'Failed to fetch project reviews' });
+    }
+  });
+  
+  // Get reviews given by the authenticated user
+  app.get('/api/users/reviews/given', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to access your reviews' });
+    }
+
+    try {
+      const userId = req.user.id;
+      
+      // Get reviews given by this user
+      const reviewsData = await storage.getReviewsByReviewer(userId);
+      
+      // Fetch associated project and user data to enrich the response
+      const enrichedReviews = await Promise.all(reviewsData.map(async (review) => {
+        const project = await storage.getProjectById(review.projectId);
+        const freelancer = await storage.getUser(review.revieweeId);
+        
+        return {
+          ...review,
+          projectTitle: project ? project.title : 'Unknown Project',
+          freelancerId: review.revieweeId,
+          freelancerName: freelancer ? freelancer.fullName : 'Unknown User',
+          freelancerAvatar: freelancer ? freelancer.profileImage : undefined
+        };
+      }));
+      
+      res.json(enrichedReviews);
+    } catch (error: any) {
+      console.error('Error fetching reviews given:', error);
+      res.status(500).json({ message: 'Failed to fetch reviews given' });
+    }
+  });
+  
+  // Get reviews received by the authenticated user
+  app.get('/api/users/reviews/received', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to access your reviews' });
+    }
+
+    try {
+      const userId = req.user.id;
+      
+      // Get reviews received by this user
+      const reviewsData = await storage.getReviewsByUser(userId);
+      
+      // Fetch associated project and user data to enrich the response
+      const enrichedReviews = await Promise.all(reviewsData.map(async (review) => {
+        const project = await storage.getProjectById(review.projectId);
+        const reviewer = await storage.getUser(review.reviewerId);
+        
+        return {
+          ...review,
+          projectTitle: project ? project.title : 'Unknown Project',
+          reviewerId: review.reviewerId,
+          reviewerName: reviewer ? reviewer.fullName : 'Unknown User',
+          reviewerAvatar: reviewer ? reviewer.profileImage : undefined
+        };
+      }));
+      
+      res.json(enrichedReviews);
+    } catch (error: any) {
+      console.error('Error fetching reviews received:', error);
+      res.status(500).json({ message: 'Failed to fetch reviews received' });
+    }
+  });
 
   return httpServer;
-}
-
-// Helper function to ensure upload directory exists
-function ensureDirExists(dirPath: string) {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
 }

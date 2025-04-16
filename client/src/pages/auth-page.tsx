@@ -9,7 +9,6 @@ import RegisterForm from "@/components/auth/register-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Briefcase, UserCheck, ShieldCheck, Users, Monitor, Award, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import LogoPng from "@/assets/images/logo.png";
 
 export default function AuthPage() {
   const { t, i18n } = useTranslation();
@@ -83,10 +82,6 @@ export default function AuthPage() {
             <div className="w-full lg:w-1/2 p-6 lg:p-12 flex flex-col justify-center relative animate-fade-in">
               <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-primary/5 to-transparent"></div>
               <div className="max-w-md mx-auto w-full">
-                <div className="flex justify-center mb-6">
-                  <img src={LogoPng} alt="Mazeej Logo" className="h-16 w-auto" />
-                </div>
-                
                 <div className="mb-8 text-center">
                   <h1 className="text-3xl font-cairo font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     {activeTab === "login" ? t("auth.welcomeBack") : t("auth.joinCommunity")}
@@ -191,7 +186,9 @@ export default function AuthPage() {
               <div className="h-full flex flex-col justify-center p-12 text-white relative z-10">
                 <div className="mb-8 animate-fade-in">
                   <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-white/10 backdrop-blur-sm mb-4">
-                    مزيج
+                    <div className="h-8 w-8 rounded-md bg-white flex items-center justify-center">
+                      <span className="text-lg font-cairo font-bold text-primary">F</span>
+                    </div>
                   </div>
                   <h2 className="text-4xl font-cairo font-bold mb-4">
                     {t("auth.platformFeatures")}
