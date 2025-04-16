@@ -25,7 +25,12 @@ import {
   ArrowUpFromLine,
   Clock,
   Calendar,
-  User
+  User,
+  Check,
+  CheckCircle,
+  X,
+  Info,
+  SaudiRiyal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +108,22 @@ interface Transaction {
   createdAt: string;
 }
 
+interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  username?: string;
+  amount: number;
+  paymentMethod: string;
+  accountDetails: any;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  notes?: string;
+  adminId?: string;
+  adminUsername?: string;
+  paymentId?: string;
+  requestedAt: string;
+  processedAt?: string;
+}
+
 // Define form schema for adding a payment
 const paymentSchema = z.object({
   userId: z.string({
@@ -158,6 +179,16 @@ export default function AdminPaymentsPage() {
     enabled: !!user && user.role === "admin"
   });
 
+  // Fetch withdrawal requests data
+  const { data: withdrawalRequests = [], isLoading: isLoadingWithdrawals } = useQuery({
+    queryKey: ["/api/withdrawal-requests"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/withdrawal-requests");
+      return response.json();
+    },
+    enabled: !!user && user.role === "admin"
+  });
+
   // Fetch users data for the dropdown
   const { data: users = [] } = useQuery({
     queryKey: ["/api/users"],
@@ -192,6 +223,15 @@ export default function AdminPaymentsPage() {
     ? transactions
     : (transactions as Transaction[]).filter((transaction: Transaction) => 
         transaction.username?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+  // Filter withdrawal requests based on search query
+  const filteredWithdrawals = searchQuery.trim() === ""
+    ? withdrawalRequests
+    : (withdrawalRequests as WithdrawalRequest[]).filter((withdrawal: WithdrawalRequest) => 
+        withdrawal.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        withdrawal.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        withdrawal.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
   // Calculate total platform earnings (5% of all completed payments)
@@ -270,6 +310,41 @@ export default function AdminPaymentsPage() {
     }
   });
 
+  // Update withdrawal request status mutation
+  const updateWithdrawalStatusMutation = useMutation({
+    mutationFn: async ({ id, status, notes }: { id: string, status: string, notes?: string }) => {
+      const response = await apiRequest("PATCH", `/api/withdrawal-requests/${id}/status`, {
+        status,
+        notes
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update withdrawal request status");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: t("earnings.withdraw.statusUpdated", { defaultValue: "Status updated" }),
+        description: t("earnings.withdraw.statusUpdatedDescription", { 
+          defaultValue: "The withdrawal request status has been updated successfully." 
+        }),
+      });
+      // Refetch withdrawal requests, payments, and transactions
+      queryClient.invalidateQueries({ queryKey: ["/api/withdrawal-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: t("common.error"),
+        description: error instanceof Error 
+          ? error.message 
+          : t("earnings.withdraw.error", { defaultValue: "Failed to update withdrawal status. Please try again." }),
+      });
+    }
+  });
+
   // Form submission handler
   const onSubmit = (data: PaymentFormValues) => {
     createPaymentMutation.mutate(data);
@@ -343,11 +418,11 @@ export default function AdminPaymentsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                ${(payments as Payment[])
+              <div className="text-3xl font-bold text-foreground  flex align-middle items-center">
+                {(payments as Payment[])
                   .filter(payment => payment.status === 'completed')
                   .reduce((total, payment) => total + payment.amount, 0)
-                  .toFixed(2)}
+                  .toFixed(2)} <SaudiRiyal className="h-6 w-6" />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {(payments as Payment[]).filter(payment => payment.status === 'completed').length} {t("common.transactions")}
@@ -359,12 +434,12 @@ export default function AdminPaymentsPage() {
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base font-medium">{t("dashboard.totalEarnings")}</CardTitle>
               <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <SaudiRiyal className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                ${totalEarnings.toFixed(2)}
+              <div className="text-3xl font-bold text-foreground  flex align-middle items-center">
+                {totalEarnings.toFixed(2)} <SaudiRiyal className="h-6 w-6" />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 5% {t("payments.platformFee")}
@@ -380,11 +455,11 @@ export default function AdminPaymentsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                ${(payments as Payment[])
+              <div className="text-3xl font-bold text-foreground flex align-middle items-center">
+                {(payments as Payment[])
                   .filter(payment => payment.status === 'pending')
                   .reduce((total, payment) => total + payment.amount, 0)
-                  .toFixed(2)}
+                  .toFixed(2)} <SaudiRiyal className="h-6 w-6" />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {(payments as Payment[]).filter(payment => payment.status === 'pending').length} {t("common.transactions")}
@@ -399,6 +474,7 @@ export default function AdminPaymentsPage() {
             <TabsList>
               <TabsTrigger value="payments">{t("payments.payments")}</TabsTrigger>
               <TabsTrigger value="transactions">{t("payments.transactions")}</TabsTrigger>
+              <TabsTrigger value="withdrawals">{t("earnings.withdraw.title")}</TabsTrigger>
             </TabsList>
             
             <div className={cn(
@@ -482,7 +558,7 @@ export default function AdminPaymentsPage() {
                             <TableRow key={payment.id}>
                               <TableCell className="font-medium">{payment.id.substring(0, 8)}</TableCell>
                               <TableCell>{payment.username || payment.userId.substring(0, 8)}</TableCell>
-                              <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                              <TableCell>{payment.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6 text-primary" /></TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(getTypeBadgeVariant(payment.type))}>
                                   {t(`payments.type.${payment.type}`, { defaultValue: payment.type })}
@@ -601,7 +677,7 @@ export default function AdminPaymentsPage() {
                               <TableCell className="font-medium">{transaction.id.substring(0, 8)}</TableCell>
                               <TableCell>{transaction.paymentId.substring(0, 8)}</TableCell>
                               <TableCell>{transaction.username || transaction.userId.substring(0, 8)}</TableCell>
-                              <TableCell>${transaction.amount.toFixed(2)}</TableCell>
+                              <TableCell>{transaction.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6 text-white" /></TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(getTypeBadgeVariant(transaction.type))}>
                                   {t(`payments.type.${transaction.type}`, { defaultValue: transaction.type })}
@@ -613,6 +689,158 @@ export default function AdminPaymentsPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell>{formatDate(transaction.createdAt)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    <div className={cn(
+                      "flex items-center justify-end py-4",
+                      isRTL ? "space-x-reverse space-x-2" : "space-x-2"
+                    )}>
+                      <Button variant="outline" size="sm">
+                        {isRTL ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        1
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        {isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Withdrawal Requests Tab Content */}
+          <TabsContent value="withdrawals" className="pt-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>{t("earnings.withdraw.title", {defaultValue: "Withdrawal Requests"})}</CardTitle>
+                <CardDescription>{t("earnings.withdraw.description", {defaultValue: "Manage withdrawal requests from freelancers"})}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingWithdrawals ? (
+                  <div className="flex justify-center py-8">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  </div>
+                ) : filteredWithdrawals.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="rounded-full bg-muted p-3 mb-4">
+                      <CreditCard className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    {searchQuery.trim() !== "" ? (
+                      <>
+                        <h3 className="text-lg font-medium">{t("earnings.withdraw.noRequestsFound", { defaultValue: "No Withdrawal Requests Found" })}</h3>
+                        <p className="text-sm text-muted-foreground max-w-xs mt-2">
+                          {t("earnings.withdraw.noRequestsFoundForSearch", { defaultValue: "No withdrawal requests match your search criteria. Try a different search term." })}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-lg font-medium">{t("earnings.withdraw.noRequests", { defaultValue: "No Withdrawal Requests" })}</h3>
+                        <p className="text-sm text-muted-foreground max-w-xs mt-2">
+                          {t("earnings.withdraw.noRequestsDescription", { defaultValue: "There are no withdrawal requests in the system yet." })}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t("common.id")}</TableHead>
+                            <TableHead>{t("common.user")}</TableHead>
+                            <TableHead>{t("payments.amount")}</TableHead>
+                            <TableHead>{t("payments.paymentMethod")}</TableHead>
+                            <TableHead>{t("common.status")}</TableHead>
+                            <TableHead>{t("common.date")}</TableHead>
+                            <TableHead className="text-right">{t("common.actions")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(filteredWithdrawals as WithdrawalRequest[]).map((withdrawal: WithdrawalRequest) => (
+                            <TableRow key={withdrawal.id}>
+                              <TableCell className="font-medium">{withdrawal.id.substring(0, 8)}</TableCell>
+                              <TableCell>{withdrawal.username || withdrawal.userId.substring(0, 8)}</TableCell>
+                              <TableCell>{withdrawal.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6" /></TableCell>
+                              <TableCell>{withdrawal.paymentMethod}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={cn(
+                                  withdrawal.status === 'pending' ? "bg-yellow-500/10 text-yellow-500" :
+                                  withdrawal.status === 'approved' ? "bg-blue-500/10 text-blue-500" :
+                                  withdrawal.status === 'completed' ? "bg-green-500/10 text-green-500" :
+                                  "bg-red-500/10 text-red-500"
+                                )}>
+                                  {t(`earnings.withdraw.status.${withdrawal.status}`, { defaultValue: withdrawal.status })}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{formatDate(withdrawal.requestedAt)}</TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <Settings className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel className={cn(isRTL && "text-right")}>{t("common.actions")}</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className={cn(isRTL && "flex-row")}
+                                      onClick={() => {
+                                        updateWithdrawalStatusMutation.mutate({
+                                          id: withdrawal.id,
+                                          status: "approved",
+                                          notes: "Approved by admin"
+                                        });
+                                      }}
+                                      disabled={withdrawal.status !== 'pending' || updateWithdrawalStatusMutation.isPending}
+                                    >
+                                      <Check className={cn("h-4 w-4 text-green-600", isRTL ? "ml-2" : "mr-2")} />
+                                      {t("earnings.withdraw.approve", { defaultValue: "Approve" })}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className={cn(isRTL && "flex-row")}
+                                      onClick={() => {
+                                        updateWithdrawalStatusMutation.mutate({
+                                          id: withdrawal.id,
+                                          status: "completed",
+                                          notes: "Marked as completed by admin"
+                                        });
+                                      }}
+                                      disabled={withdrawal.status !== 'approved' || updateWithdrawalStatusMutation.isPending}
+                                    >
+                                      <CheckCircle className={cn("h-4 w-4 text-blue-600", isRTL ? "ml-2" : "mr-2")} />
+                                      {t("earnings.withdraw.complete", { defaultValue: "Mark as Completed" })}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className={cn("text-destructive", isRTL && "flex-row")}
+                                      onClick={() => {
+                                        updateWithdrawalStatusMutation.mutate({
+                                          id: withdrawal.id,
+                                          status: "rejected",
+                                          notes: "Rejected by admin"
+                                        });
+                                      }}
+                                      disabled={withdrawal.status !== 'pending' || updateWithdrawalStatusMutation.isPending}
+                                    >
+                                      <X className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                      {t("earnings.withdraw.reject", { defaultValue: "Reject" })}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className={cn(isRTL && "flex-row")}>
+                                      <Info className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                      {t("common.details", { defaultValue: "View Details" })}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -685,7 +913,7 @@ export default function AdminPaymentsPage() {
                       <FormLabel>{t("payments.amount")}</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <SaudiRiyal className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                           <Input type="number" step="0.01" className="pl-8" {...field} />
                         </div>
                       </FormControl>

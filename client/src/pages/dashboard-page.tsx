@@ -134,7 +134,7 @@ export default function DashboardPage() {
         />
         <StatCard 
           title={user.role === "freelancer" ? t("dashboard.totalEarnings") : t("dashboard.totalSpending")} 
-          value={`$${totalEarnings}`} 
+          value={`${totalEarnings} ريال `} 
           icon="dollar-sign" 
           trend="up" 
         />

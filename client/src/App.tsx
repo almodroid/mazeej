@@ -39,6 +39,7 @@ import { lazy, Suspense } from "react";
 // Lazy load admin components
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
 const AdminUsers = lazy(() => import('./pages/admin/users'));
+const AdminverfyUsers = lazy(() => import('./pages/admin/verification'));
 const AdminProjects = lazy(() => import('./pages/admin/projects'));
 const AdminCategories = lazy(() => import('./pages/admin/categories'));
 const AdminSettings = lazy(() => import('./pages/admin/settings'));
@@ -113,6 +114,13 @@ function Router() {
         <ProtectedRoute>
           <Suspense fallback={<div>Loading...</div>}>
             <AdminUsers />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/verification">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminverfyUsers />
           </Suspense>
         </ProtectedRoute>
       </Route>

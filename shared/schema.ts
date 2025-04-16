@@ -30,6 +30,9 @@ export const paymentTypeEnum = pgEnum('payment_type', ['deposit', 'withdrawal', 
 // Transaction type enum
 export const transactionTypeEnum = pgEnum('transaction_type', ['fee', 'payment', 'refund']);
 
+// Withdrawal request status enum
+export const withdrawalRequestStatusEnum = pgEnum('withdrawal_request_status', ['pending', 'approved', 'rejected', 'completed']);
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -198,6 +201,21 @@ export const verificationRequests = pgTable("verification_requests", {
   reviewedAt: timestamp("reviewed_at"),
 });
 
+// Withdrawal Requests table
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: numeric("amount").notNull(),
+  paymentMethod: text("payment_method").notNull(),
+  accountDetails: json("account_details").notNull(),
+  status: withdrawalRequestStatusEnum("status").default('pending'),
+  notes: text("notes"),
+  adminId: integer("admin_id").references(() => users.id),
+  paymentId: integer("payment_id").references(() => payments.id),
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  processedAt: timestamp("processed_at"),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true, isVerified: true })
@@ -230,6 +248,14 @@ export const insertVerificationRequestSchema = createInsertSchema(verificationRe
   reviewerId: true,
   reviewNotes: true,
   reviewedAt: true
+});
+export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalRequests).omit({
+  id: true,
+  requestedAt: true,
+  status: true,
+  adminId: true,
+  paymentId: true,
+  processedAt: true
 });
 
 // Types
@@ -266,6 +292,9 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type VerificationRequest = typeof verificationRequests.$inferSelect;
 export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
 
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
+export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects, { relationName: "user_projects" }),
@@ -278,6 +307,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   notifications: many(notifications),
   verificationRequests: many(verificationRequests, { relationName: "user_verification_requests" }),
   reviewedVerifications: many(verificationRequests, { relationName: "reviewer_verification_requests" }),
+  withdrawalRequests: many(withdrawalRequests, { relationName: "user_withdrawal_requests" }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -334,6 +364,7 @@ export const paymentsRelations = relations(payments, ({ one, many }) => ({
   project: one(projects, { relationName: "project_payments", fields: [payments.projectId], references: [projects.id] }),
   client: one(users, { fields: [payments.userId], references: [users.id] }),
   transactions: many(transactions, { relationName: "payment_transactions" }),
+  withdrawalRequests: many(withdrawalRequests, { relationName: "payment_withdrawal_requests" }),
 }));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
@@ -354,6 +385,16 @@ export const verificationRequestsRelations = relations(verificationRequests, ({ 
     fields: [verificationRequests.reviewerId],
     references: [users.id],
   }),
+}));
+
+export const withdrawalRequestsRelations = relations(withdrawalRequests, ({ one }) => ({
+  user: one(users, {
+    relationName: "user_withdrawal_requests",
+    fields: [withdrawalRequests.userId],
+    references: [users.id],
+  }),
+  payment: one(payments, { relationName: "payment_withdrawal_requests", fields: [withdrawalRequests.paymentId], references: [payments.id] }),
+  admin: one(users, { relationName: "withdrawal_requests_admin", fields: [withdrawalRequests.adminId], references: [users.id] }),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({

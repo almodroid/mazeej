@@ -10,23 +10,27 @@ const MemoryStore = createMemoryStore(session);
 export interface PaymentData {
   id: number;
   userId: number;
+  username?: string;
   amount: number;
   status: 'completed' | 'pending' | 'failed';
   type: 'deposit' | 'withdrawal' | 'project_payment';
   projectId?: number;
+  projectTitle?: string;
+  clientName?: string;
+  createdAt: string;
   description?: string;
-  createdAt: Date;
 }
 
 export interface Transaction {
   id: number;
   paymentId: number;
   userId: number;
+  username?: string;
   amount: number;
   type: 'fee' | 'payment' | 'refund';
   status: 'completed' | 'pending' | 'failed';
+  createdAt: string;
   description?: string;
-  createdAt: Date;
 }
 
 export interface CreatePaymentParams {
@@ -45,6 +49,37 @@ export interface CreateTransactionParams {
   type: 'fee' | 'payment' | 'refund';
   status: 'completed' | 'pending' | 'failed';
   description?: string;
+}
+
+export interface CreateWithdrawalRequestParams {
+  userId: number;
+  amount: number;
+  paymentMethod: string;
+  accountDetails: any; // JSON object with payment method details
+  notes?: string;
+}
+
+export interface UpdateWithdrawalRequestStatusParams {
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  notes?: string;
+  adminId: number;
+  processedAt: Date;
+}
+
+export interface WithdrawalRequestData {
+  id: number;
+  userId: number;
+  username?: string;
+  amount: number;
+  paymentMethod: string;
+  accountDetails: any;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  notes?: string;
+  adminId?: number;
+  adminUsername?: string;
+  paymentId?: number;
+  requestedAt: string;
+  processedAt?: string;
 }
 
 export interface Message {
@@ -146,6 +181,14 @@ export interface IStorage {
   getAllTransactions(): Promise<Transaction[]>;
   getUserTransactions(userId: number): Promise<Transaction[]>;
   deleteTransactionsByPaymentId(paymentId: number): Promise<boolean>;
+  
+  // Withdrawal request operations
+  getAllWithdrawalRequests(): Promise<WithdrawalRequestData[]>;
+  getUserWithdrawalRequests(userId: number): Promise<WithdrawalRequestData[]>;
+  getWithdrawalRequest(id: number): Promise<WithdrawalRequestData | null>;
+  createWithdrawalRequest(params: CreateWithdrawalRequestParams): Promise<WithdrawalRequestData | null>;
+  updateWithdrawalRequestStatus(id: number, params: UpdateWithdrawalRequestStatusParams): Promise<WithdrawalRequestData | null>;
+  updateWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean>;
   
   // Session store
   sessionStore: SessionStore;
@@ -828,7 +871,7 @@ export class MemStorage implements IStorage {
       type,
       projectId,
       description,
-      createdAt: now,
+      createdAt: now.toISOString(),
     };
     
     this.payments.set(id, newPayment);
@@ -863,7 +906,7 @@ export class MemStorage implements IStorage {
       type,
       status,
       description,
-      createdAt: now,
+      createdAt: now.toISOString(),
     };
     
     this.transactions.set(id, newTransaction);
@@ -893,6 +936,66 @@ export class MemStorage implements IStorage {
       }
     });
     return deleted;
+  }
+
+  // Withdrawal request operations
+  async getAllWithdrawalRequests(): Promise<WithdrawalRequestData[]> {
+    return Array.from(this.transactions.values()).map(transaction => ({
+      id: transaction.id,
+      userId: transaction.userId,
+      amount: transaction.amount,
+      paymentMethod: '',
+      accountDetails: {},
+      status: 'pending',
+      requestedAt: transaction.createdAt,
+      processedAt: null,
+    }));
+  }
+
+  async getUserWithdrawalRequests(userId: number): Promise<WithdrawalRequestData[]> {
+    return Array.from(this.transactions.values())
+      .filter(transaction => transaction.userId === userId)
+      .map(transaction => ({
+        id: transaction.id,
+        userId: transaction.userId,
+        amount: transaction.amount,
+        paymentMethod: '',
+        accountDetails: {},
+        status: 'pending',
+        requestedAt: transaction.createdAt,
+        processedAt: null,
+      }));
+  }
+
+  async getWithdrawalRequest(id: number): Promise<WithdrawalRequestData | null> {
+    const transaction = this.transactions.get(id);
+    if (!transaction) return null;
+
+    return {
+      id: transaction.id,
+      userId: transaction.userId,
+      amount: transaction.amount,
+      paymentMethod: '',
+      accountDetails: {},
+      status: 'pending',
+      requestedAt: transaction.createdAt,
+      processedAt: null,
+    };
+  }
+
+  async createWithdrawalRequest(params: CreateWithdrawalRequestParams): Promise<WithdrawalRequestData | null> {
+    // Implementation needed
+    return null;
+  }
+
+  async updateWithdrawalRequestStatus(id: number, params: UpdateWithdrawalRequestStatusParams): Promise<WithdrawalRequestData | null> {
+    // Implementation needed
+    return null;
+  }
+
+  async updateWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean> {
+    // Implementation needed
+    return false;
   }
 }
 

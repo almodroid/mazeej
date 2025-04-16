@@ -11,7 +11,8 @@ import DashboardLayout from '@/components/layouts/dashboard-layout';
 
 export default function VerificationPage() {
   const { user, isLoading } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
 
   if (isLoading) {
     return (
@@ -60,7 +61,7 @@ export default function VerificationPage() {
             <AlertDescription>{t('verification.verifiedDesc')}</AlertDescription>
           </Alert>
         ) : (
-          <Tabs defaultValue="request" className="w-full">
+          <Tabs defaultValue="request" className="w-full"  dir={isRTL ? "rtl" : "ltr"}>
             <TabsList className="grid w-full grid-cols-2 mb-8">
               <TabsTrigger value="request">{t('verification.newRequest')}</TabsTrigger>
               <TabsTrigger value="history">{t('verification.requestHistory')}</TabsTrigger>

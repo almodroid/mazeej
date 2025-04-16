@@ -50,6 +50,11 @@ const adminNavItems = [
     icon: Users
   },
   {
+    title: "verification",
+    href: "/admin/verification",
+    icon: Shield
+  },
+  {
     title: "projects",
     href: "/admin/projects",
     icon: Folder

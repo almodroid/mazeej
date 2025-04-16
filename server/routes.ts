@@ -2306,5 +2306,285 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get user's earnings information
+  app.get('/api/earnings', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'freelancer') {
+        return res.status(403).json({ message: 'Freelancer access required' });
+      }
+      
+      const userId = req.user.id;
+      
+      // Get all payments for the user
+      const payments = await storage.getUserPayments(userId);
+      
+      // Calculate total earnings (completed payments only)
+      const total = payments
+        .filter(p => p.status === 'completed')
+        .reduce((sum, payment) => sum + Number(payment.amount), 0);
+      
+      // Calculate pending earnings
+      const pending = payments
+        .filter(p => p.status === 'pending')
+        .reduce((sum, payment) => sum + Number(payment.amount), 0);
+      
+      // Calculate this month's earnings
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      const thisMonth = payments
+        .filter(p => p.status === 'completed' && new Date(p.createdAt) >= firstDayOfMonth)
+        .reduce((sum, payment) => sum + Number(payment.amount), 0);
+      
+      // Format periods data for the UI
+      const periods = payments.map(payment => ({
+        id: payment.id.toString(),
+        amount: Number(payment.amount),
+        date: payment.createdAt,
+        status: payment.status,
+        projectTitle: payment.projectTitle || 'Direct Payment',
+        clientName: payment.clientName || 'Platform'
+      }));
+      
+      return res.json({
+        total,
+        pending,
+        thisMonth,
+        periods
+      });
+    } catch (error) {
+      console.error('Error getting earnings:', error);
+      return res.status(500).json({ message: 'Failed to get earnings' });
+    }
+  });
+
+  // Get all withdrawal requests (admin only)
+  app.get('/api/withdrawal-requests', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      // Get all withdrawal requests with user information joined
+      const withdrawalRequests = await storage.getAllWithdrawalRequests();
+      
+      // Return the withdrawal requests
+      return res.json(withdrawalRequests);
+    } catch (error) {
+      console.error('Error getting withdrawal requests:', error);
+      return res.status(500).json({ message: 'Failed to get withdrawal requests' });
+    }
+  });
+
+  // Get user's withdrawal requests (for the logged-in user)
+  app.get('/api/withdrawal-requests/my', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const userId = req.user.id;
+      
+      // Get all withdrawal requests for the user
+      const withdrawalRequests = await storage.getUserWithdrawalRequests(userId);
+      
+      return res.json(withdrawalRequests);
+    } catch (error) {
+      console.error('Error getting user withdrawal requests:', error);
+      return res.status(500).json({ message: 'Failed to get withdrawal requests' });
+    }
+  });
+
+  // Create a new withdrawal request (only for freelancers)
+  app.post('/api/withdrawal-requests', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'freelancer') {
+        return res.status(403).json({ message: 'Freelancer access required' });
+      }
+      
+      const { amount, paymentMethod, accountDetails, notes } = req.body;
+      
+      // Validate required fields
+      if (!amount || !paymentMethod || !accountDetails) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+      
+      // Validate amount is positive
+      if (amount <= 0) {
+        return res.status(400).json({ message: 'Amount must be positive' });
+      }
+      
+      // Check if user has sufficient earnings
+      const payments = await storage.getUserPayments(req.user.id);
+      const totalEarnings = payments
+        .filter(p => p.status === 'completed')
+        .reduce((sum, payment) => sum + Number(payment.amount), 0);
+      
+      // Get user's pending withdrawal requests
+      const pendingWithdrawals = await storage.getUserWithdrawalRequests(req.user.id);
+      const pendingWithdrawalTotal = pendingWithdrawals
+        .filter(wr => wr.status === 'pending' || wr.status === 'approved')
+        .reduce((sum, wr) => sum + Number(wr.amount), 0);
+      
+      // Calculate available balance
+      const availableBalance = totalEarnings - pendingWithdrawalTotal;
+      
+      if (amount > availableBalance) {
+        return res.status(400).json({ 
+          message: 'Insufficient funds',
+          availableBalance
+        });
+      }
+      
+      // Create the withdrawal request
+      const withdrawalRequest = await storage.createWithdrawalRequest({
+        userId: req.user.id,
+        amount,
+        paymentMethod,
+        accountDetails,
+        notes
+      });
+      
+      // Create a notification for the admin
+      await storage.createNotification({
+        userId: req.user.id,
+        title: 'New Withdrawal Request',
+        content: `A new withdrawal request for ${amount} has been submitted by ${req.user.username}.`,
+        type: 'payment'
+      });
+      
+      return res.status(201).json(withdrawalRequest);
+    } catch (error) {
+      console.error('Error creating withdrawal request:', error);
+      return res.status(500).json({ message: 'Failed to create withdrawal request' });
+    }
+  });
+
+  // Update a withdrawal request status (admin only)
+  app.patch('/api/withdrawal-requests/:id/status', async (req, res) => {
+    try {
+      // Check if user is authenticated and is an admin
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const withdrawalId = parseInt(req.params.id);
+      const { status, notes } = req.body;
+      
+      // Check if withdrawal request exists
+      const withdrawalRequest = await storage.getWithdrawalRequest(withdrawalId);
+      if (!withdrawalRequest) {
+        return res.status(404).json({ message: 'Withdrawal request not found' });
+      }
+      
+      // Validate status
+      if (!['pending', 'approved', 'rejected', 'completed'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status' });
+      }
+      
+      // Update the status
+      const updatedRequest = await storage.updateWithdrawalRequestStatus(withdrawalId, {
+        status,
+        notes,
+        adminId: req.user.id,
+        processedAt: new Date()
+      });
+      
+      // If status is "completed", create a payment record
+      if (status === 'completed') {
+        const payment = await storage.createPayment({
+          userId: withdrawalRequest.userId,
+          amount: Number(withdrawalRequest.amount),
+          type: 'withdrawal',
+          status: 'completed',
+          description: `Withdrawal request #${withdrawalId} completed`
+        });
+        
+        // Update the withdrawal request with payment ID
+        if (payment) {
+          await storage.updateWithdrawalRequestPayment(withdrawalId, payment.id);
+          
+          // Create a transaction for tracking
+          await storage.createTransaction({
+            paymentId: payment.id,
+            userId: withdrawalRequest.userId,
+            amount: Number(withdrawalRequest.amount),
+            type: 'payment',
+            status: 'completed',
+            description: `Withdrawal payment for request #${withdrawalId}`
+          });
+          
+          // Notify the user
+          await storage.createNotification({
+            userId: withdrawalRequest.userId,
+            title: 'Withdrawal Completed',
+            content: `Your withdrawal request for ${withdrawalRequest.amount} has been completed.`,
+            type: 'payment',
+            relatedId: withdrawalId
+          });
+        }
+      } else if (status === 'rejected') {
+        // Notify the user
+        await storage.createNotification({
+          userId: withdrawalRequest.userId,
+          title: 'Withdrawal Request Rejected',
+          content: `Your withdrawal request for ${withdrawalRequest.amount} has been rejected. Reason: ${notes || 'No reason provided.'}`,
+          type: 'payment',
+          relatedId: withdrawalId
+        });
+      } else if (status === 'approved') {
+        // Notify the user
+        await storage.createNotification({
+          userId: withdrawalRequest.userId,
+          title: 'Withdrawal Request Approved',
+          content: `Your withdrawal request for ${withdrawalRequest.amount} has been approved and is being processed.`,
+          type: 'payment',
+          relatedId: withdrawalId
+        });
+      }
+      
+      return res.json(updatedRequest);
+    } catch (error) {
+      console.error('Error updating withdrawal request:', error);
+      return res.status(500).json({ message: 'Failed to update withdrawal request' });
+    }
+  });
+
+  // Get all transactions for the current user
+  app.get('/api/users/transactions', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const userId = req.user.id;
+      
+      // Get all transactions for the user
+      const transactions = await storage.getUserTransactions(userId);
+      
+      return res.json(transactions);
+    } catch (error) {
+      console.error('Error getting user transactions:', error);
+      return res.status(500).json({ message: 'Failed to get user transactions' });
+    }
+  });
+
   return httpServer;
 }

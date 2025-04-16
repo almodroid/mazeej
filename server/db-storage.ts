@@ -1,4 +1,4 @@
-import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions } from "@shared/schema";
+import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions, withdrawalRequests } from "@shared/schema";
 import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
@@ -7,6 +7,22 @@ import { db } from "./db";
 import { eq, and, or, desc, asc, inArray, SQL } from "drizzle-orm";
 import { pool } from "./db";
 import { IStorage, PaymentData, CreatePaymentParams, CreateTransactionParams, Transaction } from "./storage";
+import { 
+  pgEnum, 
+  pgTable,
+  serial,
+  integer,
+  timestamp,
+  text,
+  varchar,
+  boolean,
+  json,
+  numeric
+} from 'drizzle-orm/pg-core';
+import { customAlphabet } from 'nanoid';
+import { isAuthenticated } from './auth';
+import express from 'express';
+import multer from 'multer';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -917,5 +933,175 @@ export class DatabaseStorage implements IStorage {
         isFlagged: true // Automatically flag when supervised
       })
       .where(eq(messages.id, messageId));
+  }
+
+  // Withdrawal request methods
+  async getAllWithdrawalRequests(): Promise<WithdrawalRequestData[]> {
+    try {
+      const result = await db.query.withdrawalRequests.findMany({
+        orderBy: [desc(withdrawalRequests.requestedAt)],
+        with: {
+          user: true,
+          admin: true
+        }
+      });
+
+      return result.map(wr => ({
+        id: wr.id,
+        userId: wr.userId,
+        username: wr.user?.username,
+        amount: Number(wr.amount),
+        paymentMethod: wr.paymentMethod,
+        accountDetails: wr.accountDetails,
+        status: wr.status,
+        notes: wr.notes || undefined,
+        adminId: wr.adminId || undefined,
+        adminUsername: wr.admin?.username,
+        paymentId: wr.paymentId || undefined,
+        requestedAt: wr.requestedAt.toISOString(),
+        processedAt: wr.processedAt ? wr.processedAt.toISOString() : undefined
+      }));
+    } catch (error) {
+      console.error('Error in getAllWithdrawalRequests:', error);
+      return [];
+    }
+  }
+
+  async getUserWithdrawalRequests(userId: number): Promise<WithdrawalRequestData[]> {
+    try {
+      const result = await db.query.withdrawalRequests.findMany({
+        where: eq(withdrawalRequests.userId, userId),
+        orderBy: [desc(withdrawalRequests.requestedAt)],
+        with: {
+          admin: true
+        }
+      });
+
+      return result.map(wr => ({
+        id: wr.id,
+        userId: wr.userId,
+        amount: Number(wr.amount),
+        paymentMethod: wr.paymentMethod,
+        accountDetails: wr.accountDetails,
+        status: wr.status,
+        notes: wr.notes || undefined,
+        adminId: wr.adminId || undefined,
+        adminUsername: wr.admin?.username,
+        paymentId: wr.paymentId || undefined,
+        requestedAt: wr.requestedAt.toISOString(),
+        processedAt: wr.processedAt ? wr.processedAt.toISOString() : undefined
+      }));
+    } catch (error) {
+      console.error('Error in getUserWithdrawalRequests:', error);
+      return [];
+    }
+  }
+
+  async getWithdrawalRequest(id: number): Promise<WithdrawalRequestData | null> {
+    try {
+      const result = await db.query.withdrawalRequests.findFirst({
+        where: eq(withdrawalRequests.id, id),
+        with: {
+          user: true,
+          admin: true
+        }
+      });
+
+      if (!result) return null;
+
+      return {
+        id: result.id,
+        userId: result.userId,
+        username: result.user?.username,
+        amount: Number(result.amount),
+        paymentMethod: result.paymentMethod,
+        accountDetails: result.accountDetails,
+        status: result.status,
+        notes: result.notes || undefined,
+        adminId: result.adminId || undefined,
+        adminUsername: result.admin?.username,
+        paymentId: result.paymentId || undefined,
+        requestedAt: result.requestedAt.toISOString(),
+        processedAt: result.processedAt ? result.processedAt.toISOString() : undefined
+      };
+    } catch (error) {
+      console.error('Error in getWithdrawalRequest:', error);
+      return null;
+    }
+  }
+
+  async createWithdrawalRequest(params: CreateWithdrawalRequestParams): Promise<WithdrawalRequestData | null> {
+    try {
+      const [result] = await db.insert(withdrawalRequests).values({
+        userId: params.userId,
+        amount: params.amount,
+        paymentMethod: params.paymentMethod,
+        accountDetails: params.accountDetails,
+        notes: params.notes,
+        status: 'pending',
+        requestedAt: new Date()
+      }).returning();
+
+      if (!result) return null;
+
+      return {
+        id: result.id,
+        userId: result.userId,
+        amount: Number(result.amount),
+        paymentMethod: result.paymentMethod,
+        accountDetails: result.accountDetails,
+        status: result.status,
+        notes: result.notes || undefined,
+        requestedAt: result.requestedAt.toISOString()
+      };
+    } catch (error) {
+      console.error('Error in createWithdrawalRequest:', error);
+      return null;
+    }
+  }
+
+  async updateWithdrawalRequestStatus(id: number, params: UpdateWithdrawalRequestStatusParams): Promise<WithdrawalRequestData | null> {
+    try {
+      const [result] = await db.update(withdrawalRequests)
+        .set({
+          status: params.status,
+          notes: params.notes,
+          adminId: params.adminId,
+          processedAt: params.processedAt
+        })
+        .where(eq(withdrawalRequests.id, id))
+        .returning();
+
+      if (!result) return null;
+
+      return {
+        id: result.id,
+        userId: result.userId,
+        amount: Number(result.amount),
+        paymentMethod: result.paymentMethod,
+        accountDetails: result.accountDetails,
+        status: result.status,
+        notes: result.notes || undefined,
+        adminId: result.adminId || undefined,
+        paymentId: result.paymentId || undefined,
+        requestedAt: result.requestedAt.toISOString(),
+        processedAt: result.processedAt ? result.processedAt.toISOString() : undefined
+      };
+    } catch (error) {
+      console.error('Error in updateWithdrawalRequestStatus:', error);
+      return null;
+    }
+  }
+
+  async updateWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean> {
+    try {
+      await db.update(withdrawalRequests)
+        .set({ paymentId })
+        .where(eq(withdrawalRequests.id, id));
+      return true;
+    } catch (error) {
+      console.error('Error in updateWithdrawalRequestPayment:', error);
+      return false;
+    }
   }
 }

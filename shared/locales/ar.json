@@ -28,7 +28,9 @@
     "loading": "جاري التحميل...",
     "reset" : "اعادة التعيين",
     "you" : "أنت",
-
+    "refresh" : "تحديث",
+    "user" : "المستخدم",
+    "details" : "التفاصيل",
     "warning": "تحذير",
     "info": "معلومات",
     "required": "مطلوب",
@@ -88,6 +90,7 @@
     "light": "فاتح",
     "dark": "داكن",
     "hr" : "ساعة",
+    "viewAll" :"عرض الكل",
     "from" : "يبدأ من",
     "hireMe" : "وظفني",
     "system": "النظام",
@@ -175,11 +178,12 @@
       "projects": "إدارة المشاريع",
       "categories": "إدارة الفئات",
       "reports": "التقارير والتحليلات",
-      "payments": "نظرة عامة على المدفوعات",
+      "payments": "المدفوعات",
       "settings": "إعدادات المنصة",
       "dashboard" :"لوحة التحكم",
       "dashboardDescription" : "تابع المنصة عن طريق لوحة التحكم الهاصة بك",
-      "messages":"تتبع المراسلات"
+      "messages":"تتبع المراسلات",
+      "verification"  : "التوثيق"
     }
   },
   "hero": {
@@ -708,7 +712,13 @@
     "statusUpdated": "تم تحديث الحالة",
     "statusUpdatedDesc": "تم تحديث حالة طلب التوثيق بنجاح.",
     "errorFetchingRequests": "حدث خطأ أثناء جلب طلبات التوثيق.",
-    "reviewNotesPlaceholder": "أضف ملاحظات حول سبب موافقتك أو رفضك لهذا الطلب..."
+    "reviewNotesPlaceholder": "أضف ملاحظات حول سبب موافقتك أو رفضك لهذا الطلب...",
+    "all":"الكل",
+    "review" :"تقييم",
+    "allVerificationDesc" : "عرض جميع طلبات التحقق",
+    "pendingVerificationDesc" : "طلبات التحقق المعلقة",
+    "approvedVerificationDesc" : "طلبات التحقق المؤكدة ",
+    "rejectedVerificationDesc" : "طلبات التحقق المرفوضة"
   },
   "project": {
     "statusOpen": "مفتوح",
@@ -914,6 +924,45 @@
     "noTransactionsFound": "لم يتم العثور على معاملات",
     "noTransactionsFoundForSearch": "لا توجد معاملات تطابق معايير البحث. جرب مصطلح بحث آخر.",
     "transactions": "معاملات"
+  },
+  "earnings": {
+    "title": "الأرباح",
+    "earningsHistory": "سجل الأرباح",
+    "earningsHistoryDesc": "عرض سجل أرباحك الكامل",
+    "totalEarnings": "إجمالي الأرباح",
+    "pendingPayments": "المدفوعات المعلقة",
+    "thisMonth": "هذا الشهر",
+    "downloadCSV": "تنزيل CSV",
+    "withdrawFunds": "سحب الأموال",
+    "project": "المشروع",
+    "client": "العميل",
+    "date": "التاريخ",
+    "amount": "المبلغ",
+    "status": "الحالة",
+    "pending": "معلق",
+    "paid": "مدفوع",
+    "lastPayment": "آخر دفعة",
+    "nextPayment": "الدفعة القادمة",
+    "earningsStats": "إحصائيات الأرباح",
+    "monthlyEarnings": "الأرباح الشهرية",
+    "topProjects": "أعلى المشاريع ربحاً",
+    "paymentMethods": "طرق الدفع",
+    "paymentHistory": "سجل المدفوعات",
+    "withdrawalHistory": "سجل عمليات السحب",
+    "noEarningsRecorded": "لم يتم تسجيل أي أرباح حتى الآن",
+    "withdraw": {
+      "title": "سحب الأموال",
+      "amount": "المبلغ المراد سحبه",
+      "paymentMethod": "طريقة الدفع",
+      "confirm": "تأكيد السحب",
+      "processing": "جارٍ معالجة السحب",
+      "success": "تم تقديم طلب السحب",
+      "successDescription": "تم تقديم طلب السحب الخاص بك وهو قيد المعالجة",
+      "error": "خطأ في السحب",
+      "errorDescription": "حدث خطأ أثناء معالجة طلب السحب الخاص بك. يرجى المحاولة مرة أخرى.",
+      "minWithdrawal": "الحد الأدنى للسحب هو {{amount}} ريال",
+      "insufficientFunds": "رصيد غير كافٍ للسحب"
+    }
   },
   "settings": {
     "title": "الإعدادات",

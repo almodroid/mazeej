@@ -69,7 +69,7 @@ export default function RecentProjects({ projects }: RecentProjectsProps) {
                   {project.description}
                 </p>
                 <div className="flex justify-between items-center text-sm text-neutral-500">
-                  <span>${project.budget}</span>
+                  <span>{project.budget} ريال</span>
                   <span>{project.createdAt && formatDate(project.createdAt)}</span>
                 </div>
               </a>
