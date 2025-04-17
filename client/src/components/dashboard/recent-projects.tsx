@@ -26,13 +26,13 @@ export default function RecentProjects({ projects }: RecentProjectsProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "open":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">مفتوح</Badge>;
+        return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">{t("myProjects.open")}</Badge>;
       case "in_progress":
-        return <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">قيد التنفيذ</Badge>;
+        return <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">{t("myProjects.inProgress")}</Badge>;
       case "completed":
-        return <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">مكتمل</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">{t("myProjects.completed")}</Badge>;
       case "cancelled":
-        return <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">ملغي</Badge>;
+        return <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">{t("myProjects.cancelled")}</Badge>;
       default:
         return null;
     }
