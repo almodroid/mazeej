@@ -67,7 +67,7 @@ export default function EarningsPage() {
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
 
   // Fetch earnings data
-  const { data: earnings = { total: 0, pending: 0, thisMonth: 0, periods: [] } } = useQuery({
+  const { data: earnings = { total: 0, pending: 0, thisMonth: 0, periods: [], available: 0 } } = useQuery({
     queryKey: ["/api/earnings"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/earnings");
@@ -106,11 +106,13 @@ export default function EarningsPage() {
   });
 
   // Calculate available balance
-  const pendingWithdrawalsTotal = withdrawalRequests
-    .filter(wr => wr.status === 'pending' || wr.status === 'approved')
-    .reduce((sum, wr) => sum + wr.amount, 0);
-  
-  const availableBalance = earnings.total - pendingWithdrawalsTotal;
+  // const pendingWithdrawalsTotal = withdrawalRequests
+  //   .filter(wr => wr.status === 'pending' || wr.status === 'approved')
+  //   .reduce((sum, wr) => sum + wr.amount, 0);
+  // const availableBalance = earnings.total - pendingWithdrawalsTotal;
+
+  // Use backend-provided available balance
+  const availableBalance = earnings.available ?? 0;
 
   // Withdrawal request mutation
   const withdrawalMutation = useMutation({

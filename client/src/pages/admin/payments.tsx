@@ -556,7 +556,7 @@ export default function AdminPaymentsPage() {
                         <TableBody>
                           {(filteredPayments as Payment[]).map((payment: Payment) => (
                             <TableRow key={payment.id}>
-                              <TableCell className="font-medium">{payment.id.substring(0, 8)}</TableCell>
+                              <TableCell className="font-medium">{String(payment.id).substring(0, 8)}</TableCell>
                               <TableCell>{payment.username || payment.userId.substring(0, 8)}</TableCell>
                               <TableCell>{payment.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6 text-primary" /></TableCell>
                               <TableCell>
@@ -674,8 +674,8 @@ export default function AdminPaymentsPage() {
                         <TableBody>
                           {(filteredTransactions as Transaction[]).map((transaction: Transaction) => (
                             <TableRow key={transaction.id}>
-                              <TableCell className="font-medium">{transaction.id.substring(0, 8)}</TableCell>
-                              <TableCell>{transaction.paymentId.substring(0, 8)}</TableCell>
+                              <TableCell className="font-medium">{String(transaction.id).substring(0, 8)}</TableCell>
+                              <TableCell>{String(transaction.paymentId).substring(0, 8)}</TableCell>
                               <TableCell>{transaction.username || transaction.userId.substring(0, 8)}</TableCell>
                               <TableCell>{transaction.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6 text-white" /></TableCell>
                               <TableCell>
