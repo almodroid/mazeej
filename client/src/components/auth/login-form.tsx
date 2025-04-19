@@ -42,6 +42,13 @@ export default function LoginForm() {
     loginMutation.mutate({
       username: data.username,
       password: data.password,
+    }, {
+      onSuccess: (user: any) => {
+        if (user && user.role === "admin") {
+          window.location.href = "/admin";
+        }
+        // Optionally, handle redirect for regular users here if needed
+      }
     });
   };
 
