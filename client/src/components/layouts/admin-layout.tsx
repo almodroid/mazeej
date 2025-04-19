@@ -18,7 +18,9 @@ import {
   Moon,
   Sun,
   User as UserIcon,
-  Home
+  Home,
+  ChevronDown,
+  ListFilter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,7 +36,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTheme } from "@/components/theme-provider";
 
 // Admin navigation items
@@ -60,9 +69,20 @@ const adminNavItems = [
     icon: Folder
   },
   {
-    title: "categories",
-    href: "/admin/categories",
-    icon: Layers
+    title: "classification",
+    icon: ListFilter,
+    children: [
+      {
+        title: "categories",
+        href: "/admin/categories",
+        icon: Layers
+      },
+      {
+        title: "skills",
+        href: "/admin/skills",
+        icon: BarChart4
+      }
+    ]
   },
   {
     title: "messages",
@@ -93,6 +113,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { theme, setTheme } = useTheme();
   const [path, setPath] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<{[key: string]: boolean}>({});
   
   const isRTL = i18n.language === "ar";
   
@@ -104,6 +125,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   // Get current path
   useEffect(() => {
     setPath(window.location.pathname);
+    
+    // Auto-open groups based on current path
+    const newOpenGroups = {...openGroups};
+    adminNavItems.forEach(item => {
+      if (item.children) {
+        const childPath = item.children.find(child => path.startsWith(child.href));
+        if (childPath) {
+          newOpenGroups[item.title] = true;
+        }
+      }
+    });
+    setOpenGroups(newOpenGroups);
   }, []);
   
   // Redirect if not admin
@@ -150,6 +183,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return itemPath !== "/admin/dashboard" && path.startsWith(itemPath);
   };
 
+  // Toggle group open state
+  const toggleGroup = (title: string) => {
+    setOpenGroups(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
+  };
+
+  // Check if any child in a group is active
+  const isGroupActive = (item: any) => {
+    if (!item.children) return false;
+    return item.children.some((child: any) => isPathActive(child.href));
+  };
+
   if (!user || user.role !== "admin") {
     return null;
   }
@@ -181,18 +228,62 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <div className="px-6 py-4">
                     <nav className="flex flex-col gap-3">
                       {adminNavItems.map((item) => (
-                        <Button
-                          key={item.href}
-                          variant={isPathActive(item.href) ? "secondary" : "ghost"}
-                          className={cn(
-                            "justify-start gap-3 text-base",
-                            isRTL && "flex-row"
-                          )}
-                          onClick={() => handleNavigation(item.href)}
-                        >
-                          <item.icon className="h-5 w-5" />
-                          {t(`auth.admin.${item.title}`)}
-                        </Button>
+                        item.children ? (
+                          <Collapsible 
+                            key={item.title}
+                            open={openGroups[item.title] || isGroupActive(item)}
+                            onOpenChange={() => toggleGroup(item.title)}
+                            className="w-full"
+                          >
+                            <CollapsibleTrigger asChild>
+                              <Button
+                                variant={isGroupActive(item) ? "secondary" : "ghost"}
+                                className={cn(
+                                  "justify-between w-full text-base",
+                                  isRTL && "flex-row"
+                                )}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <item.icon className="h-5 w-5" />
+                                  {t(`auth.admin.${item.title}`)}
+                                </div>
+                                <ChevronDown className={cn(
+                                  "h-4 w-4 transition-transform",
+                                  openGroups[item.title] && "transform rotate-180"
+                                )} />
+                              </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="pl-10 pr-4 space-y-2 mt-2">
+                              {item.children.map((child) => (
+                                <Button
+                                  key={child.href}
+                                  variant={isPathActive(child.href) ? "secondary" : "ghost"}
+                                  className={cn(
+                                    "justify-start gap-3 text-base w-full",
+                                    isRTL && "flex-row"
+                                  )}
+                                  onClick={() => handleNavigation(child.href)}
+                                >
+                                  <child.icon className="h-5 w-5" />
+                                  {t(`auth.admin.${child.title}`)}
+                                </Button>
+                              ))}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        ) : (
+                          <Button
+                            key={item.href}
+                            variant={isPathActive(item.href as string) ? "secondary" : "ghost"}
+                            className={cn(
+                              "justify-start gap-3 text-base",
+                              isRTL && "flex-row"
+                            )}
+                            onClick={() => handleNavigation(item.href as string)}
+                          >
+                            <item.icon className="h-5 w-5" />
+                            {t(`auth.admin.${item.title}`)}
+                          </Button>
+                        )
                       ))}
                     </nav>
                   </div>
@@ -205,19 +296,50 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <nav className="hidden lg:flex gap-2">
               {adminNavItems.map((item) => (
-                <Button
-                  key={item.href}
-                  variant={isPathActive(item.href) ? "secondary" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "gap-2",
-                    isRTL && "flex-row"
-                  )}
-                  onClick={() => handleNavigation(item.href)}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {t(`auth.admin.${item.title}`)}
-                </Button>
+                item.children ? (
+                  <DropdownMenu key={item.title}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant={isGroupActive(item) ? "secondary" : "ghost"}
+                        size="sm"
+                        className={cn(
+                          "gap-2",
+                          isRTL && "flex-row"
+                        )}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {t(`auth.admin.${item.title}`)}
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {item.children.map((child) => (
+                        <DropdownMenuItem 
+                          key={child.href}
+                          onClick={() => handleNavigation(child.href)}
+                          className={cn(isPathActive(child.href) && "bg-secondary")}
+                        >
+                          <child.icon className="h-4 w-4 mr-2" />
+                          {t(`auth.admin.${child.title}`)}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button
+                    key={item.href}
+                    variant={isPathActive(item.href as string) ? "secondary" : "ghost"}
+                    size="sm"
+                    className={cn(
+                      "gap-2",
+                      isRTL && "flex-row"
+                    )}
+                    onClick={() => handleNavigation(item.href as string)}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {t(`auth.admin.${item.title}`)}
+                  </Button>
+                )
               ))}
             </nav>
           </div>

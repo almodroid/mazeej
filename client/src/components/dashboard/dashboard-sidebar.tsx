@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  BanknoteIcon
+  BanknoteIcon,
+  Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -86,6 +87,62 @@ export default function DashboardSidebar() {
     },
   ];
 
+  // Freelancer-specific links
+  const freelancerLinks = [
+    {
+      href: "/my-proposals",
+      icon: <FileText size={18} />,
+      label: t("common.myProposals"),
+    },
+    {
+      href: "/projects",
+      icon: <Briefcase size={18} />,
+      label: t("common.findProjects"),
+    },
+  ];
+
+  // Add consultations link for experts
+  if (user?.role === "freelancer" && user?.freelancerType === "expert") {
+    freelancerLinks.push({
+      href: "/consultations",
+      icon: <Video size={18} />,
+      label: t("common.consultations"),
+    });
+  }
+  
+  // Add consultations link for beginner freelancers too
+  if (user?.role === "freelancer" && user?.freelancerLevel === "beginner") {
+    freelancerLinks.push({
+      href: "/my-consultations",
+      icon: <Video size={18} />,
+      label: t("common.myConsultations"),
+    });
+  }
+
+  // Add remaining freelancer links
+  const remainingFreelancerLinks = [
+    {
+      href: "/verification",
+      icon: <ShieldCheck size={18} />,
+      label: t("common.verification"),
+    },
+    {
+      href: "/reviews/received",
+      icon: <Star size={18} />,
+      label: t("common.reviewsReceived"),
+    },
+    {
+      href: "/earnings",
+      icon: <CreditCard size={18} />,
+      label: t("common.earnings"),
+    },
+    {
+      href: "/payments",
+      icon: <BanknoteIcon size={18} />,
+      label: t("payments.title"),
+    },
+  ];
+
   // Role-specific links
   const roleLinks = user?.role === "client"
     ? [
@@ -115,38 +172,7 @@ export default function DashboardSidebar() {
           label: t("payments.title"),
         },
       ]
-    : [
-        {
-          href: "/my-proposals",
-          icon: <FileText size={18} />,
-          label: t("common.myProposals"),
-        },
-        {
-          href: "/projects",
-          icon: <Briefcase size={18} />,
-          label: t("common.findProjects"),
-        },
-        {
-          href: "/verification",
-          icon: <ShieldCheck size={18} />,
-          label: t("common.verification"),
-        },
-        {
-          href: "/reviews/received",
-          icon: <Star size={18} />,
-          label: t("common.reviewsReceived"),
-        },
-        {
-          href: "/earnings",
-          icon: <CreditCard size={18} />,
-          label: t("common.earnings"),
-        },
-        {
-          href: "/payments",
-          icon: <BanknoteIcon size={18} />,
-          label: t("payments.title"),
-        },
-      ];
+    : [...freelancerLinks, ...remainingFreelancerLinks];
 
   const allLinks = [...commonLinks, ...roleLinks];
 

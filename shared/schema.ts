@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, json, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, json, numeric, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -15,6 +15,9 @@ export const freelancerTypeEnum = pgEnum('freelancer_type', ['content_creator', 
 // Project status enum
 export const projectStatusEnum = pgEnum('project_status', ['pending', 'open', 'in_progress', 'completed', 'cancelled']);
 
+// Project type enum
+export const projectTypeEnum = pgEnum('project_type', ['standard', 'consultation', 'mentoring']);
+
 // Proposal status enum
 export const proposalStatusEnum = pgEnum('proposal_status', ['pending', 'accepted', 'rejected']);
 
@@ -29,6 +32,9 @@ export const paymentTypeEnum = pgEnum('payment_type', ['deposit', 'withdrawal', 
 
 // Transaction type enum
 export const transactionTypeEnum = pgEnum('transaction_type', ['fee', 'payment', 'refund']);
+
+// Payout account type enum
+export const payoutAccountTypeEnum = pgEnum('payout_account_type', ['bank_account', 'paypal']);
 
 // Withdrawal request status enum
 export const withdrawalRequestStatusEnum = pgEnum('withdrawal_request_status', ['pending', 'approved', 'rejected', 'completed']);
@@ -60,6 +66,7 @@ export const categories = pgTable("categories", {
   name: text("name").notNull(),
   icon: text("icon").notNull(),
   freelancerCount: integer("freelancer_count").default(0),
+  translations: jsonb("translations")
 });
 
 // Skills table
@@ -67,6 +74,7 @@ export const skills = pgTable("skills", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   categoryId: integer("category_id").notNull(),
+  translations: jsonb("translations")
 });
 
 // User Skills table (Many to Many)
@@ -81,12 +89,20 @@ export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  clientId: integer("client_id").notNull(),
+  clientId: integer("client_id").notNull().references(() => users.id),
+  freelancerId: integer("freelancer_id").references(() => users.id),
   budget: integer("budget").notNull(),
   status: projectStatusEnum("status").default('open'),
-  category: integer("category_id").notNull(),
+  category: integer("category_id").notNull().references(() => categories.id),
   deadline: timestamp("deadline"),
   createdAt: timestamp("created_at").defaultNow(),
+  projectType: projectTypeEnum("project_type").default('standard'),
+  hourlyRate: integer("hourly_rate"),
+  estimatedHours: integer("estimated_hours"),
+  consultationDate: timestamp("consultation_date"),
+  consultationStartTime: text("consultation_start_time"),
+  consultationEndTime: text("consultation_end_time"),
+  timeZone: text("time_zone"),
 });
 
 // Project Skills table (Many to Many)
@@ -146,6 +162,17 @@ export const files = pgTable("files", {
   uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
+// Payout Accounts table
+export const payoutAccounts = pgTable("payout_accounts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: payoutAccountTypeEnum("type").notNull(),
+  name: text("name").notNull(),
+  accountDetails: json("account_details").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Payment table
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
@@ -158,7 +185,16 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Transaction table
+// User balance table for tracking earnings and withdrawals
+export const userBalances = pgTable("user_balances", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  totalEarnings: numeric("total_earnings").notNull().default('0'),
+  pendingWithdrawals: numeric("pending_withdrawals").notNull().default('0'),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+});
+
+// Transactions table
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   paymentId: integer("payment_id").references(() => payments.id, { onDelete: 'cascade' }).notNull(),
@@ -235,6 +271,14 @@ export const insertProjectSchema = createInsertSchema(projects)
   .omit({ id: true, createdAt: true, status: true, clientId: true })
   .extend({
     deadline: z.string().nullable().transform(val => val ? new Date(val) : null),
+    projectType: z.enum(['standard', 'consultation', 'mentoring']).default('standard'),
+    freelancerId: z.number().optional(),
+    hourlyRate: z.number().optional(),
+    estimatedHours: z.number().optional(),
+    consultationDate: z.string().nullable().transform(val => val ? new Date(val) : null),
+    consultationStartTime: z.string().optional(),
+    consultationEndTime: z.string().optional(),
+    timeZone: z.string().optional(),
   });
 export const insertProposalSchema = createInsertSchema(proposals).omit({ id: true, createdAt: true, status: true, freelancerId: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true, reviewerId: true });
@@ -296,7 +340,7 @@ export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
 export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   projects: many(projects, { relationName: "user_projects" }),
   skills: many(userSkills, { relationName: "user_skills" }),
   sentMessages: many(messages, { relationName: "user_sent_messages" }),
@@ -308,6 +352,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   verificationRequests: many(verificationRequests, { relationName: "user_verification_requests" }),
   reviewedVerifications: many(verificationRequests, { relationName: "reviewer_verification_requests" }),
   withdrawalRequests: many(withdrawalRequests, { relationName: "user_withdrawal_requests" }),
+  payoutAccounts: many(payoutAccounts, { relationName: "user_payout_accounts" }),
+  balance: one(userBalances, { fields: [users.id], references: [userBalances.userId] }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -326,7 +372,8 @@ export const userSkillsRelations = relations(userSkills, ({ one }) => ({
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
-  client: one(users, { relationName: "user_projects", fields: [projects.clientId], references: [users.id] }),
+  client: one(users, { relationName: "client_projects", fields: [projects.clientId], references: [users.id] }),
+  freelancer: one(users, { relationName: "freelancer_projects", fields: [projects.freelancerId], references: [users.id] }),
   skills: many(projectSkills, { relationName: "project_skills" }),
   proposals: many(proposals, { relationName: "project_proposals" }),
   reviews: many(reviews, { relationName: "project_reviews" }),
@@ -399,4 +446,9 @@ export const withdrawalRequestsRelations = relations(withdrawalRequests, ({ one 
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
   payment: one(payments, { relationName: "payment_transactions", fields: [transactions.paymentId], references: [payments.id] }),
+}));
+
+// Add balance relations
+export const userBalancesRelations = relations(userBalances, ({ one }) => ({
+  user: one(users, { fields: [userBalances.userId], references: [users.id] }),
 }));

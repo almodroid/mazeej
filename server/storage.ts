@@ -119,6 +119,7 @@ export interface IStorage {
   getSkillsByCategory(categoryId: number): Promise<Skill[]>;
   getUserSkills(userId: number): Promise<Skill[]>;
   addUserSkill(userId: number, skillId: number): Promise<void>;
+  removeUserSkill(userId: number, skillId: number): Promise<boolean>;
   
   // Project operations
   getProjects(limit?: number): Promise<Project[]>;
@@ -468,6 +469,26 @@ export class MemStorage implements IStorage {
   async addUserSkill(userId: number, skillId: number): Promise<void> {
     const id = this.userSkillId++;
     this.userSkills.set(id, { userId, skillId });
+  }
+
+  async removeUserSkill(userId: number, skillId: number): Promise<boolean> {
+    // Find the user skill entry to remove
+    let foundEntry = false;
+    let foundId = -1;
+    
+    for (const [id, entry] of this.userSkills.entries()) {
+      if (entry.userId === userId && entry.skillId === skillId) {
+        foundEntry = true;
+        foundId = id;
+        break;
+      }
+    }
+    
+    if (foundEntry && foundId !== -1) {
+      return this.userSkills.delete(foundId);
+    }
+    
+    return false;
   }
 
   // Project operations

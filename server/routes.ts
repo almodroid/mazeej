@@ -4,10 +4,10 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
 import { storage } from "./storage";
-import { setupAuth, hashPassword } from "./auth";
+import { setupAuth, hashPassword } from "./routes/auth";
 import { setupWebSocketServer } from "./chat";
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
-import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./zoom";
+import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
 import { z } from "zod";
 import fs from "fs";
 import crypto from "crypto";
@@ -502,6 +502,258 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Categories with Skills
+  app.get('/api/categories-with-skills', async (req, res) => {
+    try {
+      const categories = await storage.getCategories();
+      
+      // For each category, fetch its skills
+      const categoriesWithSkills = await Promise.all(
+        categories.map(async (category) => {
+          const skills = await storage.getSkillsByCategory(category.id);
+          return {
+            ...category,
+            skills
+          };
+        })
+      );
+      
+      res.json(categoriesWithSkills);
+    } catch (error: any) {
+      console.error('Error fetching categories with skills:', error);
+      res.status(500).json({ message: 'Failed to fetch categories with skills' });
+    }
+  });
+
+  // Skills routes
+  app.get('/api/skills', async (req, res) => {
+    try {
+      const skills = await storage.getSkills();
+      res.json(skills);
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+      res.status(500).json({ message: 'Failed to fetch skills' });
+    }
+  });
+
+  app.post('/api/skills', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const { name, categoryId, translations } = req.body;
+      
+      if (!categoryId) {
+        return res.status(400).json({ message: 'Category ID is required' });
+      }
+
+      // Ensure at least one translation is provided
+      if (translations && !Object.values(translations).some((val: any) => val && val.trim && val.trim())) {
+        return res.status(400).json({ message: 'At least one translation is required' });
+      }
+
+      // Get the category to validate it exists
+      const category = await storage.getCategory(parseInt(categoryId));
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+
+      // Set the name based on available translations (prefer Arabic as default)
+      const skillName = translations.ar?.trim() || translations.en?.trim() || '';
+      
+      const newSkill = await storage.createSkill({
+        name: skillName, 
+        categoryId: parseInt(categoryId),
+        translations
+      });
+
+      res.status(201).json(newSkill);
+    } catch (error) {
+      console.error('Error creating skill:', error);
+      res.status(500).json({ message: 'Failed to create skill' });
+    }
+  });
+
+  app.put('/api/skills/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const skillId = parseInt(req.params.id);
+      
+      if (isNaN(skillId)) {
+        return res.status(400).json({ message: 'Invalid skill ID' });
+      }
+
+      const { name, categoryId, translations } = req.body;
+      
+      // Ensure at least one translation is provided
+      if (translations && !Object.values(translations).some((val: any) => val && val.trim && val.trim())) {
+        return res.status(400).json({ message: 'At least one translation is required' });
+      }
+
+      // Get the skill to ensure it exists
+      const skill = await storage.getSkill(skillId);
+      if (!skill) {
+        return res.status(404).json({ message: 'Skill not found' });
+      }
+
+      // Set the name based on available translations (prefer Arabic as default)
+      const skillName = translations?.ar?.trim() || translations?.en?.trim() || name || skill.name;
+      
+      const updatedSkill = await storage.updateSkill(skillId, {
+        name: skillName,
+        categoryId: categoryId ? parseInt(categoryId) : undefined,
+        translations
+      });
+
+      res.json(updatedSkill);
+    } catch (error) {
+      console.error('Error updating skill:', error);
+      res.status(500).json({ message: 'Failed to update skill' });
+    }
+  });
+
+  app.delete('/api/skills/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const skillId = parseInt(req.params.id);
+      
+      if (isNaN(skillId)) {
+        return res.status(400).json({ message: 'Invalid skill ID' });
+      }
+
+      // First check if the skill has any user skills associated with it
+      const skillInUse = await storage.isSkillInUse(skillId);
+      
+      if (skillInUse) {
+        return res.status(400).json({ 
+          message: 'Cannot delete skill that is in use by users or projects'
+        });
+      }
+
+      const deleted = await storage.deleteSkill(skillId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Skill not found' });
+      }
+
+      res.json({ message: 'Skill deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting skill:', error);
+      res.status(500).json({ message: 'Failed to delete skill' });
+    }
+  });
+
+  // Update category routes to support translations
+  app.post('/api/categories', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const { name, icon, translations } = req.body;
+      
+      // Ensure at least one translation is provided
+      if (translations && !Object.values(translations).some((val: any) => val && val.trim && val.trim())) {
+        return res.status(400).json({ message: 'At least one translation is required' });
+      }
+
+      // Set the name based on available translations (prefer Arabic as default)
+      const categoryName = translations?.ar?.trim() || translations?.en?.trim() || name || '';
+      
+      if (!categoryName) {
+        return res.status(400).json({ message: 'Category name is required' });
+      }
+
+      const newCategory = await storage.createCategory({
+        name: categoryName,
+        icon: icon || 'default-icon',
+        translations
+      });
+
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      res.status(500).json({ message: 'Failed to create category' });
+    }
+  });
+
+  app.put('/api/categories/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const categoryId = parseInt(req.params.id);
+      
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: 'Invalid category ID' });
+      }
+
+      const { name, icon, translations } = req.body;
+      
+      // Get the category to ensure it exists
+      const category = await storage.getCategory(categoryId);
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+
+      // Set the name based on available translations (prefer Arabic as default)
+      const categoryName = translations?.ar?.trim() || translations?.en?.trim() || name || category.name;
+      
+      const updatedCategory = await storage.updateCategory(categoryId, {
+        name: categoryName,
+        icon,
+        translations
+      });
+
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error('Error updating category:', error);
+      res.status(500).json({ message: 'Failed to update category' });
+    }
+  });
+
+  app.delete('/api/categories/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const categoryId = parseInt(req.params.id);
+      
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: 'Invalid category ID' });
+      }
+
+      // Check if the category has any skills
+      const categorySkills = await storage.getSkillsByCategory(categoryId);
+      
+      if (categorySkills.length > 0) {
+        return res.status(400).json({ 
+          message: 'Cannot delete category that has skills. Delete the skills first.' 
+        });
+      }
+
+      const deleted = await storage.deleteCategory(categoryId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+
+      res.json({ message: 'Category deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      res.status(500).json({ message: 'Failed to delete category' });
+    }
+  });
+
   // Freelancers Routes
   app.get('/api/freelancers', async (req, res) => {
     try {
@@ -534,6 +786,49 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Consultation Projects for mentors (expert freelancers)
+  app.get('/api/projects/consultation/mentor', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'freelancer') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      // Get all projects
+      const projects = await storage.getProjects();
+      
+      // Filter to only consultation type projects where this freelancer is involved
+      const freelancerProjects = projects.filter((project: any) => {
+        return (project.projectType === 'consultation' || project.projectType === 'mentoring') &&
+               project.freelancerId === req.user.id;
+      });
+      
+      res.json(freelancerProjects);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch consultation projects' });
+    }
+  });
+
+  // Consultation Projects for clients (or beginner freelancers seeking consultation)
+  app.get('/api/projects/consultation/client', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      // Get all consultation projects created by this user
+      const projects = await storage.getProjectsByClient(req.user.id);
+      
+      // Filter to only consultation or mentoring type
+      const consultationProjects = projects.filter((project: any) => 
+        project.projectType === 'consultation' || project.projectType === 'mentoring'
+      );
+      
+      res.json(consultationProjects);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch client consultation projects' });
+    }
+  });
+
   app.get('/api/projects/:id', async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
@@ -551,18 +846,36 @@ export function registerRoutes(app: Express): Server {
 
   app.post('/api/projects', async (req: Request, res: Response) => {
     try {
-      if (!req.isAuthenticated() || req.user.role !== 'client') {
-        return res.status(403).json({ message: 'Only clients can create projects' });
+      if (!req.isAuthenticated()) {
+        return res.status(403).json({ message: 'Authentication required' });
+      }
+
+      const projectData = req.body;
+      const isConsultationProject = projectData.projectType === 'consultation' || projectData.projectType === 'mentoring';
+      
+      // Check if user can create this type of project
+      // - Clients can create any project type
+      // - Beginner freelancers can create consultation projects
+      if (req.user?.role === 'client') {
+        // Clients can create any type of project
+      } else if (req.user?.role === 'freelancer' && 
+                req.user?.freelancerLevel === 'beginner' && 
+                isConsultationProject) {
+        // Beginner freelancers can create consultation projects
+      } else {
+        return res.status(403).json({ 
+          message: 'Only clients can create regular projects. Beginner freelancers can only create consultation projects.' 
+        });
       }
 
       const validatedData = insertProjectSchema.parse(req.body);
-      const project = await storage.createProject(validatedData, req.user.id);
-      res.status(201).json(project);
+      const project = await storage.createProject(validatedData, req.user!.id);
+      return res.status(201).json(project);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }
-      res.status(500).json({ message: 'Failed to create project' });
+      return res.status(500).json({ message: 'Failed to create project' });
     }
   });
 
@@ -1151,7 +1464,7 @@ export function registerRoutes(app: Express): Server {
       }
       
       // Import here to avoid errors if the ZOOM credentials are not set
-      const { generateZoomToken } = await import('./zoom');
+      const { generateZoomToken } = await import('./routes/zoom');
       
       // Generate a token with the user's ID
       const token = generateZoomToken(req.user.id.toString());
@@ -2319,18 +2632,11 @@ export function registerRoutes(app: Express): Server {
       
       const userId = req.user.id;
       
-      // Get all payments for the user
+      // Get user balance using the new balance system
+      const balanceData = await storage.getUserBalance(userId);
+      
+      // Get all payments for the user to display transaction history
       const payments = await storage.getUserPayments(userId);
-      
-      // Calculate total earnings (completed payments only)
-      const total = payments
-        .filter(p => p.status === 'completed')
-        .reduce((sum, payment) => sum + Number(payment.amount), 0);
-      
-      // Calculate pending earnings
-      const pending = payments
-        .filter(p => p.status === 'pending')
-        .reduce((sum, payment) => sum + Number(payment.amount), 0);
       
       // Calculate this month's earnings
       const now = new Date();
@@ -2350,10 +2656,18 @@ export function registerRoutes(app: Express): Server {
         clientName: payment.clientName || 'Platform'
       }));
       
+      // Log the data for debugging
+      console.log(`User ${userId} balance data:`, balanceData);
+
+      // Calculate available balance
+      const available = balanceData.totalEarnings - balanceData.pendingWithdrawals;
+      
       return res.json({
-        total,
-        pending,
+        total: balanceData.totalEarnings,
+        pending: payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + Number(p.amount), 0),
         thisMonth,
+        available,
+        pendingWithdrawals: balanceData.pendingWithdrawals,
         periods
       });
     } catch (error) {
@@ -2422,30 +2736,35 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: 'Missing required fields' });
       }
       
-      // Validate amount is positive
+      // Validate amount is positive and meets minimum withdrawal amount
       if (amount <= 0) {
         return res.status(400).json({ message: 'Amount must be positive' });
       }
+
+      if (amount < 100) {
+        return res.status(400).json({ message: 'Minimum withdrawal amount is 100' });
+      }
       
-      // Check if user has sufficient earnings
-      const payments = await storage.getUserPayments(req.user.id);
-      const totalEarnings = payments
-        .filter(p => p.status === 'completed')
-        .reduce((sum, payment) => sum + Number(payment.amount), 0);
-      
-      // Get user's pending withdrawal requests
-      const pendingWithdrawals = await storage.getUserWithdrawalRequests(req.user.id);
-      const pendingWithdrawalTotal = pendingWithdrawals
-        .filter(wr => wr.status === 'pending' || wr.status === 'approved')
-        .reduce((sum, wr) => sum + Number(wr.amount), 0);
+      // Get user balance using the new balance system
+      const balance = await storage.getUserBalance(req.user.id);
       
       // Calculate available balance
-      const availableBalance = totalEarnings - pendingWithdrawalTotal;
+      const available = balance.totalEarnings - balance.pendingWithdrawals;
       
-      if (amount > availableBalance) {
+      console.log(`User ${req.user.id} withdrawal request:`, { 
+        requestedAmount: amount,
+        totalEarnings: balance.totalEarnings,
+        pendingWithdrawals: balance.pendingWithdrawals,
+        available
+      });
+      
+      // Check if user has sufficient available balance
+      if (amount > available) {
         return res.status(400).json({ 
           message: 'Insufficient funds',
-          availableBalance
+          available,
+          totalEarnings: balance.totalEarnings,
+          pendingWithdrawals: balance.pendingWithdrawals
         });
       }
       
@@ -2457,6 +2776,9 @@ export function registerRoutes(app: Express): Server {
         accountDetails,
         notes
       });
+      
+      // Update the user's pending withdrawals
+      await storage.updateUserPendingWithdrawals(req.user.id, amount);
       
       // Create a notification for the admin
       await storage.createNotification({
@@ -2499,6 +2821,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: 'Invalid status' });
       }
       
+      // Previous status for comparison
+      const previousStatus = withdrawalRequest.status;
+      
       // Update the status
       const updatedRequest = await storage.updateWithdrawalRequestStatus(withdrawalId, {
         status,
@@ -2507,7 +2832,29 @@ export function registerRoutes(app: Express): Server {
         processedAt: new Date()
       });
       
-      // If status is "completed", create a payment record
+      // Update user balance based on status transition
+      const userId = withdrawalRequest.userId;
+      const amount = Number(withdrawalRequest.amount);
+      
+      // If the request is moving from pending/approved to rejected/completed
+      // we need to remove it from pending withdrawals
+      if (
+        (previousStatus === 'pending' || previousStatus === 'approved') && 
+        (status === 'rejected' || status === 'completed')
+      ) {
+        await storage.updateUserPendingWithdrawals(userId, -amount);
+      }
+      
+      // If the request is moving from rejected/completed to pending/approved
+      // we need to add it back to pending withdrawals
+      if (
+        (previousStatus === 'rejected' || previousStatus === 'completed') && 
+        (status === 'pending' || status === 'approved')
+      ) {
+        await storage.updateUserPendingWithdrawals(userId, amount);
+      }
+      
+      // If status is "completed", create a payment record and update total earnings
       if (status === 'completed') {
         const payment = await storage.createPayment({
           userId: withdrawalRequest.userId,
@@ -2530,6 +2877,9 @@ export function registerRoutes(app: Express): Server {
             status: 'completed',
             description: `Withdrawal payment for request #${withdrawalId}`
           });
+          
+          // Update user's total earnings to reflect the completed withdrawal
+          await storage.calculateUserBalance(withdrawalRequest.userId);
           
           // Notify the user
           await storage.createNotification({
@@ -2583,6 +2933,513 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error getting user transactions:', error);
       return res.status(500).json({ message: 'Failed to get user transactions' });
+    }
+  });
+
+  // User Profile Get Route
+  app.get('/api/users/profile', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ message: 'Failed to fetch profile' });
+    }
+  });
+
+  // Get user skills
+  app.get('/api/users/:id/skills', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      // Check if the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const skills = await storage.getUserSkills(userId);
+      res.json(skills);
+    } catch (error) {
+      console.error('Error fetching user skills:', error);
+      res.status(500).json({ message: 'Failed to fetch user skills', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+  
+  // Add skill to user
+  app.post('/api/users/:id/skills', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      // Only allow users to add skills to their own profile (or admins)
+      if (req.user.id !== userId && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const { skillId } = req.body;
+      
+      if (!skillId || isNaN(parseInt(skillId.toString()))) {
+        return res.status(400).json({ message: 'Invalid skill ID' });
+      }
+      
+      const skillIdNum = parseInt(skillId.toString());
+      
+      // Check if the skill exists
+      const skillExists = await storage.getSkills().then(skills => 
+        skills.some(skill => skill.id === skillIdNum)
+      );
+      
+      if (!skillExists) {
+        return res.status(404).json({ message: 'Skill not found' });
+      }
+      
+      // Add the skill
+      await storage.addUserSkill(userId, skillIdNum);
+      
+      res.status(201).json({ message: 'Skill added successfully' });
+    } catch (error) {
+      console.error('Error adding user skill:', error);
+      res.status(500).json({ message: 'Failed to add skill', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+  
+  // Remove skill from user
+  app.delete('/api/users/:userId/skills/:skillId', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const userId = parseInt(req.params.userId);
+      const skillId = parseInt(req.params.skillId);
+      
+      if (isNaN(userId) || isNaN(skillId)) {
+        return res.status(400).json({ message: 'Invalid user ID or skill ID' });
+      }
+      
+      // Only allow users to remove skills from their own profile (or admins)
+      if (req.user.id !== userId && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      // Find the userSkill entry to remove
+      const userSkills = await storage.getUserSkills(userId);
+      const skillExists = userSkills.some(skill => skill.id === skillId);
+      
+      if (!skillExists) {
+        return res.status(404).json({ message: 'User does not have this skill' });
+      }
+      
+      // Remove the skill
+      const removed = await storage.removeUserSkill(userId, skillId);
+      
+      if (!removed) {
+        return res.status(500).json({ message: 'Failed to remove skill' });
+      }
+      
+      res.json({ message: 'Skill removed successfully' });
+    } catch (error: any) {
+      console.error('Error removing user skill:', error);
+      res.status(500).json({ message: 'Failed to remove skill', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Update withdrawal request status
+  app.put('/api/withdrawal-requests/:id/status', async (req, res) => {
+    // ... existing code ...
+  });
+
+  // Payout Accounts API
+  app.get('/api/payout-accounts', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const userId = req.user.id;
+      const accounts = await storage.getPayoutAccounts(userId);
+      
+      res.json(accounts);
+    } catch (error) {
+      console.error('Error fetching payout accounts:', error);
+      res.status(500).json({ message: 'Failed to fetch payout accounts' });
+    }
+  });
+
+  app.post('/api/payout-accounts', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const userId = req.user.id;
+      const { type, name, accountDetails, isDefault } = req.body;
+      
+      if (!type || !accountDetails) {
+        return res.status(400).json({ message: 'Type and account details are required' });
+      }
+
+      const account = await storage.createPayoutAccount(userId, {
+        type,
+        name: name || 'My Payout Account', // Provide a default name if not specified
+        accountDetails,
+        isDefault: isDefault ?? false
+      });
+      
+      res.status(201).json(account);
+    } catch (error) {
+      console.error('Error creating payout account:', error);
+      res.status(500).json({ message: 'Failed to create payout account' });
+    }
+  });
+
+  app.get('/api/payout-accounts/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const userId = req.user.id;
+      const accountId = parseInt(req.params.id);
+      
+      if (isNaN(accountId)) {
+        return res.status(400).json({ message: 'Invalid account ID' });
+      }
+
+      const account = await storage.getPayoutAccount(accountId);
+      
+      if (!account) {
+        return res.status(404).json({ message: 'Account not found' });
+      }
+      
+      // Ensure the account belongs to the authenticated user
+      if (account.userId !== userId) {
+        return res.status(403).json({ message: 'Not authorized to access this account' });
+      }
+      
+      res.json(account);
+    } catch (error) {
+      console.error('Error fetching payout account:', error);
+      res.status(500).json({ message: 'Failed to fetch payout account' });
+    }
+  });
+
+  app.put('/api/payout-accounts/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const userId = req.user.id;
+      const accountId = parseInt(req.params.id);
+      
+      if (isNaN(accountId)) {
+        return res.status(400).json({ message: 'Invalid account ID' });
+      }
+
+      const account = await storage.getPayoutAccount(accountId);
+      
+      if (!account) {
+        return res.status(404).json({ message: 'Account not found' });
+      }
+      
+      // Ensure the account belongs to the authenticated user
+      if (account.userId !== userId) {
+        return res.status(403).json({ message: 'Not authorized to update this account' });
+      }
+
+      const { name, accountDetails, isDefault } = req.body;
+      const updatedAccount = await storage.updatePayoutAccount(accountId, {
+        name,
+        accountDetails,
+        isDefault
+      });
+      
+      res.json(updatedAccount);
+    } catch (error) {
+      console.error('Error updating payout account:', error);
+      res.status(500).json({ message: 'Failed to update payout account' });
+    }
+  });
+
+  app.delete('/api/payout-accounts/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const userId = req.user.id;
+      const accountId = parseInt(req.params.id);
+      
+      if (isNaN(accountId)) {
+        return res.status(400).json({ message: 'Invalid account ID' });
+      }
+
+      const account = await storage.getPayoutAccount(accountId);
+      
+      if (!account) {
+        return res.status(404).json({ message: 'Account not found' });
+      }
+      
+      // Ensure the account belongs to the authenticated user
+      if (account.userId !== userId) {
+        return res.status(403).json({ message: 'Not authorized to delete this account' });
+      }
+
+      const deleted = await storage.deletePayoutAccount(accountId);
+      
+      if (!deleted) {
+        return res.status(500).json({ message: 'Failed to delete account' });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error('Error deleting payout account:', error);
+      res.status(500).json({ message: 'Failed to delete payout account' });
+    }
+  });
+
+  // Upload file route
+  app.post('/api/upload', upload.single('file'), (req, res) => {
+    // ... existing code ...
+  });
+
+  // USER TESTING ONLY - debug route to generate test earnings
+  app.post('/api/debug/generate-earnings', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ message: 'Debug routes not available in production' });
+      }
+      
+      const userId = req.user.id;
+      const { amount = 1000 } = req.body;
+      
+      // Create a test payment for the user
+      const payment = await storage.createPayment({
+        userId,
+        amount: Number(amount),
+        type: 'project_payment',
+        status: 'completed',
+        description: 'Test payment for development'
+      });
+      
+      return res.status(201).json({
+        message: 'Test earnings generated successfully',
+        payment
+      });
+    } catch (error) {
+      console.error('Error generating test earnings:', error);
+      return res.status(500).json({ message: 'Failed to generate test earnings' });
+    }
+  });
+
+  // --- Consultation Specific Routes ---
+
+  // GET: Beginner Freelancer's Consultations (Requests they made)
+  app.get('/api/projects/consultation/beginner', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'freelancer' || req.user.freelancerLevel !== 'beginner') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    try {
+      const userId = req.user.id;
+      const projects = await storage.getProjectsByClient(userId);
+      const consultationProjects = projects.filter((project: any) => 
+        project.projectType === 'consultation' || project.projectType === 'mentoring'
+      );
+      // Enrich with freelancer (expert) details
+      const enrichedProjects = await Promise.all(consultationProjects.map(async (p) => {
+        const expert = p.freelancerId ? await storage.getUser(p.freelancerId) : null;
+        const { password, ...expertWithoutPassword } = expert || {};
+        return { ...p, freelancer: expertWithoutPassword };
+      }));
+      res.json(enrichedProjects);
+    } catch (error) {
+      console.error('Error fetching beginner consultations:', error);
+      res.status(500).json({ message: 'Failed to fetch consultations' });
+    }
+  });
+
+  // GET: Expert Freelancer's Pending Consultation Requests (Requests for them)
+  app.get('/api/projects/consultation/requests', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'freelancer' || req.user.freelancerType !== 'expert') {
+      return res.status(403).json({ message: 'Only expert freelancers can view requests' });
+    }
+    try {
+      const expertId = req.user.id;
+      // Fetch projects where status is pending and type is consultation/mentoring
+      // AND freelancerId matches the logged-in expert
+      const pendingRequests = await storage.getPendingConsultationsForExpert(expertId);
+      
+      // Enrich with client (beginner freelancer) details
+      const enrichedRequests = await Promise.all(pendingRequests.map(async (p) => {
+        const client = await storage.getUser(p.clientId);
+        const { password, ...clientWithoutPassword } = client || {};
+        return { ...p, client: clientWithoutPassword };
+      }));
+      
+      res.json(enrichedRequests);
+    } catch (error) {
+      console.error('Error fetching consultation requests:', error);
+      res.status(500).json({ message: 'Failed to fetch consultation requests' });
+    }
+  });
+
+  // PATCH: Expert accepts a consultation request
+  app.patch('/api/projects/:id/accept', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'freelancer' || req.user.freelancerType !== 'expert') {
+      return res.status(403).json({ message: 'Only expert freelancers can accept requests' });
+    }
+    try {
+      const projectId = parseInt(req.params.id);
+      const expertId = req.user.id;
+      
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Verify the project is pending and assigned to this expert
+      if (project.status !== 'pending' || project.freelancerId !== expertId) {
+        return res.status(400).json({ message: 'Cannot accept this consultation request' });
+      }
+      
+      // Update status to 'in_progress'
+      const updatedProject = await storage.updateProjectStatus(projectId, 'in_progress');
+      
+      // Notify beginner freelancer
+      await storage.createNotification({
+        userId: project.clientId,
+        type: 'project_update',
+        title: t('notification.consultationAcceptedTitle'),
+        content: t('notification.consultationAcceptedContent', { expertName: req.user.fullName, title: project.title }),
+        relatedId: projectId
+      });
+
+      res.json(updatedProject);
+    } catch (error) {
+      console.error('Error accepting consultation request:', error);
+      res.status(500).json({ message: 'Failed to accept request' });
+    }
+  });
+
+  // PATCH: Expert rejects a consultation request
+  app.patch('/api/projects/:id/reject', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'freelancer' || req.user.freelancerType !== 'expert') {
+      return res.status(403).json({ message: 'Only expert freelancers can reject requests' });
+    }
+    try {
+      const projectId = parseInt(req.params.id);
+      const expertId = req.user.id;
+      
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Verify the project is pending and assigned to this expert
+      if (project.status !== 'pending' || project.freelancerId !== expertId) {
+        return res.status(400).json({ message: 'Cannot reject this consultation request' });
+      }
+      
+      // Update status to 'cancelled'
+      const updatedProject = await storage.updateProjectStatus(projectId, 'cancelled');
+
+      // Notify beginner freelancer
+      await storage.createNotification({
+        userId: project.clientId,
+        type: 'project_update',
+        title: t('notification.consultationRejectedTitle'),
+        content: t('notification.consultationRejectedContent', { expertName: req.user.fullName, title: project.title }),
+        relatedId: projectId
+      });
+
+      res.json(updatedProject);
+    } catch (error) {
+      console.error('Error rejecting consultation request:', error);
+      res.status(500).json({ message: 'Failed to reject request' });
+    }
+  });
+
+  // Modify the existing POST /api/projects route
+  app.post('/api/projects', async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(403).json({ message: 'Authentication required' });
+      }
+
+      const projectData = req.body;
+      const isConsultationProject = projectData.projectType === 'consultation' || projectData.projectType === 'mentoring';
+      
+      // Authorization check (same as before)
+      if (req.user?.role === 'client') {
+        // Clients can create any type of project
+      } else if (req.user?.role === 'freelancer' && 
+                 req.user?.freelancerLevel === 'beginner' && 
+                 isConsultationProject) {
+        // Beginner freelancers can create consultation projects
+      } else {
+        return res.status(403).json({ 
+          message: 'User role does not permit creating this project type.' 
+        });
+      }
+
+      // Add freelancerId to the validation data (if it's a consultation)
+      // The frontend (consultation-form) should be sending this
+      const validatedData = insertProjectSchema.parse(req.body);
+      
+      // Determine initial status
+      const initialStatus = isConsultationProject ? 'pending' : 'open';
+
+      const project = await storage.createProject(
+        { ...validatedData, status: initialStatus }, // Pass initial status
+        req.user!.id
+      );
+
+      // If consultation, notify the expert
+      if (isConsultationProject && project.freelancerId) {
+         await storage.createNotification({
+           userId: project.freelancerId,
+           type: 'project_update', // Or a new 'consultation_request' type?
+           title: t('notification.newConsultationRequestTitle'),
+           content: t('notification.newConsultationRequestContent', { beginnerName: req.user.fullName, title: project.title }),
+           relatedId: project.id
+         });
+      }
+
+      return res.status(201).json(project);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error("Error creating project:", error);
+      return res.status(500).json({ message: 'Failed to create project' });
     }
   });
 

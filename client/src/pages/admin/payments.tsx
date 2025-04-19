@@ -85,22 +85,22 @@ import * as z from "zod";
 
 // Define interfaces
 interface Payment {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   username?: string;
   amount: number;
   status: 'completed' | 'pending' | 'failed';
   type: 'deposit' | 'withdrawal' | 'project_payment';
-  projectId?: string;
+  projectId?: number;
   projectTitle?: string;
   createdAt: string;
   description?: string;
 }
 
 interface Transaction {
-  id: string;
-  paymentId: string;
-  userId: string;
+  id: number;
+  paymentId: number;
+  userId: number;
   username?: string;
   amount: number;
   type: 'fee' | 'payment' | 'refund';
@@ -109,17 +109,17 @@ interface Transaction {
 }
 
 interface WithdrawalRequest {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   username?: string;
   amount: number;
   paymentMethod: string;
   accountDetails: any;
   status: 'pending' | 'approved' | 'rejected' | 'completed';
   notes?: string;
-  adminId?: string;
+  adminId?: number;
   adminUsername?: string;
-  paymentId?: string;
+  paymentId?: number;
   requestedAt: string;
   processedAt?: string;
 }
@@ -312,7 +312,7 @@ export default function AdminPaymentsPage() {
 
   // Update withdrawal request status mutation
   const updateWithdrawalStatusMutation = useMutation({
-    mutationFn: async ({ id, status, notes }: { id: string, status: string, notes?: string }) => {
+    mutationFn: async ({ id, status, notes }: { id: number | string, status: string, notes?: string }) => {
       const response = await apiRequest("PATCH", `/api/withdrawal-requests/${id}/status`, {
         status,
         notes
@@ -557,7 +557,7 @@ export default function AdminPaymentsPage() {
                           {(filteredPayments as Payment[]).map((payment: Payment) => (
                             <TableRow key={payment.id}>
                               <TableCell className="font-medium">{String(payment.id).substring(0, 8)}</TableCell>
-                              <TableCell>{payment.username || payment.userId.substring(0, 8)}</TableCell>
+                              <TableCell>{payment.username || String(payment.userId).substring(0, 8)}</TableCell>
                               <TableCell>{payment.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6 text-primary" /></TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(getTypeBadgeVariant(payment.type))}>
@@ -565,7 +565,7 @@ export default function AdminPaymentsPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                {payment.projectTitle || (payment.projectId ? payment.projectId.substring(0, 8) : '-')}
+                                {payment.projectTitle || (payment.projectId ? String(payment.projectId).substring(0, 8) : '-')}
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(getStatusBadgeVariant(payment.status))}>
@@ -589,7 +589,7 @@ export default function AdminPaymentsPage() {
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 
                                       className={cn("text-destructive", isRTL && "flex-row")}
-                                      onClick={() => setPaymentToDelete(payment.id)}
+                                      onClick={() => setPaymentToDelete(payment.id.toString())}
                                     >
                                       <Trash className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                                       {t("common.delete")}
@@ -676,8 +676,8 @@ export default function AdminPaymentsPage() {
                             <TableRow key={transaction.id}>
                               <TableCell className="font-medium">{String(transaction.id).substring(0, 8)}</TableCell>
                               <TableCell>{String(transaction.paymentId).substring(0, 8)}</TableCell>
-                              <TableCell>{transaction.username || transaction.userId.substring(0, 8)}</TableCell>
-                              <TableCell>{transaction.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6 text-white" /></TableCell>
+                              <TableCell>{transaction.username || String(transaction.userId).substring(0, 8)}</TableCell>
+                              <TableCell>{transaction.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6" /></TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(getTypeBadgeVariant(transaction.type))}>
                                   {t(`payments.type.${transaction.type}`, { defaultValue: transaction.type })}
@@ -766,8 +766,8 @@ export default function AdminPaymentsPage() {
                         <TableBody>
                           {(filteredWithdrawals as WithdrawalRequest[]).map((withdrawal: WithdrawalRequest) => (
                             <TableRow key={withdrawal.id}>
-                              <TableCell className="font-medium">{withdrawal.id.substring(0, 8)}</TableCell>
-                              <TableCell>{withdrawal.username || withdrawal.userId.substring(0, 8)}</TableCell>
+                              <TableCell className="font-medium">{String(withdrawal.id).substring(0, 8)}</TableCell>
+                              <TableCell>{withdrawal.username || String(withdrawal.userId).substring(0, 8)}</TableCell>
                               <TableCell>{withdrawal.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6" /></TableCell>
                               <TableCell>{withdrawal.paymentMethod}</TableCell>
                               <TableCell>
@@ -795,7 +795,7 @@ export default function AdminPaymentsPage() {
                                       className={cn(isRTL && "flex-row")}
                                       onClick={() => {
                                         updateWithdrawalStatusMutation.mutate({
-                                          id: withdrawal.id,
+                                          id: withdrawal.id.toString(),
                                           status: "approved",
                                           notes: "Approved by admin"
                                         });
@@ -809,7 +809,7 @@ export default function AdminPaymentsPage() {
                                       className={cn(isRTL && "flex-row")}
                                       onClick={() => {
                                         updateWithdrawalStatusMutation.mutate({
-                                          id: withdrawal.id,
+                                          id: withdrawal.id.toString(),
                                           status: "completed",
                                           notes: "Marked as completed by admin"
                                         });
@@ -823,7 +823,7 @@ export default function AdminPaymentsPage() {
                                       className={cn("text-destructive", isRTL && "flex-row")}
                                       onClick={() => {
                                         updateWithdrawalStatusMutation.mutate({
-                                          id: withdrawal.id,
+                                          id: withdrawal.id.toString(),
                                           status: "rejected",
                                           notes: "Rejected by admin"
                                         });

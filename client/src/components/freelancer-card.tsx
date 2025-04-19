@@ -16,6 +16,8 @@ import { useState } from "react";
 import { StartChatButton } from "./user-actions";
 import { useQuery } from "@tanstack/react-query";
 import HireMeForm from "./hire-me-form";
+import ConsultationForm from "./consultation-form";
+import { useAuth } from "@/hooks/use-auth";
 
 type FreelancerCardProps = {
   freelancer: Omit<User, 'password'>;
@@ -23,9 +25,21 @@ type FreelancerCardProps = {
 
 export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const isRTL = i18n.language === "ar";
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHireMeOpen, setIsHireMeOpen] = useState(false);
+  const [isConsultationOpen, setIsConsultationOpen] = useState(false);
+  
+  // Check if this freelancer is an expert
+  const isExpert = freelancer.freelancerType === 'expert';
+  
+  // Check if current user is a beginner freelancer
+  const isCurrentUserBeginnerFreelancer = 
+    user?.role === 'freelancer' && user?.freelancerLevel === 'beginner';
+  
+  // Determine if consultation is available
+  const canBookConsultation = isExpert && isCurrentUserBeginnerFreelancer;
   
   // Fetch freelancer's skills
   const { data: skills = [] } = useQuery<Skill[]>({
@@ -86,6 +100,16 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
     setIsFavorite(!isFavorite);
   };
 
+  // Handle consultation button click
+  const handleConsultationClick = () => {
+    setIsConsultationOpen(true);
+  };
+
+  // Handle hire me button click
+  const handleHireMeClick = () => {
+    setIsHireMeOpen(true);
+  };
+
   return (
     <>
       <div className="bg-card rounded-xl border border-border overflow-hidden hover-lift transition-all duration-300 hover:border-primary/20 group">
@@ -111,8 +135,7 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
           )}
         </div>
         
-        {/* Profile content */}
-        <div className="p-5 pt-14 relative">
+        <div className="relative pt-12 pb-4 px-4">
           {/* Profile image overlapping the header */}
           <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
             <div className="h-20 w-20 rounded-full overflow-hidden border-4 border-background shadow-md">
@@ -161,7 +184,7 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
           </div>
           
           {/* Stats row */}
-          <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+          <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="bg-muted/50 p-2 rounded-lg">
               <div className="text-primary font-cairo font-semibold">
                 {projectsCompleted}+
@@ -222,23 +245,41 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
                 username={freelancer.username}
                 fullName={freelancer.fullName}
               />
-              <Button 
-                size="sm" 
-                className="rounded-full"
-                onClick={() => setIsHireMeOpen(true)}
-              >
-                {t('common.hireMe')}
-              </Button>
+              {canBookConsultation ? (
+                <Button 
+                  size="sm" 
+                  className="rounded-full"
+                  onClick={handleConsultationClick}
+                >
+                  {t('consultation.bookConsultationShort')}
+                </Button>
+              ) : (
+                <Button 
+                  size="sm" 
+                  className="rounded-full"
+                  onClick={handleHireMeClick}
+                >
+                  {t('common.hireMe')}
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <HireMeForm
-        freelancer={freelancer}
-        isOpen={isHireMeOpen}
-        onClose={() => setIsHireMeOpen(false)}
-      />
+      {canBookConsultation ? (
+        <ConsultationForm
+          freelancer={freelancer}
+          isOpen={isConsultationOpen}
+          onClose={() => setIsConsultationOpen(false)}
+        />
+      ) : (
+        <HireMeForm
+          freelancer={freelancer}
+          isOpen={isHireMeOpen}
+          onClose={() => setIsHireMeOpen(false)}
+        />
+      )}
     </>
   );
 }

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import DashboardHeader from "@/components/dashboard/dashboard-header";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
 import DashboardFooter from "@/components/dashboard/dashboard-footer";
+import FreelancerOnboardingWizard from "@/components/onboarding/freelancer-onboarding-wizard";
 import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
@@ -43,6 +44,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <DashboardFooter />
         </main>
       </div>
+      
+      {/* Show onboarding wizard for freelancers */}
+      {user.role === 'freelancer' && <FreelancerOnboardingWizard />}
     </div>
   );
 } 

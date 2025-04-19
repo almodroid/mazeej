@@ -4,7 +4,7 @@ import { Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { storage } from "./storage";
+import { storage } from "../storage";
 import { User, User as SelectUser } from "@shared/schema";
 
 declare global {
@@ -184,4 +184,12 @@ export function setupAuth(app: Express) {
       res.sendStatus(401);
     }
   });
+}
+
+// Middleware to check if user is authenticated
+export function isAuthenticated(req: any, res: any, next: any) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Unauthorized" });
 }

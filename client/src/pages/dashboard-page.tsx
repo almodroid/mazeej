@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [debug, setDebug] = useState<Record<string, any>>({});
 
-  // Fetch all projects (for both clients and freelancers)
+  // Fetch all projects
   const { data: allProjects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
     queryFn: async () => {
@@ -52,6 +52,15 @@ export default function DashboardPage() {
     },
     enabled: !!user && user.role === "freelancer",
   });
+
+  // Get projects that the freelancer is engaged in (through accepted proposals)
+  const freelancerProjects = user?.role === "freelancer" 
+    ? allProjects.filter(project => 
+        freelancerProposals.some(
+          proposal => proposal.projectId === project.id && proposal.status === "accepted"
+        )
+      )
+    : [];
 
   // Fetch financial data if user is a freelancer
   const { data: earnings = { total: 0, pending: 0 } } = useQuery({
@@ -87,16 +96,13 @@ export default function DashboardPage() {
   // Define RTL state based on language
   const isRTL = i18n.language === "ar";
 
+  // Get user's projects based on role
+  const userProjects = user?.role === "client" ? clientProjects : freelancerProjects;
  
-  // Calculate stats
-  const activeProjects = user?.role === "client" 
-    ? clientProjects.filter(p => p.status === "in_progress").length
-    : allProjects.filter(p => p.status === "in_progress").length;
-    
-  const completedProjects = user?.role === "client"
-    ? clientProjects.filter(p => p.status === "completed").length
-    : allProjects.filter(p => p.status === "completed").length;
-    
+  // Calculate stats based on user's role and their own data
+  const activeProjects = userProjects.filter(p => p.status === "in_progress").length;
+  const completedProjects = userProjects.filter(p => p.status === "completed").length;
+  
   const pendingProposals = freelancerProposals.filter(p => p.status === "pending").length;
   
   const totalEarnings = user?.role === "freelancer" 
@@ -115,7 +121,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
-          title={user.role === "client" ? t("dashboard.activeProjects") : t("dashboard.availableProjects")} 
+          title={t("dashboard.activeProjects")} 
           value={activeProjects.toString()} 
           icon="briefcase" 
           trend="up" 
@@ -145,14 +151,14 @@ export default function DashboardPage() {
           <Tabs defaultValue="projects" className="w-full" dir={isRTL ? "rtl" : "ltr"}>
             <TabsList>
               <TabsTrigger value="projects">
-                {user.role === "client" ? t("dashboard.myProjects") : t("dashboard.recentProjects")}
+                {t("dashboard.myProjects")}
               </TabsTrigger>
               {user.role === "freelancer" && (
                 <TabsTrigger value="proposals">{t("dashboard.recentProposals")}</TabsTrigger>
               )}
             </TabsList>
             <TabsContent value="projects" className="mt-4">
-              <RecentProjects projects={user.role === "client" ? clientProjects.slice(0, 5) : allProjects.slice(0, 5)} />
+              <RecentProjects projects={userProjects.slice(0, 5)} />
             </TabsContent>
             {user.role === "freelancer" && (
               <TabsContent value="proposals" className="mt-4">

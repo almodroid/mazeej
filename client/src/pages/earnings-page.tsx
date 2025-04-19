@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Proposal } from "@shared/schema";
-import { Download, DollarSign, TrendingUp, Calendar, SaudiRiyal } from "lucide-react";
+import { Download, DollarSign, TrendingUp, Calendar, SaudiRiyal, BanknoteIcon, CreditCard, Loader2, Plus } from "lucide-react";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { cn } from "@/lib/utils";
 
 interface EarningPeriod {
   id: string;
@@ -28,12 +29,12 @@ interface EarningPeriod {
   clientName: string;
 }
 
-interface PaymentMethod {
+interface PayoutAccount {
   id: number;
-  type: string;
+  type: "bank_account" | "paypal";
   name: string;
   isDefault: boolean;
-  accountDetails: string;
+  accountDetails: any;
 }
 
 interface WithdrawalRequest {
@@ -48,11 +49,11 @@ interface WithdrawalRequest {
 
 // Define form schema for withdrawal request
 const withdrawalSchema = z.object({
-  amount: z.coerce.number().positive({
-    message: "Amount must be a positive number",
-  }),
-  paymentMethod: z.string({
-    required_error: "Please select a payment method",
+  amount: z.coerce.number()
+    .positive({ message: "Amount must be a positive number" })
+    .min(100, { message: "Minimum withdrawal amount is 100 SAR" }),
+  payoutAccount: z.string({
+    required_error: "Please select a payout account",
   }),
   notes: z.string().optional(),
 });
@@ -63,8 +64,10 @@ export default function EarningsPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isRTL = i18n.language === "ar";
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
 
   // Fetch earnings data
   const { data: earnings = { total: 0, pending: 0, thisMonth: 0, periods: [], available: 0 } } = useQuery({
@@ -79,13 +82,13 @@ export default function EarningsPage() {
     enabled: !!user && user.role === "freelancer",
   });
 
-  // Fetch payment methods
-  const { data: paymentMethods = [], isLoading: isLoadingPaymentMethods } = useQuery<PaymentMethod[]>({
-    queryKey: ["/api/users/payment-methods"],
+  // Fetch payout accounts
+  const { data: payoutAccounts = [], isLoading: isLoadingAccounts } = useQuery<PayoutAccount[]>({
+    queryKey: ["/api/payout-accounts"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/users/payment-methods");
+      const response = await apiRequest("GET", "/api/payout-accounts");
       if (!response.ok) {
-        throw new Error("Failed to fetch payment methods");
+        throw new Error("Failed to fetch payout accounts");
       }
       return response.json();
     },
@@ -105,32 +108,26 @@ export default function EarningsPage() {
     enabled: !!user && user.role === "freelancer",
   });
 
-  // Calculate available balance
-  // const pendingWithdrawalsTotal = withdrawalRequests
-  //   .filter(wr => wr.status === 'pending' || wr.status === 'approved')
-  //   .reduce((sum, wr) => sum + wr.amount, 0);
-  // const availableBalance = earnings.total - pendingWithdrawalsTotal;
-
   // Use backend-provided available balance
   const availableBalance = earnings.available ?? 0;
 
   // Withdrawal request mutation
   const withdrawalMutation = useMutation({
     mutationFn: async (data: WithdrawalFormValues) => {
-      const selectedMethod = paymentMethods.find(m => m.id.toString() === data.paymentMethod);
-      if (!selectedMethod) {
-        throw new Error("Selected payment method not found");
+      const selectedAccount = payoutAccounts.find(a => a.id.toString() === data.payoutAccount);
+      if (!selectedAccount) {
+        throw new Error("Selected payout account not found");
       }
 
       const response = await apiRequest("POST", "/api/withdrawal-requests", {
         amount: data.amount,
-        paymentMethod: selectedMethod.name,
-        accountDetails: JSON.parse(selectedMethod.accountDetails),
+        paymentMethod: selectedAccount.type === 'paypal' ? 'PayPal' : 'Bank Transfer',
+        accountDetails: selectedAccount.accountDetails,
         notes: data.notes
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         throw new Error(errorData.message || "Failed to submit withdrawal request");
       }
 
@@ -139,7 +136,7 @@ export default function EarningsPage() {
     onSuccess: () => {
       toast({
         title: t("earnings.withdraw.success"),
-        description: t("earnings.withdraw.successDescription"),
+        description: t("payments.payoutSuccess"),
       });
       setIsWithdrawDialogOpen(false);
       form.reset();
@@ -162,6 +159,14 @@ export default function EarningsPage() {
       notes: "",
     },
   });
+
+  useEffect(() => {
+    // Pre-select the default payout account if one exists
+    const defaultAccount = payoutAccounts.find(account => account.isDefault);
+    if (defaultAccount) {
+      form.setValue('payoutAccount', defaultAccount.id.toString());
+    }
+  }, [payoutAccounts, form]);
 
   // Format date to display in a user-friendly way
   const formatDate = (dateString: string) => {
@@ -190,6 +195,37 @@ export default function EarningsPage() {
   // Form submission handler
   const onSubmit = (data: WithdrawalFormValues) => {
     withdrawalMutation.mutate(data);
+  };
+
+  // Debug function to generate test earnings (only in development)
+  const generateTestEarnings = async () => {
+    try {
+      const response = await apiRequest('POST', '/api/debug/generate-earnings', { amount: 1000 });
+      if (!response.ok) {
+        throw new Error('Failed to generate test earnings');
+      }
+      
+      const data = await response.json();
+      toast({
+        title: "Test earnings generated",
+        description: "Refresh the page to see your updated balance",
+        variant: "default",
+      });
+      
+      // Refresh earnings data
+      queryClient.invalidateQueries({ queryKey: ['/api/earnings'] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Redirect to Payments page to add an account
+  const redirectToPaymentsPage = () => {
+    window.location.href = '/payments';
   };
 
   if (!user || user.role !== "freelancer") {
@@ -284,134 +320,194 @@ export default function EarningsPage() {
         <div>
           <Card>
             <CardHeader>
-              <CardTitle>{t("earnings.withdraw.title", { defaultValue: "Withdrawals" })}</CardTitle>
-              <CardDescription>{t("earnings.withdraw.description", { defaultValue: "Request withdrawals to your payment methods" })}</CardDescription>
+              <CardTitle>{t("payments.payout")}</CardTitle>
+              <CardDescription>{t("earnings.withdraw.description", { defaultValue: "Request withdrawals to your payout accounts" })}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 rounded-md border border-blue-200 text-blue-700">
                   <h4 className="font-medium mb-1">{t("earnings.availableBalance", { defaultValue: "Available Balance" })}</h4>
-                  <p className="text-2xl font-bold  flex align-middle items-center">{availableBalance} <SaudiRiyal className="h-6 w-6" /></p>
+                  <p className="text-2xl font-bold flex align-middle items-center">{availableBalance} <SaudiRiyal className="h-6 w-6" /></p>
+                  {availableBalance < 100 && (
+                    <p className="text-xs mt-2 text-amber-600">
+                      {t("payments.minAmount", { amount: "100" })}
+                    </p>
+                  )}
+                  <div className="mt-2 text-xs text-blue-600">
+                    <p>{t("earnings.totalBalance", { defaultValue: "Total Earnings" })}: {earnings.total} <SaudiRiyal className="h-4 w-4 inline" /></p>
+                    <p>{t("earnings.pendingWithdrawals", { defaultValue: "Pending Withdrawals" })}: {earnings.total - availableBalance} <SaudiRiyal className="h-4 w-4 inline" /></p>
+                  </div>
                 </div>
 
                 <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
                   <DialogTrigger asChild>
                     <Button 
                       className="w-full"
-                      disabled={availableBalance <= 0 || paymentMethods.length === 0}
+                      disabled={availableBalance < 100 || payoutAccounts.length === 0}
+                      variant={availableBalance < 100 ? "outline" : "default"}
                     >
-                      {t("earnings.withdrawFunds")}
+                      {availableBalance < 100 
+                        ? t("earnings.insufficientFunds", { defaultValue: "Insufficient Funds" })
+                        : t("earnings.withdrawFunds")}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                       <DialogTitle>{t("earnings.withdraw.title", { defaultValue: "Withdraw Funds" })}</DialogTitle>
                       <DialogDescription>
-                        {t("earnings.withdraw.withdrawDescription", { defaultValue: "Request a withdrawal to your chosen payment method" })}
+                        {t("earnings.withdraw.withdrawDescription", { defaultValue: "Request a withdrawal to your chosen payout account" })}
                       </DialogDescription>
                     </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="amount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("earnings.withdraw.amount", { defaultValue: "Amount to Withdraw" })}</FormLabel>
-                              <FormControl>
-                                <div className="relative  flex align-middle items-center">
-                                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-muted-foreground">
-                                    <SaudiRiyal className="h-6 w-6" />
-                                  </span>
-                                  <Input type="number" className="pl-12" {...field} />
-                                </div>
-                              </FormControl>
-                              <FormDescription>
-                                {t("earnings.withdraw.minWithdrawal", { amount: "100", defaultValue: "Minimum withdrawal amount is 100 ريال" })}
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="paymentMethod"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("earnings.withdraw.paymentMethod", { defaultValue: "Payment Method" })}</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {payoutAccounts.length === 0 ? (
+                      <div className="py-4 text-center">
+                        <div className="rounded-full bg-amber-100 p-3 w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                          <BanknoteIcon className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <h3 className="font-medium text-lg mb-2">{t("payments.noMethods")}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          {t("earnings.withdraw.addPayoutAccount", { defaultValue: "You need to add a payout account before you can withdraw funds." })}
+                        </p>
+                        <Button onClick={redirectToPaymentsPage}>
+                          {t("payments.addPayoutAccount")}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                          <FormField
+                            control={form.control}
+                            name="amount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("earnings.withdraw.amount", { defaultValue: "Amount to Withdraw" })}</FormLabel>
                                 <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={t("payments.selectMethod", { defaultValue: "Select a payment method" })} />
-                                  </SelectTrigger>
+                                  <div className="relative flex align-middle items-center">
+                                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-muted-foreground">
+                                      <SaudiRiyal className="h-6 w-6" />
+                                    </span>
+                                    <Input type="number" className="pl-12" {...field} />
+                                  </div>
                                 </FormControl>
-                                <SelectContent>
-                                  {paymentMethods.map((method) => (
-                                    <SelectItem key={method.id} value={method.id.toString()}>
-                                      {method.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormDescription>
-                                {paymentMethods.length === 0 ? (
-                                  <span className="text-red-500">
-                                    {t("payments.noMethods", { defaultValue: "No payment methods available. Please add one first." })}
-                                  </span>
-                                ) : (
-                                  t("earnings.withdraw.selectPaymentMethodDescription", { defaultValue: "Choose how you want to receive your funds" })
-                                )}
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                                <FormDescription>
+                                  <div className="space-y-1">
+                                    <p>{t("payments.minAmount", { amount: "100" })}</p>
+                                    <p className="font-medium text-blue-600">
+                                      {t("earnings.availableToWithdraw", { defaultValue: "Available to withdraw" })}: {availableBalance} <SaudiRiyal className="h-4 w-4 inline" />
+                                    </p>
+                                    {field.value > availableBalance && (
+                                      <p className="text-red-500">
+                                        {t("earnings.withdraw.exceedsAvailable", { defaultValue: "Amount exceeds available balance" })}
+                                      </p>
+                                    )}
+                                  </div>
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                        <FormField
-                          control={form.control}
-                          name="notes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("common.notes", { defaultValue: "Notes" })}</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder={t("earnings.withdraw.notesPlaceholder", { defaultValue: "Any additional information..." })} {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                          <FormField
+                            control={form.control}
+                            name="payoutAccount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("payments.payoutMethod")}</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder={t("payments.payoutMethod")} />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {payoutAccounts.map((account) => (
+                                      <SelectItem key={account.id} value={account.id.toString()}>
+                                        <div className="flex items-center">
+                                          {account.type === "bank_account" ? (
+                                            <BanknoteIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                                          ) : (
+                                            <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
+                                          )}
+                                          {account.name}
+                                          {account.isDefault && (
+                                            <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
+                                              {t("payments.default")}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                  <div className="flex justify-between items-center">
+                                    <span>{t("earnings.withdraw.selectPayoutAccount", { defaultValue: "Choose which account to receive your funds" })}</span>
+                                    <Button variant="link" className="p-0 h-auto" onClick={redirectToPaymentsPage}>
+                                      {t("payments.addNew")}
+                                    </Button>
+                                  </div>
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                        <DialogFooter className="pt-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setIsWithdrawDialogOpen(false)}
-                          >
-                            {t("common.cancel")}
-                          </Button>
-                          <Button
-                            type="submit"
-                            disabled={
-                              withdrawalMutation.isPending || 
-                              form.getValues("amount") <= 0 || 
-                              form.getValues("amount") > availableBalance || 
-                              !form.getValues("paymentMethod")
-                            }
-                          >
-                            {withdrawalMutation.isPending ? 
-                              t("earnings.withdraw.processing", { defaultValue: "Processing..." }) : 
-                              t("earnings.withdraw.confirm", { defaultValue: "Confirm Withdrawal" })
-                            }
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
+                          <FormField
+                            control={form.control}
+                            name="notes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("common.notes", { defaultValue: "Notes" })}</FormLabel>
+                                <FormControl>
+                                  <Textarea placeholder={t("earnings.withdraw.notesPlaceholder", { defaultValue: "Any additional information..." })} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <DialogFooter className="pt-4">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setIsWithdrawDialogOpen(false)}
+                            >
+                              {t("common.cancel")}
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={
+                                withdrawalMutation.isPending || 
+                                !form.formState.isValid ||
+                                form.getValues("amount") > availableBalance ||
+                                availableBalance < 100
+                              }
+                            >
+                              {withdrawalMutation.isPending ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  {t("earnings.withdraw.processing", { defaultValue: "Processing..." })}
+                                </>
+                              ) : (
+                                t("earnings.withdraw.confirm", { defaultValue: "Confirm Withdrawal" })
+                              )}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </Form>
+                    )}
                   </DialogContent>
                 </Dialog>
 
                 <div className="mt-4">
-                  <h4 className="font-medium mb-2">{t("earnings.withdraw.recentRequests", { defaultValue: "Recent Withdrawal Requests" })}</h4>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">{t("earnings.withdraw.recentRequests", { defaultValue: "Recent Withdrawal Requests" })}</h4>
+                    {withdrawalRequests.length > 0 && (
+                      <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => refetchWithdrawals()}>
+                        <Loader2 className={`h-3 w-3 mr-1 ${withdrawalMutation.isPending ? 'animate-spin' : ''}`} />
+                        {t("common.refresh")}
+                      </Button>
+                    )}
+                  </div>
                   <div className="space-y-3">
                     {withdrawalRequests.length === 0 ? (
                       <div className="text-sm text-muted-foreground p-3 text-center border rounded-md">
@@ -419,16 +515,31 @@ export default function EarningsPage() {
                       </div>
                     ) : (
                       withdrawalRequests.slice(0, 5).map((request) => (
-                        <div key={request.id} className="p-3 border rounded-md flex justify-between items-center">
-                          <div>
-                            <p className="font-medium  flex align-middle items-center  flex align-middle items-center">{request.amount} <SaudiRiyal className="h-6 w-6" /></p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDate(request.requestedAt)}
+                        <div key={request.id} className="p-3 border rounded-md space-y-1">
+                          <div className="flex justify-between items-center">
+                            <p className="font-medium flex align-middle items-center">{request.amount} <SaudiRiyal className="h-6 w-6" /></p>
+                            <div>
+                              {getStatusBadge(request.status)}
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-muted-foreground">
+                            <p>
+                              {t("earnings.requestedAt")}: {formatDate(request.requestedAt)}
+                            </p>
+                            <p>
+                              {request.paymentMethod}
                             </p>
                           </div>
-                          <div>
-                            {getStatusBadge(request.status)}
-                          </div>
+                          {request.status === 'rejected' && request.notes && (
+                            <div className="mt-1 text-xs p-1 bg-red-50 text-red-700 rounded">
+                              {request.notes}
+                            </div>
+                          )}
+                          {request.status === 'approved' && (
+                            <div className="mt-1 text-xs p-1 bg-blue-50 text-blue-700 rounded">
+                              {t("earnings.withdraw.processingNote", { defaultValue: "Your withdrawal is being processed" })}
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
@@ -445,6 +556,14 @@ export default function EarningsPage() {
           <Download size={16} className={isRTL ? "ml-2" : "mr-2"} />
           {t("earnings.downloadCSV")}
         </Button>
+        
+        {/* Debug button for development only */}
+        {process.env.NODE_ENV !== 'production' && (
+          <Button variant="secondary" onClick={generateTestEarnings}>
+            <Plus size={16} className={isRTL ? "ml-2" : "mr-2"} />
+            Generate Test Earnings (Debug)
+          </Button>
+        )}
       </div>
     </DashboardLayout>
   );

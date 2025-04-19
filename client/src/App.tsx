@@ -28,6 +28,8 @@ import ReviewsReceivedPage from "@/pages/reviews-received-page";
 import ReviewsGivenPage from "@/pages/reviews-given-page";
 import PaymentsPage from "@/pages/payments-page";
 import HelpPage from "@/pages/help-page";
+import ConsultationsPage from "@/pages/consultations-page";
+import MyConsultationsPage from "@/pages/my-consultations-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { NotificationsProvider } from "./hooks/use-notifications";
@@ -40,6 +42,7 @@ import { lazy, Suspense } from "react";
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
 const AdminUsers = lazy(() => import('./pages/admin/users'));
 const AdminverfyUsers = lazy(() => import('./pages/admin/verification'));
+const AdminSkillsPage = lazy(() => import('./pages/admin/skills'));
 const AdminProjects = lazy(() => import('./pages/admin/projects'));
 const AdminCategories = lazy(() => import('./pages/admin/categories'));
 const AdminSettings = lazy(() => import('./pages/admin/settings'));
@@ -87,6 +90,16 @@ function Router() {
           <SubmitProposalPage />
         </ProtectedRoute>
       </Route>
+      <Route path="/consultations">
+        <ProtectedRoute>
+          <ConsultationsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/my-consultations">
+        <ProtectedRoute>
+          <MyConsultationsPage />
+        </ProtectedRoute>
+      </Route>
       <Route path="/categories">
         <CategoriesPage />
       </Route>
@@ -121,6 +134,13 @@ function Router() {
         <ProtectedRoute>
           <Suspense fallback={<div>Loading...</div>}>
             <AdminverfyUsers />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/skills">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminSkillsPage />
           </Suspense>
         </ProtectedRoute>
       </Route>

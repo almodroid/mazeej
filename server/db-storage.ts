@@ -1,12 +1,12 @@
-import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions, withdrawalRequests } from "@shared/schema";
+import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions, withdrawalRequests, payoutAccounts, userBalances } from "@shared/schema";
 import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { db } from "./db";
-import { eq, and, or, desc, asc, inArray, SQL } from "drizzle-orm";
+import { eq, and, or, desc, asc, inArray, SQL, not, ne, ilike, between, like } from "drizzle-orm";
 import { pool } from "./db";
-import { IStorage, PaymentData, CreatePaymentParams, CreateTransactionParams, Transaction } from "./storage";
+import { IStorage, PaymentData, CreatePaymentParams, CreateTransactionParams, Transaction, WithdrawalRequestData, CreateWithdrawalRequestParams, UpdateWithdrawalRequestStatusParams } from "./storage";
 import { 
   pgEnum, 
   pgTable,
@@ -20,9 +20,10 @@ import {
   numeric
 } from 'drizzle-orm/pg-core';
 import { customAlphabet } from 'nanoid';
-import { isAuthenticated } from './auth';
+import { isAuthenticated } from './routes/auth';
 import express from 'express';
 import multer from 'multer';
+import { count, avg, sum, getTableColumns, SQLWrapper } from 'drizzle-orm';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -205,19 +206,75 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCategoryById(id: number): Promise<Category | undefined> {
-    const [category] = await db
+    const results = await db
       .select()
       .from(categories)
       .where(eq(categories.id, id));
-    return category;
+    
+    return results.length > 0 ? results[0] : undefined;
   }
 
-  async createCategory(category: InsertCategory): Promise<Category> {
-    const [newCategory] = await db
+  async getCategory(id: number): Promise<Category | undefined> {
+    return this.getCategoryById(id);
+  }
+
+  async createCategory(category: InsertCategory & { translations?: Record<string, string> }): Promise<Category> {
+    // Set name based on translations (prefer Arabic)
+    let name = category.name;
+    if (category.translations) {
+      name = category.translations.ar || category.translations.en || category.name;
+    }
+
+    const result = await db
       .insert(categories)
-      .values(category)
+      .values({
+        name,
+        icon: category.icon || 'default-icon',
+        freelancerCount: category.freelancerCount || 0,
+        translations: category.translations
+      })
       .returning();
-    return newCategory;
+    
+    return result[0];
+  }
+
+  async updateCategory(id: number, categoryData: Partial<Category & { translations?: Record<string, string> }>): Promise<Category | undefined> {
+    // Set name based on translations (prefer Arabic)
+    let name = categoryData.name;
+    if (categoryData.translations) {
+      name = categoryData.translations.ar || categoryData.translations.en || categoryData.name || undefined;
+    }
+
+    const updateData: Partial<Category> = {
+      ...categoryData
+    };
+
+    if (name) {
+      updateData.name = name;
+    }
+
+    const result = await db
+      .update(categories)
+      .set(updateData)
+      .where(eq(categories.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteCategory(id: number): Promise<boolean> {
+    // First check if the category has any skills
+    const categorySkills = await this.getSkillsByCategory(id);
+    if (categorySkills.length > 0) {
+      return false;
+    }
+
+    const result = await db
+      .delete(categories)
+      .where(eq(categories.id, id))
+      .returning();
+    
+    return result.length > 0;
   }
 
   // Skill operations
@@ -230,6 +287,88 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(skills)
       .where(eq(skills.categoryId, categoryId));
+  }
+
+  async getSkill(id: number): Promise<Skill | undefined> {
+    const results = await db
+      .select()
+      .from(skills)
+      .where(eq(skills.id, id));
+    
+    return results.length > 0 ? results[0] : undefined;
+  }
+
+  async createSkill(skillData: Partial<InsertSkill> & { translations?: Record<string, string> }): Promise<Skill> {
+    // Set name based on translations (prefer Arabic)
+    let name = skillData.name || '';
+    if (skillData.translations) {
+      name = skillData.translations.ar || skillData.translations.en || name;
+    }
+
+    const result = await db
+      .insert(skills)
+      .values({
+        name,
+        categoryId: skillData.categoryId!,
+        translations: skillData.translations
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  async updateSkill(id: number, skillData: Partial<Skill & { translations?: Record<string, string> }>): Promise<Skill | undefined> {
+    // Set name based on translations (prefer Arabic)
+    let name = skillData.name;
+    if (skillData.translations) {
+      name = skillData.translations.ar || skillData.translations.en || skillData.name || undefined;
+    }
+
+    const updateData: Partial<Skill> = {
+      ...skillData
+    };
+
+    if (name) {
+      updateData.name = name;
+    }
+
+    const result = await db
+      .update(skills)
+      .set(updateData)
+      .where(eq(skills.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteSkill(id: number): Promise<boolean> {
+    // Delete the skill
+    const result = await db
+      .delete(skills)
+      .where(eq(skills.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+
+  async isSkillInUse(skillId: number): Promise<boolean> {
+    // Check if any user has this skill
+    const userSkillsResult = await db
+      .select()
+      .from(userSkills)
+      .where(eq(userSkills.skillId, skillId));
+
+    if (userSkillsResult.length > 0) {
+      return true;
+    }
+
+    // Check if any project requires this skill
+    const projectSkillsResult = await db
+      .select()
+      .from(projectSkills)
+      .where(eq(projectSkills.skillId, skillId));
+
+    return projectSkillsResult.length > 0;
   }
 
   async getUserSkills(userId: number): Promise<Skill[]> {
@@ -252,6 +391,24 @@ export class DatabaseStorage implements IStorage {
     await db
       .insert(userSkills)
       .values({ userId, skillId });
+  }
+
+  async removeUserSkill(userId: number, skillId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(userSkills)
+        .where(
+          and(
+            eq(userSkills.userId, userId),
+            eq(userSkills.skillId, skillId)
+          )
+        ).returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error removing user skill:", error);
+      return false;
+    }
   }
 
   // Project operations
@@ -284,13 +441,38 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(projects.createdAt));
   }
 
+  async getPendingConsultationsForExpert(expertId: number): Promise<Project[]> {
+    return db
+      .select()
+      .from(projects)
+      .where(
+        and(
+          eq(projects.freelancerId, expertId),
+          eq(projects.status, 'pending'),
+          or(
+            eq(projects.projectType, 'consultation'),
+            eq(projects.projectType, 'mentoring')
+          )
+        )
+      )
+      .orderBy(desc(projects.createdAt));
+  }
+
   async createProject(project: InsertProject, clientId: number): Promise<Project> {
+    // Determine initial status based on project type
+    const initialStatus = 
+      project.projectType === 'consultation' || project.projectType === 'mentoring'
+        ? 'pending' 
+        : 'open';
+
     const [newProject] = await db
       .insert(projects)
       .values({
         ...project,
         clientId,
-        status: 'pending'
+        status: initialStatus, // Use the determined initial status
+        // Ensure freelancerId is included if provided
+        freelancerId: project.freelancerId,
       })
       .returning();
     return newProject;
@@ -299,7 +481,7 @@ export class DatabaseStorage implements IStorage {
   async updateProjectStatus(id: number, status: string): Promise<Project | undefined> {
     const [updatedProject] = await db
       .update(projects)
-      .set({ status: status as any })
+      .set({ status: status as Project['status'] })
       .where(eq(projects.id, id))
       .returning();
     return updatedProject;
@@ -661,7 +843,7 @@ export class DatabaseStorage implements IStorage {
       ];
       
       for (const category of categories) {
-        await this.createCategory(category);
+        await this.createCategory(category as InsertCategory & { translations?: Record<string, string> });
       }
     }
   }
@@ -675,13 +857,13 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     if (!payment) return undefined;
-    
     // Convert amount from string to number and null to undefined
     return {
       ...payment,
       amount: Number(payment.amount),
       projectId: payment.projectId ?? undefined,
-      description: payment.description ?? undefined
+      description: payment.description ?? undefined,
+      createdAt: payment.createdAt.toISOString()
     };
   }
 
@@ -702,7 +884,8 @@ export class DatabaseStorage implements IStorage {
       ...payment,
       amount: Number(payment.amount),
       projectId: payment.projectId ?? undefined,
-      description: payment.description ?? undefined
+      description: payment.description ?? undefined,
+      createdAt: payment.createdAt.toISOString()
     };
   }
 
@@ -717,25 +900,82 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.payment,
-      username: row.username,
+      username: row.username ?? undefined,
       amount: Number(row.payment.amount),
       projectId: row.payment.projectId ?? undefined,
-      description: row.payment.description ?? undefined
+      description: row.payment.description ?? undefined,
+      createdAt: row.payment.createdAt.toISOString()
     }));
   }
 
   async getUserPayments(userId: number): Promise<PaymentData[]> {
-    const userPayments = await db
-      .select()
-      .from(payments)
-      .where(eq(payments.userId, userId));
-    
-    return userPayments.map(payment => ({
-      ...payment,
-      amount: Number(payment.amount),
-      projectId: payment.projectId ?? undefined,
-      description: payment.description ?? undefined
-    }));
+    console.log(`Getting payments for user ${userId}`);
+    try {
+      const results = await db
+        .select({
+          id: payments.id,
+          userId: payments.userId,
+          amount: payments.amount,
+          status: payments.status,
+          type: payments.type,
+          projectId: payments.projectId,
+          description: payments.description,
+          createdAt: payments.createdAt
+        })
+        .from(payments)
+        .where(eq(payments.userId, userId));
+      
+      console.log(`Found ${results.length} payments for user ${userId}`);
+      
+      // Join with projects if projectId is present
+      const enhancedResults = await Promise.all(results.map(async (payment) => {
+        let projectTitle = '';
+        let clientName = '';
+        
+        if (payment.projectId) {
+          const projectResults = await db
+            .select({
+              title: projects.title,
+              clientId: projects.clientId
+            })
+            .from(projects)
+            .where(eq(projects.id, payment.projectId));
+          
+          if (projectResults.length > 0) {
+            projectTitle = projectResults[0].title;
+            
+            if (projectResults[0].clientId) {
+              const clientResults = await db
+                .select({
+                  username: users.username,
+                  fullName: users.fullName
+                })
+                .from(users)
+                .where(eq(users.id, projectResults[0].clientId));
+              
+              if (clientResults.length > 0) {
+                clientName = clientResults[0].fullName || clientResults[0].username;
+              }
+            }
+          }
+        }
+        
+        return {
+          ...payment,
+          amount: Number(payment.amount),
+          projectId: payment.projectId ?? undefined,
+          description: payment.description ?? undefined,
+          createdAt: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : payment.createdAt,
+          projectTitle,
+          clientName
+        };
+      }));
+      
+      return enhancedResults;
+    } catch (error) {
+      console.error('Error in getUserPayments:', error);
+      return [];
+    }
   }
 
   async deletePayment(id: number): Promise<boolean> {
@@ -767,7 +1007,8 @@ export class DatabaseStorage implements IStorage {
     return {
       ...transaction,
       amount: Number(transaction.amount),
-      description: transaction.description ?? undefined
+      description: transaction.description ?? undefined,
+      createdAt: transaction.createdAt.toISOString()
     };
   }
 
@@ -782,9 +1023,10 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.transaction,
-      username: row.username,
+      username: row.username ?? undefined,
       amount: Number(row.transaction.amount),
-      description: row.transaction.description ?? undefined
+      description: row.transaction.description ?? undefined,
+      createdAt: row.transaction.createdAt.toISOString()
     }));
   }
 
@@ -798,7 +1040,8 @@ export class DatabaseStorage implements IStorage {
     return userTransactions.map(transaction => ({
       ...transaction,
       amount: Number(transaction.amount),
-      description: transaction.description ?? undefined
+      description: transaction.description ?? undefined,
+      createdAt: transaction.createdAt.toISOString()
     }));
   }
 
@@ -953,7 +1196,7 @@ export class DatabaseStorage implements IStorage {
         amount: Number(wr.amount),
         paymentMethod: wr.paymentMethod,
         accountDetails: wr.accountDetails,
-        status: wr.status,
+        status: wr.status || 'pending',
         notes: wr.notes || undefined,
         adminId: wr.adminId || undefined,
         adminUsername: wr.admin?.username,
@@ -983,7 +1226,7 @@ export class DatabaseStorage implements IStorage {
         amount: Number(wr.amount),
         paymentMethod: wr.paymentMethod,
         accountDetails: wr.accountDetails,
-        status: wr.status,
+        status: wr.status || 'pending',
         notes: wr.notes || undefined,
         adminId: wr.adminId || undefined,
         adminUsername: wr.admin?.username,
@@ -1016,7 +1259,7 @@ export class DatabaseStorage implements IStorage {
         amount: Number(result.amount),
         paymentMethod: result.paymentMethod,
         accountDetails: result.accountDetails,
-        status: result.status,
+        status: result.status || 'pending',
         notes: result.notes || undefined,
         adminId: result.adminId || undefined,
         adminUsername: result.admin?.username,
@@ -1034,7 +1277,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const [result] = await db.insert(withdrawalRequests).values({
         userId: params.userId,
-        amount: params.amount,
+        amount: String(params.amount),
         paymentMethod: params.paymentMethod,
         accountDetails: params.accountDetails,
         notes: params.notes,
@@ -1050,7 +1293,7 @@ export class DatabaseStorage implements IStorage {
         amount: Number(result.amount),
         paymentMethod: result.paymentMethod,
         accountDetails: result.accountDetails,
-        status: result.status,
+        status: result.status || 'pending',
         notes: result.notes || undefined,
         requestedAt: result.requestedAt.toISOString()
       };
@@ -1080,7 +1323,7 @@ export class DatabaseStorage implements IStorage {
         amount: Number(result.amount),
         paymentMethod: result.paymentMethod,
         accountDetails: result.accountDetails,
-        status: result.status,
+        status: result.status || 'pending',
         notes: result.notes || undefined,
         adminId: result.adminId || undefined,
         paymentId: result.paymentId || undefined,
@@ -1104,4 +1347,258 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+
+  // Payout account operations
+  async getPayoutAccounts(userId: number): Promise<any[]> {
+    const payoutAccountsResult = await db
+      .select()
+      .from(payoutAccounts)
+      .where(eq(payoutAccounts.userId, userId))
+      .orderBy(desc(payoutAccounts.createdAt));
+    
+    return payoutAccountsResult;
+  }
+
+  async getPayoutAccount(id: number): Promise<any | undefined> {
+    const results = await db
+      .select()
+      .from(payoutAccounts)
+      .where(eq(payoutAccounts.id, id));
+    
+    return results.length > 0 ? results[0] : undefined;
+  }
+
+  async createPayoutAccount(userId: number, data: { type: string; name: string; accountDetails: any; isDefault: boolean }): Promise<any> {
+    // If this is set as default, unset any existing default
+    if (data.isDefault) {
+      await db
+        .update(payoutAccounts)
+        .set({ isDefault: false })
+        .where(and(
+          eq(payoutAccounts.userId, userId),
+          eq(payoutAccounts.isDefault, true)
+        ));
+    }
+    
+    // If no preference is set and this is the first account, make it default
+    if (data.isDefault === undefined) {
+      const existingAccounts = await this.getPayoutAccounts(userId);
+      data.isDefault = existingAccounts.length === 0;
+    }
+    
+    const result = await db
+      .insert(payoutAccounts)
+      .values({
+        userId,
+        type: data.type as any,
+        name: data.name,
+        accountDetails: data.accountDetails,
+        isDefault: data.isDefault
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  async updatePayoutAccount(id: number, data: { name?: string; accountDetails?: any; isDefault?: boolean }): Promise<any | undefined> {
+    const account = await this.getPayoutAccount(id);
+    
+    if (!account) {
+      return undefined;
+    }
+    
+    // If setting this as default, unset any existing default
+    if (data.isDefault) {
+      await db
+        .update(payoutAccounts)
+        .set({ isDefault: false })
+        .where(and(
+          eq(payoutAccounts.userId, account.userId),
+          eq(payoutAccounts.isDefault, true),
+          ne(payoutAccounts.id, id)
+        ));
+    }
+    
+    const result = await db
+      .update(payoutAccounts)
+      .set({
+        name: data.name,
+        accountDetails: data.accountDetails,
+        isDefault: data.isDefault
+      })
+      .where(eq(payoutAccounts.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deletePayoutAccount(id: number): Promise<boolean> {
+    const account = await this.getPayoutAccount(id);
+    
+    if (!account) {
+      return false;
+    }
+    
+    const result = await db
+      .delete(payoutAccounts)
+      .where(eq(payoutAccounts.id, id));
+    
+    // If this was the default account and there are other accounts, make another one default
+    if (account.isDefault) {
+      const otherAccounts = await db
+        .select()
+        .from(payoutAccounts)
+        .where(eq(payoutAccounts.userId, account.userId))
+        .limit(1);
+      
+      if (otherAccounts.length > 0) {
+        await db
+          .update(payoutAccounts)
+          .set({ isDefault: true })
+          .where(eq(payoutAccounts.id, otherAccounts[0].id));
+      }
+    }
+    
+    return true;
+  }
+
+  // User balance operations
+  async getUserBalance(userId: number): Promise<{ totalEarnings: number; pendingWithdrawals: number }> {
+    try {
+      const results = await db
+        .select()
+        .from(userBalances)
+        .where(eq(userBalances.userId, userId));
+
+      if (results.length === 0) {
+        // No balance record found, return default values
+        return {
+          totalEarnings: 0,
+          pendingWithdrawals: 0
+        };
+      }
+
+      const balance = results[0];
+      
+      // Parse string values to numbers
+      return {
+        totalEarnings: parseFloat(balance.totalEarnings || '0'),
+        pendingWithdrawals: parseFloat(balance.pendingWithdrawals || '0')
+      };
+    } catch (error) {
+      console.error('Error getting user balance:', error);
+      return {
+        totalEarnings: 0,
+        pendingWithdrawals: 0
+      };
+    }
+  }
+  
+  async calculateUserBalance(userId: number): Promise<{ totalEarnings: number; pendingWithdrawals: number; }> {
+    try {
+      // Calculate total earnings from payments
+      const payments = await this.getUserPayments(userId);
+      
+      // Separate completed payments into earnings and withdrawals
+      const earnings = payments
+        .filter(p => p.status === 'completed' && p.type !== 'withdrawal')
+        .reduce((sum, payment) => sum + Number(payment.amount), 0);
+      
+      // Withdrawals are negative earnings
+      const withdrawals = payments
+        .filter(p => p.status === 'completed' && p.type === 'withdrawal')
+        .reduce((sum, payment) => sum + Number(payment.amount), 0);
+      
+      // Net earnings are earnings minus withdrawals
+      const totalEarnings = earnings - withdrawals;
+      
+      // Calculate pending withdrawals
+      const pendingWithdrawals = await this.getUserWithdrawalRequests(userId);
+      const pendingWithdrawalTotal = pendingWithdrawals
+        .filter(wr => wr.status === 'pending' || wr.status === 'approved')
+        .reduce((sum, wr) => sum + Number(wr.amount), 0);
+      
+      // Update or create the user balance record
+      await this.updateUserBalance(userId, totalEarnings, pendingWithdrawalTotal);
+      
+      return {
+        totalEarnings,
+        pendingWithdrawals: pendingWithdrawalTotal,
+      };
+    } catch (error) {
+      console.error('Error in calculateUserBalance:', error);
+      return { totalEarnings: 0, pendingWithdrawals: 0 };
+    }
+  }
+  
+  async updateUserBalance(userId: number, totalEarnings: number, pendingWithdrawals: number): Promise<void> {
+    try {
+      // First check if the user already has a balance record
+      const balanceResults = await db
+        .select()
+        .from(userBalances)
+        .where(eq(userBalances.userId, userId));
+      
+      if (balanceResults.length > 0) {
+        // Update existing record
+        await db.update(userBalances)
+          .set({
+            totalEarnings: String(totalEarnings),
+            pendingWithdrawals: String(pendingWithdrawals),
+            lastUpdated: new Date()
+          })
+          .where(eq(userBalances.userId, userId));
+      } else {
+        // Create new record
+        await db.insert(userBalances).values({
+          userId,
+          totalEarnings: String(totalEarnings),
+          pendingWithdrawals: String(pendingWithdrawals),
+          lastUpdated: new Date()
+        });
+      }
+    } catch (error) {
+      console.error('Error updating user balance:', error);
+    }
+  }
+  
+  // Update the total earnings when a payment is created/updated
+  async updateUserEarnings(userId: number, amountDelta: number): Promise<void> {
+    try {
+      // Get current balance
+      const balance = await this.getUserBalance(userId);
+      
+      // Update with new total
+      await this.updateUserBalance(
+        userId, 
+        balance.totalEarnings + amountDelta,
+        balance.pendingWithdrawals
+      );
+    } catch (error) {
+      console.error('Error in updateUserEarnings:', error);
+    }
+  }
+  
+  // Update pending withdrawals when a withdrawal request is created/updated
+  async updateUserPendingWithdrawals(userId: number, amountDelta: number): Promise<void> {
+    try {
+      // Get current balance
+      const balance = await this.getUserBalance(userId);
+      
+      // Update with new total
+      const newPendingAmount = balance.pendingWithdrawals + amountDelta;
+      // Don't allow negative pending withdrawals
+      const finalPendingAmount = Math.max(0, newPendingAmount);
+      
+      await this.updateUserBalance(
+        userId, 
+        balance.totalEarnings,
+        finalPendingAmount
+      );
+    } catch (error) {
+      console.error('Error in updateUserPendingWithdrawals:', error);
+    }
+  }
+
+  // Create a withdrawal request
 }

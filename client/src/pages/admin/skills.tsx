@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -25,12 +25,14 @@ import {
   Trash,
   Loader2,
   Settings,
-  X
+  X,
+  Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Table, 
   TableBody, 
@@ -47,37 +49,56 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import AdminLayout from "@/components/layouts/admin-layout";
 
-// Define interface for Category data
+// Define interfaces for data
 interface Category {
   id: string;
   name: string;
   icon?: string;
+}
+
+interface Skill {
+  id: string;
+  name: string;
+  categoryId: string;
   translations?: Record<string, string>;
 }
 
-export default function AdminCategoriesPage() {
+interface NewSkill {
+  name: string;
+  categoryId: string;
+  translations: {
+    en: string;
+    ar: string;
+  };
+}
+
+export default function AdminSkillsPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isRTL = i18n.language === "ar";
   
-  // New category state
+  // New skill state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [newCategory, setNewCategory] = useState({ 
+  const [newSkill, setNewSkill] = useState<NewSkill>({ 
     name: "", 
-    icon: "",
-    translations: {
-      en: "",
-      ar: ""
-    }
+    categoryId: "", 
+    translations: { en: "", ar: "" } 
   });
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Fetch categories data
@@ -89,13 +110,33 @@ export default function AdminCategoriesPage() {
     },
     enabled: !!user && user.role === "admin"
   });
+  
+  // Fetch skills data
+  const { data: skills = [], isLoading: isLoadingSkills } = useQuery({
+    queryKey: ["/api/skills"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/skills");
+      return response.json();
+    },
+    enabled: !!user && user.role === "admin"
+  });
 
-  // Handle adding a new category
-  const handleAddCategory = async () => {
-    if (!newCategory.translations.ar.trim() && !newCategory.translations.en.trim()) {
+  // Handle adding a new skill
+  const handleAddSkill = async () => {
+    // Check if either English or Arabic name is provided
+    if (!newSkill.translations.en.trim() && !newSkill.translations.ar.trim()) {
       toast({
         title: t("common.error"),
-        description: t("admin.categoryNameRequired", { defaultValue: "Category name is required" }),
+        description: t("admin.skillNameRequired", { defaultValue: "Skill name is required" }),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newSkill.categoryId) {
+      toast({
+        title: t("common.error"),
+        description: t("admin.categoryRequired", { defaultValue: "Category is required" }),
         variant: "destructive",
       });
       return;
@@ -104,34 +145,38 @@ export default function AdminCategoriesPage() {
     try {
       setIsSubmitting(true);
       
-      // Make API request to add the category
-      const response = await apiRequest("POST", "/api/categories", newCategory);
+      // Set the main name field based on translations
+      // Use Arabic if available, otherwise use English
+      const skillToSubmit = {
+        ...newSkill,
+        name: newSkill.translations.ar.trim() || newSkill.translations.en.trim()
+      };
+      
+      // Make API request to add the skill
+      const response = await apiRequest("POST", "/api/skills", skillToSubmit);
       const data = await response.json();
       
       // Show success toast
       toast({
         title: t("common.success"),
-        description: t("admin.categoryAdded", { defaultValue: "Category added successfully" }),
+        description: t("admin.skillAdded", { defaultValue: "Skill added successfully" }),
         variant: "default",
       });
       
       // Reset form and close dialog
-      setNewCategory({ 
+      setNewSkill({ 
         name: "", 
-        icon: "",
-        translations: {
-          en: "",
-          ar: ""
-        }
+        categoryId: "", 
+        translations: { en: "", ar: "" } 
       });
       setIsDialogOpen(false);
       
-      // Refresh categories data
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      // Refresh skills data
+      queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: t("admin.categoryAddError", { defaultValue: "Failed to add category" }),
+        description: t("admin.skillAddError", { defaultValue: "Failed to add skill" }),
         variant: "destructive",
       });
     } finally {
@@ -139,34 +184,50 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  // Handle editing a category
-  const handleEditCategory = async () => {
-    if (!editingCategory) return;
+  // Handle editing a skill
+  const handleEditSkill = async () => {
+    if (!editingSkill) return;
+    
+    // Check if either English or Arabic name is provided
+    if (!editingSkill.translations?.en?.trim() && !editingSkill.translations?.ar?.trim()) {
+      toast({
+        title: t("common.error"),
+        description: t("admin.skillNameRequired", { defaultValue: "Skill name is required" }),
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       setIsSubmitting(true);
       
-      // Make API request to update the category
-      const response = await apiRequest("PUT", `/api/categories/${editingCategory.id}`, editingCategory);
+      // Set the main name field based on translations
+      const skillToUpdate = {
+        ...editingSkill,
+        name: editingSkill.translations?.ar?.trim() || editingSkill.translations?.en?.trim() || editingSkill.name
+      };
+      
+      // Make API request to update the skill
+      const response = await apiRequest("PUT", `/api/skills/${editingSkill.id}`, skillToUpdate);
       const data = await response.json();
       
       // Show success toast
       toast({
         title: t("common.success"),
-        description: t("admin.categoryUpdated", { defaultValue: "Category updated successfully" }),
+        description: t("admin.skillUpdated", { defaultValue: "Skill updated successfully" }),
         variant: "default",
       });
       
       // Reset form and close dialog
-      setEditingCategory(null);
+      setEditingSkill(null);
       setIsEditDialogOpen(false);
       
-      // Refresh categories data
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      // Refresh skills data
+      queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: t("admin.categoryUpdateError", { defaultValue: "Failed to update category" }),
+        description: t("admin.skillUpdateError", { defaultValue: "Failed to update skill" }),
         variant: "destructive",
       });
     } finally {
@@ -174,28 +235,34 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  // Handle deleting a category
-  const handleDeleteCategory = async (categoryId: string) => {
+  // Handle deleting a skill
+  const handleDeleteSkill = async (skillId: string) => {
     try {
-      // Make API request to delete the category
-      const response = await apiRequest("DELETE", `/api/categories/${categoryId}`);
+      // Make API request to delete the skill
+      const response = await apiRequest("DELETE", `/api/skills/${skillId}`);
       
       // Show success toast
       toast({
         title: t("common.success"),
-        description: t("admin.categoryDeleted", { defaultValue: "Category deleted successfully" }),
+        description: t("admin.skillDeleted", { defaultValue: "Skill deleted successfully" }),
         variant: "default",
       });
       
-      // Refresh categories data
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      // Refresh skills data
+      queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: t("admin.categoryDeleteError", { defaultValue: "Failed to delete category" }),
+        description: t("admin.skillDeleteError", { defaultValue: "Failed to delete skill" }),
         variant: "destructive",
       });
     }
+  };
+
+  // Get category name by ID
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find((cat: Category) => cat.id === categoryId);
+    return category ? category.name : '';
   };
 
   return (
@@ -207,10 +274,10 @@ export default function AdminCategoriesPage() {
         )}>
           <div>
             <h1 className="text-3xl font-cairo font-bold mb-2 text-foreground">
-              {t("auth.admin.categories")}
+              {t("admin.skills", { defaultValue: "Skills" })}
             </h1>
             <p className="text-muted-foreground">
-              {t("auth.admin.categoriesDescription", {defaultValue: "Manage project categories"})}
+              {t("admin.skillsDescription", { defaultValue: "Manage skills that users can add to their profiles" })}
             </p>
           </div>
         </div>
@@ -221,7 +288,7 @@ export default function AdminCategoriesPage() {
               "flex justify-between items-center",
        
             )}>
-              <CardTitle>{t("auth.admin.categories")}</CardTitle>
+              <CardTitle>{t("admin.skills", { defaultValue: "Skills" })}</CardTitle>
               <div className={cn(
                 "flex items-center gap-2",
            
@@ -235,9 +302,9 @@ export default function AdminCategoriesPage() {
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                      <DialogTitle>{t("admin.addCategory", { defaultValue: "Add New Category" })}</DialogTitle>
+                      <DialogTitle>{t("admin.addSkill", { defaultValue: "Add New Skill" })}</DialogTitle>
                       <DialogDescription>
-                        {t("admin.addCategoryDescription", { defaultValue: "Create a new project category" })}
+                        {t("admin.addSkillDescription", { defaultValue: "Create a new skill with translations" })}
                       </DialogDescription>
                     </DialogHeader>
                     
@@ -250,16 +317,16 @@ export default function AdminCategoriesPage() {
                       <TabsContent value="en">
                         <div className="grid gap-4 py-2">
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="nameEn" className="text-right">
+                            <Label htmlFor="skillNameEn" className="text-right">
                               {t("common.name")}
                             </Label>
                             <Input
-                              id="nameEn"
-                              value={newCategory.translations.en}
-                              onChange={(e) => setNewCategory({
-                                ...newCategory,
+                              id="skillNameEn"
+                              value={newSkill.translations.en}
+                              onChange={(e) => setNewSkill({
+                                ...newSkill,
                                 translations: {
-                                  ...newCategory.translations,
+                                  ...newSkill.translations,
                                   en: e.target.value
                                 }
                               })}
@@ -272,16 +339,16 @@ export default function AdminCategoriesPage() {
                       <TabsContent value="ar">
                         <div className="grid gap-4 py-2">
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="nameAr" className="text-right">
+                            <Label htmlFor="skillNameAr" className="text-right">
                               {t("common.name")}
                             </Label>
                             <Input
-                              id="nameAr"
-                              value={newCategory.translations.ar}
-                              onChange={(e) => setNewCategory({
-                                ...newCategory,
+                              id="skillNameAr"
+                              value={newSkill.translations.ar}
+                              onChange={(e) => setNewSkill({
+                                ...newSkill,
                                 translations: {
-                                  ...newCategory.translations,
+                                  ...newSkill.translations,
                                   ar: e.target.value
                                 }
                               })}
@@ -295,23 +362,31 @@ export default function AdminCategoriesPage() {
                     
                     <div className="grid gap-4 py-2">
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="icon" className="text-right">
-                          {t("common.icon")}
+                        <Label htmlFor="category" className="text-right">
+                          {t("common.category")}
                         </Label>
-                        <Input
-                          id="icon"
-                          value={newCategory.icon}
-                          onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
-                          className="col-span-3"
-                          placeholder="default-icon"
-                        />
+                        <Select 
+                          value={newSkill.categoryId} 
+                          onValueChange={(value) => setNewSkill({ ...newSkill, categoryId: value })}
+                        >
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder={t("admin.selectCategory", { defaultValue: "Select a category" })} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((category: Category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     
                     <DialogFooter>
                       <Button 
                         type="submit" 
-                        onClick={handleAddCategory}
+                        onClick={handleAddSkill}
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? (
@@ -326,18 +401,18 @@ export default function AdminCategoriesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoadingCategories ? (
+            {isLoadingSkills ? (
               <div className="flex justify-center py-8">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
               </div>
-            ) : categories.length === 0 ? (
+            ) : skills.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <div className="rounded-full bg-muted p-3 mb-4">
                   <Layers className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium">{t("admin.noCategories", { defaultValue: "No Categories" })}</h3>
+                <h3 className="text-lg font-medium">{t("admin.noSkills", { defaultValue: "No Skills" })}</h3>
                 <p className="text-sm text-muted-foreground max-w-xs mt-2">
-                  {t("admin.noCategoriesDescription", { defaultValue: "You haven't added any categories yet. Add your first category to get started." })}
+                  {t("admin.noSkillsDescription", { defaultValue: "You haven't added any skills yet. Add your first skill to get started." })}
                 </p>
                 <Button 
                   size="sm" 
@@ -345,7 +420,7 @@ export default function AdminCategoriesPage() {
                   onClick={() => setIsDialogOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  {t("admin.addFirstCategory", { defaultValue: "Add Your First Category" })}
+                  {t("admin.addFirstSkill", { defaultValue: "Add Your First Skill" })}
                 </Button>
               </div>
             ) : (
@@ -354,15 +429,15 @@ export default function AdminCategoriesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className={cn(isRTL && "text-right")}>{t("common.name")}</TableHead>
-                      <TableHead className={cn(isRTL && "text-right")}>{t("common.icon")}</TableHead>
+                      <TableHead className={cn(isRTL && "text-right")}>{t("common.category")}</TableHead>
                       <TableHead className={cn("text-right", isRTL && "text-right")}>{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(categories as Category[]).map((category: Category) => (
-                      <TableRow key={category.id}>
-                        <TableCell className="font-medium">{category.name}</TableCell>
-                        <TableCell>{category.icon || "default-icon"}</TableCell>
+                    {(skills as Skill[]).map((skill: Skill) => (
+                      <TableRow key={skill.id}>
+                        <TableCell className="font-medium">{skill.name}</TableCell>
+                        <TableCell>{getCategoryName(skill.categoryId)}</TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -374,7 +449,7 @@ export default function AdminCategoriesPage() {
                               <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => {
-                                setEditingCategory(category);
+                                setEditingSkill(skill);
                                 setIsEditDialogOpen(true);
                               }}>
                                 <Edit className="h-4 w-4 mr-2" />
@@ -382,7 +457,7 @@ export default function AdminCategoriesPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 className="text-destructive"
-                                onClick={() => handleDeleteCategory(category.id)}
+                                onClick={() => handleDeleteSkill(skill.id)}
                               >
                                 <Trash className="h-4 w-4 mr-2" />
                                 {t("common.delete")}
@@ -400,17 +475,17 @@ export default function AdminCategoriesPage() {
         </Card>
       </div>
       
-      {/* Edit Category Dialog */}
+      {/* Edit Skill Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{t("admin.editCategory", { defaultValue: "Edit Category" })}</DialogTitle>
+            <DialogTitle>{t("admin.editSkill", { defaultValue: "Edit Skill" })}</DialogTitle>
             <DialogDescription>
-              {t("admin.editCategoryDescription", { defaultValue: "Update category information and translations" })}
+              {t("admin.editSkillDescription", { defaultValue: "Update skill information and translations" })}
             </DialogDescription>
           </DialogHeader>
           
-          {editingCategory && (
+          {editingSkill && (
             <>
               <Tabs defaultValue="en" className="w-full">
                 <TabsList className="mb-4">
@@ -421,16 +496,16 @@ export default function AdminCategoriesPage() {
                 <TabsContent value="en">
                   <div className="grid gap-4 py-2">
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="editNameEn" className="text-right">
+                      <Label htmlFor="editSkillNameEn" className="text-right">
                         {t("common.name")}
                       </Label>
                       <Input
-                        id="editNameEn"
-                        value={editingCategory.translations?.en || ""}
-                        onChange={(e) => setEditingCategory({
-                          ...editingCategory,
+                        id="editSkillNameEn"
+                        value={editingSkill.translations?.en || ""}
+                        onChange={(e) => setEditingSkill({
+                          ...editingSkill,
                           translations: {
-                            ...editingCategory.translations,
+                            ...editingSkill.translations,
                             en: e.target.value
                           }
                         })}
@@ -443,16 +518,16 @@ export default function AdminCategoriesPage() {
                 <TabsContent value="ar">
                   <div className="grid gap-4 py-2">
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="editNameAr" className="text-right">
+                      <Label htmlFor="editSkillNameAr" className="text-right">
                         {t("common.name")}
                       </Label>
                       <Input
-                        id="editNameAr"
-                        value={editingCategory.translations?.ar || ""}
-                        onChange={(e) => setEditingCategory({
-                          ...editingCategory,
+                        id="editSkillNameAr"
+                        value={editingSkill.translations?.ar || ""}
+                        onChange={(e) => setEditingSkill({
+                          ...editingSkill,
                           translations: {
-                            ...editingCategory.translations,
+                            ...editingSkill.translations,
                             ar: e.target.value
                           }
                         })}
@@ -466,16 +541,24 @@ export default function AdminCategoriesPage() {
               
               <div className="grid gap-4 py-2">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="editIcon" className="text-right">
-                    {t("common.icon")}
+                  <Label htmlFor="editCategory" className="text-right">
+                    {t("common.category")}
                   </Label>
-                  <Input
-                    id="editIcon"
-                    value={editingCategory.icon || ""}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, icon: e.target.value })}
-                    className="col-span-3"
-                    placeholder="default-icon"
-                  />
+                  <Select 
+                    value={editingSkill.categoryId} 
+                    onValueChange={(value) => setEditingSkill({ ...editingSkill, categoryId: value })}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder={t("admin.selectCategory", { defaultValue: "Select a category" })} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category: Category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </>
@@ -484,7 +567,7 @@ export default function AdminCategoriesPage() {
           <DialogFooter>
             <Button 
               type="submit" 
-              onClick={handleEditCategory}
+              onClick={handleEditSkill}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
