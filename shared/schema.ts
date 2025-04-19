@@ -162,6 +162,18 @@ export const files = pgTable("files", {
   uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
+// Portfolio table
+export const portfolios = pgTable("portfolios", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  link: text("link"),
+  date: timestamp("date"),
+  imageId: integer("image_id").references(() => files.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Payout Accounts table
 export const payoutAccounts = pgTable("payout_accounts", {
   id: serial("id").primaryKey(),

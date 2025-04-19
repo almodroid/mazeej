@@ -1,4 +1,4 @@
-import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions, withdrawalRequests, payoutAccounts, userBalances } from "@shared/schema";
+import { users, categories, skills, userSkills, projects,portfolios, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions, withdrawalRequests, payoutAccounts, userBalances } from "@shared/schema";
 import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
@@ -24,6 +24,9 @@ import { isAuthenticated } from './routes/auth';
 import express from 'express';
 import multer from 'multer';
 import { count, avg, sum, getTableColumns, SQLWrapper } from 'drizzle-orm';
+import path from 'path'; // Add this line
+import * as mime from 'mime-types'; // Add this line
+import fs from 'fs'; // Add this line
 
 const PostgresSessionStore = connectPg(session);
 
@@ -746,6 +749,99 @@ export class DatabaseStorage implements IStorage {
       console.error('Error deleting notification:', error);
       return false;
     }
+  }
+
+  // Portfolio operations
+  async createPortfolioProject(
+    project: {
+      freelancerId: number;
+      title: string;
+      description: string;
+      link?: string;
+      date?: string;
+      imagePath?: string | null;
+    }
+  ): Promise<{
+    id: number;
+    title: string;
+    description: string;
+    link: string | null;
+    date: Date | null;
+    image: File | null;
+  }> {
+    let imageId: number | null = null;
+    
+    if (project.imagePath) {
+      const fileData = {
+        userId: project.freelancerId,
+        filename: path.basename(project.imagePath),
+        originalName: path.basename(project.imagePath),
+        mimeType: mime.lookup(project.imagePath) || 'application/octet-stream',
+        size: fs.statSync(path.join(process.cwd(), project.imagePath)).size
+      };
+      
+      const savedFile = await this.uploadFile(fileData);
+      imageId = savedFile.id;
+    }
+    
+    const [portfolio] = await db
+      .insert(portfolios)
+      .values({
+        userId: project.freelancerId,
+        title: project.title,
+        description: project.description,
+        link: project.link || null,
+        date: project.date ? new Date(project.date) : null,
+        imageId
+      })
+      .returning();
+
+    let image = null;
+    if (portfolio.imageId) {
+      image = await this.getFileById(portfolio.imageId);
+    }
+
+    return {
+      id: portfolio.id,
+      title: portfolio.title,
+      description: portfolio.description,
+      link: portfolio.link,
+      date: portfolio.date,
+      image
+    };
+  }
+
+  async getPortfolioProjects(userId: number): Promise<Array<{
+    id: number;
+    title: string;
+    description: string;
+    link: string | null;
+    date: Date | null;
+    image: File | null;
+  }>> {
+    const portfolioItems = await db
+      .select()
+      .from(portfolios)
+      .where(eq(portfolios.userId, userId));
+
+    const portfolioWithImages = await Promise.all(
+      portfolioItems.map(async (item) => {
+        let image = null;
+        if (item.imageId) {
+          image = await this.getFileById(item.imageId);
+        }
+        return {
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          link: item.link,
+          date: item.date,
+          image
+        };
+      })
+    );
+
+    return portfolioWithImages;
   }
 
   // Verification operations

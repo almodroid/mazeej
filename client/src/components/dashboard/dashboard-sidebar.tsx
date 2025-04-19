@@ -122,6 +122,11 @@ export default function DashboardSidebar() {
   // Add remaining freelancer links
   const remainingFreelancerLinks = [
     {
+      href: "/portfolio",
+      icon: <Briefcase size={18} />,
+      label: t("common.portfolio"),
+    },
+    {
       href: "/verification",
       icon: <ShieldCheck size={18} />,
       label: t("common.verification"),

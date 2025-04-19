@@ -38,6 +38,7 @@ import { SettingsProvider } from "./contexts/settings-context";
 import { Redirect } from "wouter";
 import { lazy, Suspense } from "react";
 import TracksPage from "@/pages/tracks";
+import PortfolioPage from "./pages/portfolio-page";
 
 // Lazy load admin components
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
@@ -99,6 +100,11 @@ function Router() {
       <Route path="/my-consultations">
         <ProtectedRoute>
           <MyConsultationsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/portfolio">
+        <ProtectedRoute>
+          <PortfolioPage />
         </ProtectedRoute>
       </Route>
       <Route path="/categories">

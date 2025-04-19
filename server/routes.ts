@@ -42,6 +42,50 @@ export function registerRoutes(app: Express): Server {
   
   // Setup WebSocket server for chat
   setupWebSocketServer(httpServer);
+
+  // Portfolio API Routes
+  app.get('/api/portfolio', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'freelancer') {
+      return res.status(403).json({ message: 'Only freelancers can access portfolio' });
+    }
+    
+    try {
+      const portfolio = await storage.getPortfolioProjects(req.user.id);
+      res.json(portfolio);
+    } catch (error) {
+      console.error('Error fetching portfolio:', error);
+      res.status(500).json({ message: 'Failed to fetch portfolio projects' });
+    }
+  });
+
+  app.post('/api/portfolio', upload.single('image'), async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'freelancer') {
+      return res.status(403).json({ message: 'Only freelancers can add portfolio projects' });
+    }
+    
+    try {
+      const { title, description, link, date } = req.body;
+      const image = req.file;
+      
+      if (!title || !description || !date) {
+        return res.status(400).json({ message: 'Title, description and date are required' });
+      }
+      
+      const project = await storage.createPortfolioProject({
+        freelancerId: req.user.id,
+        title,
+        description,
+        link,
+        date,
+        imagePath: image ? `/uploads/${image.filename}` : null
+      });
+      
+      res.status(201).json(project);
+    } catch (error) {
+      console.error('Error adding portfolio project:', error);
+      res.status(500).json({ message: 'Failed to add portfolio project' });
+    }
+  });
   
   // Messages API Routes
   

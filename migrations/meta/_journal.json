@@ -43,6 +43,13 @@
       "when": 1745081492099,
       "tag": "0005_groovy_rhino",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1745090586185,
+      "tag": "0006_elite_bloodscream",
+      "breakpoints": true
     }
   ]
 }

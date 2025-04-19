@@ -48,6 +48,15 @@ export default function MyProjectsPage() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [freelancerId, setFreelancerId] = useState<number | null>(null);
+  const [isPortfolioDialogOpen, setIsPortfolioDialogOpen] = useState(false);
+  const [portfolioProjects, setPortfolioProjects] = useState([]);
+  const [portfolioForm, setPortfolioForm] = useState({
+    title: '',
+    description: '',
+    link: '',
+    date: '',
+    image: null
+  });
 
   // Fetch client projects
   const { data: projects = [], isLoading } = useQuery<Project[]>({
@@ -395,4 +404,4 @@ export default function MyProjectsPage() {
 
     </DashboardLayout>
   );
-} 
+}
