@@ -12,6 +12,9 @@ import { z } from "zod";
 import fs from "fs";
 import crypto from "crypto";
 import { eq, and, or, desc } from "drizzle-orm";
+import { useTranslation } from "react-i18next";   
+import { t } from "i18next";
+
 
 // Configure multer for file uploads
 const upload = multer({
