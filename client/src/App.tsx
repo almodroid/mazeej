@@ -6,11 +6,6 @@ import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
-import AdminDashboardPage from "@/pages/admin-dashboard";
-import AdminUsersPage from "@/pages/admin/users";
-import AdminProjectsPage from "@/pages/admin/projects";
-import AdminCategoriesPage from "@/pages/admin/categories";
-import AdminSettingsPage from "@/pages/admin/settings";
 import BrowseFreelancers from "@/pages/browse-freelancers";
 import ProjectsPage from "@/pages/projects-page";
 import CreateProjectPage from "@/pages/create-project-page";
@@ -30,6 +25,7 @@ import PaymentsPage from "@/pages/payments-page";
 import HelpPage from "@/pages/help-page";
 import ConsultationsPage from "@/pages/consultations-page";
 import MyConsultationsPage from "@/pages/my-consultations-page";
+import FreelancerPortfolioPage from "@/pages/freelancer-portfolio";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { NotificationsProvider } from "./hooks/use-notifications";
@@ -106,6 +102,9 @@ function Router() {
         <ProtectedRoute>
           <PortfolioPage />
         </ProtectedRoute>
+      </Route>
+      <Route path="/freelancers/:id">
+        <FreelancerPortfolioPage />
       </Route>
       <Route path="/categories">
         <CategoriesPage />

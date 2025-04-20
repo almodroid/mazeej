@@ -47,13 +47,24 @@ export function registerRoutes(app: Express): Server {
   setupWebSocketServer(httpServer);
 
   // Portfolio API Routes
-  app.get('/api/portfolio', async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== 'freelancer') {
-      return res.status(403).json({ message: 'Only freelancers can access portfolio' });
+  app.get('/api/portfolio/:id?', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to access portfolio' });
     }
     
     try {
-      const portfolio = await storage.getPortfolioProjects(req.user.id);
+      const freelancerId = req.params.id ? parseInt(req.params.id) : req.user.id;
+      
+      if (isNaN(freelancerId)) {
+        return res.status(400).json({ message: 'Invalid freelancer ID' });
+      }
+      
+      // Only allow freelancers to view their own portfolio unless they're clients
+      if (req.user.role === 'freelancer' && freelancerId !== req.user.id) {
+        return res.status(403).json({ message: 'You can only view your own portfolio' });
+      }
+      
+      const portfolio = await storage.getPortfolioProjects(freelancerId);
       res.json(portfolio);
     } catch (error) {
       console.error('Error fetching portfolio:', error);
@@ -3466,7 +3477,7 @@ export function registerRoutes(app: Express): Server {
 
       const project = await storage.createProject(
         { ...validatedData, status: initialStatus }, // Pass initial status
-        req.user!.id
+        req.user!.id  
       );
 
       // If consultation, notify the expert

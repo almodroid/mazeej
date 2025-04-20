@@ -174,6 +174,19 @@ export const portfolios = pgTable("portfolios", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Portfolio Project interface
+export interface PortfolioProject {
+  id: number;
+  userId: number;
+  title: string;
+  description: string;
+  link?: string;
+  date?: Date;
+  imageId?: number;
+  image?: string;
+  createdAt: Date;
+}
+
 // Payout Accounts table
 export const payoutAccounts = pgTable("payout_accounts", {
   id: serial("id").primaryKey(),
@@ -280,7 +293,7 @@ export const insertUserSchema = createInsertSchema(users)
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertSkillSchema = createInsertSchema(skills).omit({ id: true });
 export const insertProjectSchema = createInsertSchema(projects)
-  .omit({ id: true, createdAt: true, status: true, clientId: true })
+  .omit({ id: true, createdAt: true, clientId: true })
   .extend({
     deadline: z.string().nullable().transform(val => val ? new Date(val) : null),
     projectType: z.enum(['standard', 'consultation', 'mentoring']).default('standard'),
@@ -331,7 +344,14 @@ export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = z.infer<typeof insertProposalSchema>;
 
-export type Review = typeof reviews.$inferSelect;
+export type Review = typeof reviews.$inferSelect & {
+  reviewer: {
+    id: number;
+    fullName: string;
+    username: string;
+    profileImage?: string;
+  };
+};
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 
 export type File = typeof files.$inferSelect;

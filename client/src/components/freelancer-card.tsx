@@ -7,7 +7,8 @@ import {
   Award, 
   CheckCircle, 
   Briefcase,
-  Heart
+  Heart,
+  ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,8 @@ import { useQuery } from "@tanstack/react-query";
 import HireMeForm from "./hire-me-form";
 import ConsultationForm from "./consultation-form";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
+import { cn } from "@/lib/utils";
 
 type FreelancerCardProps = {
   freelancer: Omit<User, 'password'>;
@@ -155,9 +158,10 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
           
           {/* User info */}
           <div className="text-center mb-4">
-            <h3 className="text-lg font-cairo font-semibold text-foreground mb-1">
+            <Link href={`/freelancers/${freelancer.id}`} className={cn("group/link inline-flex items-center gap-2 hover:text-primary transition-colors", "text-lg font-cairo font-semibold text-foreground mb-1")}>
               {freelancer.fullName || freelancer.username}
-            </h3>
+              <ExternalLink className="h-4 w-4 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+            </Link>
             <p className="text-sm text-muted-foreground">
               {freelancer.freelancerType === 'content_creator' 
                 ? t('profile.contentCreator') 

@@ -8,6 +8,12 @@
     "login": "تسجيل الدخول",
     "register": "إنشاء حساب",
     "logout": "تسجيل الخروج",
+    "registerNow": "إنشاء حساب الآن",
+    "loginNow": "تسجيل الدخول الآن",
+    "searchProjects": "ابحث عن مشاريع",
+    "searchFreelancers": "ابحث عن مستقلين",
+    "browseProjects": "تصفح مشاريع",
+    "message": "مراسلة",
     "dashboard": "لوحة التحكم",
     "profile": "الملف الشخصي",
     "settings": "الإعدادات",
@@ -133,7 +139,16 @@
     "deleteUserError": "حدث خطأ أثناء حذف المستخدم",
     "deleteUserConfirmation": "تأكيد الحذف",
     "deleteUserConfirmationDescription": "هل أنت متأكد أنك تريد حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.",
-    "selected": "محدد"
+    "selected": "محدد",
+    "send":"إرسال"
+  },
+  "hireMe": {
+    "title": "وظفني", 
+    "description": "وصف المشروع",
+    "projectTitle": "عنوان المشروع",
+    "projectDescription": "وصف المشروع",  
+    "budget": "ميزانية المشروع",
+    "deadline": "موعد التسليم" 
   },
   "portfolio": {
       "title": "محفظة أعمالي",
