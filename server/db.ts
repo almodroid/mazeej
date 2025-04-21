@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
 // Development connection string - replace with your actual local/development DB URL
-const devDbUrl = "postgres://postgres:postgres@localhost:5432/mazeej_local";
+const devDbUrl = "postgres://postgres:NewAlmo2030@@db.abkbhsfmgvcfdjmatffl.supabase.co:5432/postgres";
 
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL || devDbUrl 
