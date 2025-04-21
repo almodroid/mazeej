@@ -33,12 +33,10 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-    allowedHosts: ['devserver-main--mazeej.netlify.app'],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       }
     }
   },
