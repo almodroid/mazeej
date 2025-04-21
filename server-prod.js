@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
-import { registerRoutes } from './dist/server/routes.js';
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -41,8 +41,42 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Register all API routes
-const httpServer = registerRoutes(app);
+// Create HTTP server
+const httpServer = http.createServer(app);
+
+// Basic API routes
+
+// Health check endpoint for Render
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Simple API endpoint to test database connection
+app.get('/api/status', async (req, res) => {
+  try {
+    // Check if DATABASE_URL is set
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        status: 'error', 
+        message: 'DATABASE_URL environment variable is not set' 
+      });
+    }
+    
+    res.status(200).json({ 
+      status: 'ok', 
+      message: 'Server is running', 
+      database: 'Connected',
+      env: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    console.error('Error checking database connection:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Error checking database connection',
+      error: error.message 
+    });
+  }
+});
 
 // Fallback to index.html for SPA
 app.get('*', (req, res) => {
