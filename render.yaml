@@ -2,7 +2,7 @@ services:
   - type: web
     name: mazeej
     env: node
-    buildCommand: npm install && node build-render.js
+    buildCommand: npm install && node build-render.cjs
     startCommand: npm start
     envVars:
       - key: NODE_ENV
