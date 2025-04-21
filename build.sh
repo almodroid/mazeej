@@ -11,9 +11,9 @@ npm install
 npm run build
 cd ..
 
-# Compile TypeScript files
-echo "Compiling TypeScript files..."
-npx tsc --project tsconfig.json
+# Compile server TypeScript files (without JSX)
+echo "Compiling server TypeScript files..."
+npx tsc --project tsconfig.server.json
 
 # Create necessary directories
 echo "Setting up directory structure..."
