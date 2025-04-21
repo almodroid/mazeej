@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Project } from "@shared/schema";
 import ProjectCard from "@/components/project-card";
 import { Link } from "wouter";
+import { useTheme } from "@/components/theme-provider";
 
 export default function ProjectsSection() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   
   // Fetch latest projects limited to 2
   const { data: projects = [], isLoading } = useQuery<Project[]>({
@@ -16,10 +18,10 @@ export default function ProjectsSection() {
   const proposalsCounts: Record<number, number> = { 1: 8, 2: 12 }; // Mock data
 
   return (
-    <section className="py-12 bg-white">
+    <section className="py-12 bg-white dark:bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-cairo font-bold text-neutral-900">
+          <h2 className="text-3xl font-cairo font-bold text-neutral-900 dark:text-white">
             {t("projects.title")}
           </h2>
           <Link href="/projects">
@@ -45,7 +47,7 @@ export default function ProjectsSection() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">
+            <h3 className="text-lg font-medium text-neutral-900 dark:text-white mb-2">
               {t("projects.noProjects")}
             </h3>
           </div>

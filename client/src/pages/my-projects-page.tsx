@@ -253,7 +253,7 @@ export default function MyProjectsPage() {
           )} size={18} />
           <Input 
             className={cn(
-              "bg-white",
+              "bg-white dark:bg-gray-900",
               isRTL ? "pr-10" : "pl-10"
             )}
             placeholder={t("myProjects.searchPlaceholder")}
@@ -296,14 +296,14 @@ export default function MyProjectsPage() {
                           "flex justify-between items-start mb-2",
                           isRTL && "flex-row"
                         )}>
-                          <h3 className="font-medium text-neutral-900 group-hover:text-blue-600">{project.title}</h3>
+                          <h3 className="font-medium text-neutral-900 dark:text-white group-hover:text-gray-200">{project.title}</h3>
                           {project.status && getStatusBadge(project.status)}
                         </div>
-                        <p className="text-neutral-600 text-sm line-clamp-2 mb-2">
+                        <p className="text-neutral-600 dark:text-gray-300 text-sm line-clamp-2 mb-2 group-hover:text-gray-200">
                           {project.description}
                         </p>
                         <div className={cn(
-                          "flex justify-between items-center text-sm text-neutral-500 mb-3",
+                          "flex justify-between items-center text-sm text-neutral-500 dark:text-gray-400 mb-3 group-hover:text-gray-200",
                           isRTL && "flex-row"
                         )}>
                           <span>${project.budget}</span>
@@ -332,7 +332,7 @@ export default function MyProjectsPage() {
 
                     return project.status !== 'in_progress' ? (
                       <Link key={project.id} href={`/projects/${project.id}`}>
-                        <div className="block hover:bg-neutral-50">
+                        <div className="block hover:bg-neutral-50 dark:hover:bg-gray-800">
                            {projectCardContent}
                         </div>
                       </Link>

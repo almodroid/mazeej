@@ -87,27 +87,27 @@ export default function ReviewsGivenPage() {
         {t("reviews.givenReviews")}
       </h1>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <div className={`flex flex-col md:flex-row items-center justify-between ${isRTL ? 'md:flex-row-reverse' : ''}`}>
-          <div className={`flex items-center mb-4 md:mb-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={`bg-primary/10 p-4 rounded-full ${isRTL ? 'ml-4' : 'mr-4'}`}>
-              <Star size={24} className="text-primary" />
+      <div className="bg-white rounded-lg shadow p-6 mb-8 dark:bg-gray-900">
+        <div className={`flex flex-col md:flex-row items-center justify-between`}>
+          <div className={`flex items-center mb-4 md:mb-0`}>
+            <div className={`bg-primary/10 p-4 rounded-full ${isRTL ? 'mr-4' : 'ml-4'}`}>
+              <Star size={24} className="text-primary dark:text-primary" />
             </div>
             <div className={isRTL ? 'text-right' : 'text-left'}>
               <h2 className="text-2xl font-bold">{averageRating.toFixed(1)}</h2>
-              <p className="text-neutral-500">{t("reviews.averageRating")}</p>
+              <p className="text-neutral-500 dark:text-gray-300">{t("reviews.averageRating")}</p>
             </div>
           </div>
           <div className={`flex ${isRTL ? 'space-x-reverse space-x-8' : 'space-x-8'} text-center`}>
             <div>
               <p className="text-2xl font-bold">{reviews.length}</p>
-              <p className="text-neutral-500">{t("reviews.totalReviews")}</p>
+              <p className="text-neutral-500 dark:text-gray-300">{t("reviews.totalReviews")}</p>
             </div>
             <div>
               <p className="text-2xl font-bold">
                 {reviews.filter(r => r.rating === 5).length}
               </p>
-              <p className="text-neutral-500">{t("reviews.fiveStarReviews")}</p>
+              <p className="text-neutral-500 dark:text-gray-300">{t("reviews.fiveStarReviews")}</p>
             </div>
           </div>
         </div>
@@ -115,36 +115,36 @@ export default function ReviewsGivenPage() {
 
       <div className="space-y-4">
         {reviews.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-neutral-500">{t("reviews.noReviews")}</p>
+          <div className="text-center py-12 bg-white rounded-lg shadow dark:bg-gray-900">
+            <p className="text-neutral-500 dark:text-gray-300">{t("reviews.noReviews")}</p>
           </div>
         ) : (
           reviews.map((review) => (
             <Card key={review.id}>
               <CardContent className="p-6">
                 <div className="flex flex-col space-y-4">
-                  <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-                      <Avatar className={`h-10 w-10 ${isRTL ? 'ml-3' : 'mr-3'}`}>
+                  <div className={`flex justify-between items-start `}>
+                    <div className={`flex items-center`}>
+                      <Avatar className={`h-10 w-10 ${isRTL ? 'mr-3' : 'ml-3'}`}>
                         <AvatarImage src={review.freelancerAvatar} alt={review.freelancerName} />
                         <AvatarFallback>{review.freelancerName.substring(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className={isRTL ? 'text-right' : 'text-left'}>
                         <h3 className="font-medium">{review.freelancerName}</h3>
-                        <p className="text-sm text-neutral-500">{review.projectTitle}</p>
+                        <p className="text-sm text-neutral-500 dark:text-gray-300">{review.projectTitle}</p>
                       </div>
                     </div>
                     <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <div className={`flex ${isRTL ? 'ml-2' : 'mr-2'}`}>
                         {renderStars(review.rating)}
                       </div>
-                      <div className={`flex items-center text-sm text-neutral-500 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <div className={`flex items-center text-sm text-neutral-500 dark:text-gray-300 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <Calendar size={14} className={isRTL ? 'ml-1' : 'mr-1'} />
                         {formatDate(review.createdAt)}
                       </div>
                     </div>
                   </div>
-                  <p className={`text-neutral-700 ${isRTL ? 'text-right' : 'text-left'}`}>{review.comment}</p>
+                  <p className={`text-neutral-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>{review.comment}</p>
                 </div>
               </CardContent>
             </Card>

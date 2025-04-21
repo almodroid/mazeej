@@ -591,24 +591,107 @@
   "notification": {
     "title": "الإشعارات",
     "empty": "لا توجد إشعارات",
-    "unread": "غير مقروء",
-    "markAsRead": "تعيين كمقروء",
+    "unread": "غير مقروءة",
+    "markAsRead": "وضع كمقروء",
     "delete": "حذف الإشعار",
-    "deleteConfirm": "هل أنت متأكد من رغبتك في حذف هذا الإشعار؟",
-    "markAllAsRead": "تعيين الكل كمقروء",
-    "message": "رسالة",
+    "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذا الإشعار؟",
+    "markAllAsRead": "وضع الكل كمقروء",
     "proposal": "عرض",
-    "projectUpdate": "تحديث مشروع",
-    "payment": "دفع",
-    "review": "تقييم",
+    "projectUpdate": "تحديث المشروع",
+    "payment": "دفعة",
+    "paymentDetails": {
+      "withdrawalRequestTitle": "طلب سحب جديد",
+      "withdrawalRequestContent": "تم تقديم طلب سحب جديد بقيمة {{amount}} من قبل {{username}}.",
+      "withdrawalCompletedTitle": "اكتمل السحب",
+      "withdrawalCompletedContent": "تم إكمال طلب السحب الخاص بك بقيمة {{amount}}.",
+      "withdrawalRejectedTitle": "تم رفض طلب السحب",
+      "withdrawalRejectedContent": "تم رفض طلب السحب الخاص بك بقيمة {{amount}}. السبب: {{reason}}",
+      "withdrawalApprovedTitle": "تمت الموافقة على طلب السحب",
+      "withdrawalApprovedContent": "تمت الموافقة على طلب السحب الخاص بك بقيمة {{amount}} ويتم معالجته الآن.",
+      "noReasonProvided": "لم يتم تقديم سبب."
+    },
+    "consultation": {
+      "acceptedTitle": "تم قبول طلب الاستشارة",
+      "acceptedContent": "{{expertName}} قبل طلب الاستشارة الخاص بك بخصوص \"{{title}}\"",
+      "rejectedTitle": "تم رفض طلب الاستشارة",
+      "rejectedContent": "{{expertName}} رفض طلب الاستشارة الخاص بك بخصوص \"{{title}}\"",
+      "newRequestTitle": "طلب استشارة جديد",
+      "newRequestContent": "{{beginnerName}} طلب استشارة حول مشروع \"{{title}}\""
+    },
+    "review": "مراجعة",
     "admin": "النظام",
     "newMessage": "لديك رسالة جديدة",
     "newProposal": "عرض جديد لمشروعك",
     "projectStatusUpdate": "تم تحديث حالة المشروع",
-    "newPayment": "تمت عملية الدفع بنجاح",
-    "newReview": "تم استلام تقييم جديد",
-    "noMessages": "لا توجد رسائل"
+    "newPayment": "تمت عملية الدفع",
+    "newReview": "تم استلام مراجعة جديدة",
+    "noMessages": "لا توجد رسائل",
+    "message": {
+      "title": "رسالة جديدة من {{name}}",
+      "content": "{{content}}",
+      "contentTruncated": "{{content}}..."
+    },
+    "media": {
+      "title": "ملف {{mediaType}} جديد من {{name}}",
+      "content": "أرسل ملف {{mediaType}}",
+      "captionContent": "{{caption}}"
+    },
+    "proposal": {
+      "newTitle": "عرض جديد على مشروعك",
+      "newContent": "تلقى مشروعك \"{{projectTitle}}\" عرضًا جديدًا من {{freelancerName}}",
+      "rejectedTitle": "تم رفض عرضك",
+      "rejectedContent": "تم رفض عرضك لمشروع \"{{projectTitle}}\"",
+      "acceptedTitle": "تم قبول عرضك!",
+      "acceptedContent": "تم قبول عرضك لمشروع \"{{projectTitle}}\". يمكنك الآن التواصل مع العميل."
+    },
+    "project": {
+      "chatStartTitle": "ابدأ محادثة",
+      "chatStartContent": "يمكنك الآن التواصل مع {{freelancerName}} لمناقشة تفاصيل المشروع \"{{projectTitle}}\""
+    },
+    "verification": {
+      "requestReceivedTitle": "تم استلام طلب التحقق",
+      "requestReceivedContent": "تم استلام طلب التحقق الخاص بك وسيتم مراجعته قريباً",
+      "approvedTitle": "تمت الموافقة على طلب التحقق",
+      "approvedContent": "تهانينا! تمت الموافقة على طلب التحقق الخاص بك. يمكنك الآن الاستمتاع بمزايا المستخدمين المُحققين.",
+      "rejectedTitle": "تم رفض طلب التحقق",
+      "rejectedContent": "تم رفض طلب التحقق الخاص بك. السبب: {{reason}}",
+      "noReasonProvided": "لم يتم تقديم سبب",
+      "statusTitle": "{{status}}",
+      "statusContent": "{{content}}"
+    },
+    "admin": {
+      "newVerificationRequestTitle": "طلب تحقق جديد",
+      "newVerificationRequestContent": "{{userName}} قدّم طلب تحقق جديد"
+    },
+    "videoCall": {
+      "inviteTitle": "دعوة لمكالمة فيديو",
+      "inviteContent": "{{userName}} يدعوك لمكالمة فيديو",
+      "groupInviteTitle": "دعوة لمكالمة فيديو",
+      "groupInviteContent": "{{userName}} دعاك لمكالمة فيديو حول الموضوع: {{topic}}"
+    },
+    "review": {
+      "newTitle": "تم استلام مراجعة جديدة",
+      "newContent": "تلقيت مراجعة {{rating}} نجوم لمشروع \"{{projectTitle}}\""
+    },
+    "payment": {
+      "withdrawalRequestTitle": "طلب سحب جديد",
+      "withdrawalRequestContent": "تم تقديم طلب سحب جديد بقيمة {{amount}} من قبل {{username}}.",
+      "withdrawalCompletedTitle": "اكتمل السحب",
+      "withdrawalCompletedContent": "تم إكمال طلب السحب الخاص بك بقيمة {{amount}}.",
+      "withdrawalRejectedTitle": "تم رفض طلب السحب",
+      "withdrawalRejectedContent": "تم رفض طلب السحب الخاص بك بقيمة {{amount}}. السبب: {{reason}}",
+      "withdrawalApprovedTitle": "تمت الموافقة على طلب السحب",
+      "withdrawalApprovedContent": "تمت الموافقة على طلب السحب الخاص بك بقيمة {{amount}} ويتم معالجته الآن.",
+      "noReasonProvided": "لم يتم تقديم سبب."
+    },
+    "consultationAcceptedTitle": "تم قبول طلب الاستشارة",
+    "consultationAcceptedContent": "{{expertName}} قبل طلب الاستشارة الخاص بك بخصوص \"{{title}}\"",
+    "consultationRejectedTitle": "تم رفض طلب الاستشارة",
+    "consultationRejectedContent": "{{expertName}} رفض طلب الاستشارة الخاص بك بخصوص \"{{title}}\"",
+    "newConsultationRequestTitle": "طلب استشارة جديد",
+    "newConsultationRequestContent": "{{beginnerName}} طلب استشارة حول مشروع \"{{title}}\""
   },
+
   "proposals": {
     "title": "العروض",
     "createProposal": "إنشاء عرض",

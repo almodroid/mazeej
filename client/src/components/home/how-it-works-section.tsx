@@ -4,9 +4,11 @@ import {
   Handshake, 
   CheckCircle
 } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 
 export default function HowItWorksSection() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
 
   const steps = [
     {
@@ -27,13 +29,13 @@ export default function HowItWorksSection() {
   ];
 
   return (
-    <section className="py-12 bg-white">
+    <section className="py-12 bg-white dark:bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-cairo font-bold text-neutral-900">
+          <h2 className="text-3xl font-cairo font-bold text-neutral-900 dark:text-white">
             {t("howItWorks.title")}
           </h2>
-          <p className="mt-4 text-xl text-neutral-600">
+          <p className="mt-4 text-xl text-neutral-600 dark:text-gray-400">
             {t("howItWorks.subtitle")}
           </p>
         </div>
@@ -41,15 +43,15 @@ export default function HowItWorksSection() {
           {steps.map((step, index) => (
             <div
               key={index}
-              className="bg-neutral-50 rounded-lg p-6 text-center shadow-sm hover:shadow-md transition-shadow duration-200"
+              className="bg-neutral-50 dark:bg-gray-800 rounded-lg p-6 text-center shadow-sm hover:shadow-md transition-shadow duration-200"
             >
-              <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-primary/10 dark:bg-primary/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
                 {step.icon}
               </div>
-              <h3 className="text-xl font-cairo font-semibold mb-2">
+              <h3 className="text-xl font-cairo font-semibold mb-2 dark:text-white">
                 {step.title}
               </h3>
-              <p className="text-neutral-600">{step.description}</p>
+              <p className="text-neutral-600 dark:text-gray-300">{step.description}</p>
             </div>
           ))}
         </div>

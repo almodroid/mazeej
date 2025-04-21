@@ -205,7 +205,7 @@ export default function CreateProjectPage() {
   // Render functions
   return (
     <DashboardLayout>
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h1 className="text-2xl font-bold mb-6">{t("projects.createNew")}</h1>
         
         <Form {...form}>

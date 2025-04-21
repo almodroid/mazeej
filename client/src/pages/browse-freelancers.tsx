@@ -66,9 +66,9 @@ export default function BrowseFreelancers() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl font-cairo font-bold mb-8">{t("common.browseFreelancers")}</h1>
           
-          <div className="mb-8 bg-white p-6 rounded-lg shadow-sm">
+          <div className="mb-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-grow">
+              <div className="relative flex-grow dark:bg-gray-800 rounded-lg border border-border dark:border-gray-700">
                 <Input
                   type="text"
                   placeholder={t("common.search")}

@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import FreelancerCard from "@/components/freelancer-card";
 import { Link } from "wouter";
+import { useTheme } from "@/components/theme-provider";
 
 export default function FreelancersSection() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   
   // Fetch featured freelancers limited to 3
   const { data: freelancers = [], isLoading } = useQuery<Omit<User, 'password'>[]>({
@@ -13,10 +15,10 @@ export default function FreelancersSection() {
   });
 
   return (
-    <section className="py-12 bg-neutral-50">
+    <section className="py-12 bg-neutral-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-cairo font-bold text-neutral-900">
+          <h2 className="text-3xl font-cairo font-bold text-neutral-900 dark:text-white">
             {t("freelancers.title")}
           </h2>
           <Link href="/browse-freelancers">
@@ -38,7 +40,7 @@ export default function FreelancersSection() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">
+            <h3 className="text-lg font-medium text-neutral-900 dark:text-white mb-2">
               {t("freelancers.noFreelancers")}
             </h3>
           </div>

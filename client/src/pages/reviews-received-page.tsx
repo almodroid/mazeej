@@ -84,7 +84,7 @@ export default function ReviewsReceivedPage() {
         {t("reviews.receivedReviews")}
       </h1>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
+      <div className="bg-white rounded-lg shadow p-6 mb-8 dark:bg-gray-800 dark:text-white">
         <div className="flex flex-col md:flex-row items-center justify-between">
           <div className="flex items-center mb-4 md:mb-0">
             <div className="bg-primary/10 p-4 rounded-full mr-4">

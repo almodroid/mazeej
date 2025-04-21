@@ -12,6 +12,8 @@ import { Moon, Sun } from "lucide-react"
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme()
   const { t } = useTranslation()
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
 
   return (
     <DropdownMenu>
@@ -22,7 +24,7 @@ export function ThemeSwitcher() {
           <span className="sr-only">{t("common.toggleTheme")}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" dir={isRTL ? "rtl" : "ltr"}>
         <DropdownMenuItem onClick={() => setTheme("light")}>
           {t("common.light")}
         </DropdownMenuItem>

@@ -21,12 +21,12 @@ export default function CategoryCard({ category }: CategoryCardProps) {
 
   return (
     <Link href={`/categories/${category.id}`}>
-      <a className="flex flex-col items-center bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 hover:bg-primary/5">
-        <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
+      <a className="flex flex-col items-center bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 hover:bg-primary/5 dark:hover:bg-primary/10">
+        <div className="w-16 h-16 bg-primary/10 dark:bg-primary/20 text-primary rounded-full flex items-center justify-center mb-4">
           <i className={`${iconMapping[category.icon] || 'fas fa-circle'} text-2xl`}></i>
         </div>
-        <h3 className="text-lg font-cairo font-medium text-neutral-900 mb-1 text-center">{category.name}</h3>
-        <p className="text-neutral-500 text-sm text-center">
+        <h3 className="text-lg font-cairo font-medium text-neutral-900 dark:text-white mb-1 text-center">{category.name}</h3>
+        <p className="text-neutral-500 dark:text-gray-400 text-sm text-center">
           +{category.freelancerCount} {t('categories.freelancers')}
         </p>
       </a>

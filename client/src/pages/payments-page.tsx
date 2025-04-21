@@ -279,15 +279,15 @@ export default function PaymentsPage() {
                   {t("payments.addNew")}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="sm:max-w-[425px] dark:bg-gray-900 dark:text-white" dir={isRTL ? "rtl" : "ltr"}>
                 <DialogHeader>
-                  <DialogTitle>{t("payments.addPaymentMethod")}</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-center">{t("payments.addPaymentMethod")}</DialogTitle>
+                  <DialogDescription className="text-center dark:text-gray-300 pt-2">
                     {t("payments.addPaymentMethodDesc")}
                   </DialogDescription>
                 </DialogHeader>
                 
-                <Tabs defaultValue="bank_account" className="w-full mt-4" onValueChange={(value) => setPaymentType(value as "bank_account" | "paypal")}>
+                <Tabs defaultValue="bank_account" className="w-full mt-4" onValueChange={(value) => setPaymentType(value as "bank_account" | "paypal")} dir={isRTL ? "rtl" : "ltr"}>
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="bank_account">
                       <BanknoteIcon size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
@@ -467,8 +467,8 @@ export default function PaymentsPage() {
             {isLoadingAccounts ? (
               <p className="col-span-2 text-center py-10">{t("common.loading")}</p>
             ) : payoutAccounts.length === 0 ? (
-              <div className="col-span-2 bg-neutral-50 rounded-lg border border-neutral-200 p-6 text-center">
-                <p className="text-neutral-500 mb-4">{t("payments.noMethods")}</p>
+              <div className="col-span-2 bg-neutral-50 dark:bg-gray-800 rounded-lg border border-neutral-200 p-6 text-center">
+                <p className="text-neutral-500 mb-4 dark:text-gray-200">{t("payments.noMethods")}</p>
                 <Button variant="outline" onClick={() => setIsAddPaymentOpen(true)}>
                   <Plus size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
                   {t("payments.addPaymentMethod")}

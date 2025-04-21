@@ -41,7 +41,7 @@ export default function HelpPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="faq" className="w-full">
+      <Tabs defaultValue="faq" className="w-full" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
         <TabsList>
           <TabsTrigger value="faq">{t("help.faq")}</TabsTrigger>
           <TabsTrigger value="contact">{t("help.contactUs")}</TabsTrigger>

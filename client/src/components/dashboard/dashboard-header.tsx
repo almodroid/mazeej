@@ -94,15 +94,7 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
       dir={isRTL ? "rtl" : "ltr"}
     >
       <div className="h-16 px-4 md:px-6 flex items-center justify-between">
-        {/* Mobile menu button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="md:hidden" 
-          onClick={onMobileMenuOpen}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        
         
         {/* Logo for medium screens and above */}
         <div className="hidden md:flex items-center">
@@ -202,7 +194,7 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align={isRTL ? "start" : "end"}>
+            <DropdownMenuContent className="w-56" align={isRTL ? "start" : "end"} dir={isRTL ? "rtl" : "ltr"}>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{user.fullName}</p>

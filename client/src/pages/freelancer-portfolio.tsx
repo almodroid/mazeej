@@ -18,6 +18,11 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
+// Define a more complete Review interface
+interface ReviewWithoutUser extends Review {
+  reviewerId: number;
+}
+
 export default function FreelancerPortfolioPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
@@ -48,9 +53,38 @@ export default function FreelancerPortfolioPage() {
   });
 
   // Fetch freelancer's reviews
-  const { data: reviews = [] } = useQuery<Review[]>({
+  const { data: reviewsData = [] } = useQuery<ReviewWithoutUser[]>({
     queryKey: [`/api/users/${id}/reviews`],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/users/${id}/reviews`);
+      if (!response.ok) throw new Error(t('common.errorFetchingData'));
+      return response.json();
+    },
     enabled: !!freelancer,
+  });
+
+  // Fetch all reviewer users in one query
+  const reviewerIds = reviewsData.map(review => review.reviewerId);
+  const { data: reviewerUsers = [] } = useQuery<Omit<User, 'password'>[]>({
+    queryKey: ['reviewers', reviewerIds],
+    queryFn: async () => {
+      if (reviewerIds.length === 0) return [];
+      const promises = reviewerIds.map(reviewerId => 
+        apiRequest("GET", `/api/users/${reviewerId}`)
+          .then(res => res.ok ? res.json() : null)
+      );
+      return (await Promise.all(promises)).filter(Boolean);
+    },
+    enabled: reviewerIds.length > 0,
+  });
+
+  // Combine reviews with user data
+  const reviews = reviewsData.map(review => {
+    const reviewer = reviewerUsers.find(user => user.id === review.reviewerId);
+    return { 
+      ...review, 
+      reviewer
+    };
   });
 
   // Fetch freelancer's portfolio projects
@@ -292,12 +326,12 @@ export default function FreelancerPortfolioPage() {
                     <div key={review.id} className="border-b border-border last:border-0 pb-4 last:pb-0">
                       <div className="flex items-start gap-4">
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={review.reviewer.profileImage} />
-                          <AvatarFallback>{review.reviewer.fullName.charAt(0) || '?'}</AvatarFallback>
+                          <AvatarImage src={review.reviewer?.profileImage || undefined} />
+                          <AvatarFallback>{review.reviewer?.fullName?.charAt(0) || review.reviewer?.username?.charAt(0) || '?'}</AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold">{review.reviewer.fullName || t('common.anonymous')}</span>
+                            <span className="font-semibold">{review.reviewer?.fullName || review.reviewer?.username || t('common.anonymous')}</span>
                             <div className="flex">
                               {[...Array(review.rating)].map((_, i) => (
                                 <Star key={i} className="h-4 w-4 fill-accent text-accent" />

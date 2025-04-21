@@ -1,12 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useTheme } from "@/components/theme-provider";
 
 export default function CtaSection() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
 
   return (
-    <section className="py-12 bg-primary">
+    <section className="py-12 bg-primary dark:bg-primary/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-3xl font-cairo font-bold text-white mb-4">
@@ -19,7 +21,7 @@ export default function CtaSection() {
             <Button
               size="lg"
               variant="secondary"
-              className="bg-white hover:bg-neutral-100 text-primary"
+              className="bg-white hover:bg-neutral-100 text-primary dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white"
               asChild
             >
               <Link href="/auth?register=true&role=client">
