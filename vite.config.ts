@@ -40,7 +40,7 @@ export default defineConfig({
       }
     },
     allowedHosts:{
-      devserver-main--mazeej.netlify.app
+      'devserver-main--mazeej.netlify.app'
     }
   },
 });
