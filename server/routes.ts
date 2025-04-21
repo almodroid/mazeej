@@ -5,6 +5,7 @@ import multer from "multer";
 import path from "path";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./routes/auth";
+import { setupWebSocketServer } from "./chat";
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
 import { z } from "zod";
@@ -42,7 +43,8 @@ export function registerRoutes(app: Express): Server {
   // Create HTTP server
   const httpServer = createServer(app);
   
-  
+  // Setup WebSocket server for chat
+  setupWebSocketServer(httpServer);
 
   // Portfolio API Routes
   app.get('/api/portfolio/:id?', async (req, res) => {
