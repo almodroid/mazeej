@@ -5,6 +5,8 @@ services:
     buildCommand: npm install && node build-render.cjs
     startCommand: npm start
     envVars:
+  - key: BUN_INSTALL
+    value: "0"
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
