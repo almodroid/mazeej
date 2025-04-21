@@ -19,11 +19,25 @@ echo "Setting up directory structure..."
 mkdir -p dist/public
 mkdir -p uploads
 
-# Copy built client files to dist/public if they exist
-echo "Copying client build to dist/public (if available)..."
+# Check if dist directory exists in root or client folder
+echo "Checking for build output..."
 CLIENT_BUILD_SUCCESS=false
-if [ -d "client/dist" ]; then
-  cp -r client/dist/* dist/public/ 2>/dev/null && CLIENT_BUILD_SUCCESS=true || echo "No client build files found"
+
+# First check if dist/public already has index.html (from a previous build)
+if [ -f "dist/public/index.html" ]; then
+  echo "Found existing build in dist/public"
+  CLIENT_BUILD_SUCCESS=true
+# Then check if client/dist exists
+elif [ -d "client/dist" ]; then
+  echo "Found build in client/dist, copying to dist/public..."
+  cp -r client/dist/* dist/public/ 2>/dev/null && CLIENT_BUILD_SUCCESS=true || echo "Failed to copy client build files"
+# Finally check if dist exists in root (from vite build in root)
+elif [ -d "dist" ] && [ -f "dist/index.html" ]; then
+  echo "Found build in root dist, moving to dist/public..."
+  mkdir -p dist/public
+  mv dist/* dist/public/ 2>/dev/null && CLIENT_BUILD_SUCCESS=true || echo "Failed to move build files"
+else
+  echo "No build output found"
 fi
 
 # Create a simple index.html file for testing only if client build failed
