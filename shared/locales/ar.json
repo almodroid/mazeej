@@ -140,7 +140,37 @@
     "deleteUserConfirmation": "تأكيد الحذف",
     "deleteUserConfirmationDescription": "هل أنت متأكد أنك تريد حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.",
     "selected": "محدد",
-    "send":"إرسال"
+    "send":"إرسال",
+    "seoSettings": "إعدادات تحسين محركات البحث والميتا",
+    "analyticsSettings": "التحليلات",
+    "searchConsole": "وحدة تحكم البحث",
+    "socialMedia": "وسائل التواصل الاجتماعي",
+    "facebookPixel": "معرّف Facebook Pixel",
+    "snapchatPixel": "معرّف Snapchat Pixel",
+    "tiktokPixel": "معرّف TikTok Pixel",
+    "pexelsApiKey": "مفتاح Pexels API",
+    "socialMediaLinks": "روابط وسائل التواصل الاجتماعي",
+    "facebook": "فيسبوك",
+    "snapchat": "سناب شات",
+    "tiktok": "تيك توك",
+    "pexels": "بيكسلز",
+    "siteTitle": "عنوان الموقع",
+    "metaDescription": "وصف الميتا",
+    "keywords": "الكلمات المفتاحية",
+    "openGraph": "Open Graph (المشاركة الاجتماعية)",
+    "ogTitle": "عنوان OG",
+    "ogDescription": "وصف OG",
+    "ogImage": "رابط صورة OG",
+    "twitterCard": "بطاقة تويتر",
+    "twitterCardType": "نوع البطاقة",
+    "twitterTitle": "عنوان تويتر",
+    "twitterDescription": "وصف تويتر",
+    "twitterImage": "رابط صورة تويتر",
+    "gaTrackingId": "معرّف التتبع (GA4)",
+    "enableTracking": "تفعيل تتبع التحليلات",
+    "anonymizeIp": "تعمية عناوين IP",
+    "verificationToken": "وسم التحقق",
+    "sitemapUrl": "رابط خريطة الموقع"
   },
   "hireMe": {
     "title": "وظفني", 
@@ -1076,7 +1106,7 @@
     "guide3": "كتابة العروض الناجحة",
     "guide3Description": "كيفية كتابة العروض التي تبرز وتفوز بالمشاريع",
     "guide4": "إدارة المشاريع بفعالية",
-    "guide4Description": "أفضل الممارسات لإدارة مشاريعك بنجاح",
+    "guide4Description": "أفضل الممارسات لإدارة مشاريك بنجاح",
     "readMore": "قراءة المزيد"
   },
   "payments": {
@@ -1210,5 +1240,18 @@
     "success": "اكتمل إعداد الملف الشخصي",
     "successMessage": "تم إعداد ملفك الشخصي وتم تقديم وثيقة التحقق للمراجعة. يمكنك الآن البدء في استكشاف المشاريع وتقديم العروض.",
     "startExploring": "ابدأ الاستكشاف"
+  },
+  "admin": {
+    "socialMediaDescription": "ضبط روابط وسائل التواصل الاجتماعي التي سيتم عرضها على موقعك",
+    "seoDescription": "تكوين إعدادات تحسين محركات البحث وعلامات الميتا للموقع",
+    "analyticsDescription": "ضبط إعدادات Google Analytics لموقعك",
+    "gaTrackingIdHint": "معرّف قياس Google Analytics 4 الخاص بك",
+    "analyticsNote": "ملاحظة: تأكد من الامتثال للوائح الخصوصية مثل GDPR عند تنفيذ التحليلات.",
+    "searchConsoleDescription": "تكوين التحقق من Google Search Console وإعدادات خريطة الموقع",
+    "verificationTokenHint": "سمتك الكاملة للتحقق التي توفرها Google Search Console",
+    "searchConsoleNote": "بعد إضافة موقعك إلى Google Search Console، قم بإرسال رابط خريطة الموقع للمساعدة في فهرسة صفحاتك.",
+    "metaDescriptionHint": "الطول الموصى به: 150-160 حرفًا",
+    "keywordsHint": "قائمة الكلمات المفتاحية مفصولة بفواصل",
+    "addSocialMedia": "إضافة وسيلة تواصل اجتماعي"
   }
 }

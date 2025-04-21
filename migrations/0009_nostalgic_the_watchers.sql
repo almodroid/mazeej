@@ -1,0 +1,1 @@
+ALTER TABLE "site_settings" ADD COLUMN "general_settings" jsonb;

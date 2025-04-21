@@ -5,6 +5,7 @@ import multer from "multer";
 import path from "path";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./routes/auth";
+import adminSettingsRoutes from "./routes/admin-settings";
 
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
@@ -39,6 +40,9 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes (/api/register, /api/login, /api/logout, /api/user)
   setupAuth(app);
+  
+  // Setup admin settings routes
+  app.use('/api/admin', adminSettingsRoutes);
 
   // Create HTTP server
   const httpServer = createServer(app);

@@ -25,6 +25,7 @@ import {
   List,
   Sparkles,
   Languages,
+  UserPlus,
 } from "lucide-react";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -275,6 +276,71 @@ export default function Navbar() {
                         </Button>
                       </Link>
                     ))}
+                    
+                    {/* Login/Register buttons for mobile menu */}
+                    <div className="pt-4 border-t border-border">
+                      {user ? (
+                        <>
+                          <Link href="/dashboard">
+                            <Button
+                              variant="ghost"
+                              className={`w-full justify-start text-base ${
+                                isRTL ? "text-right" : "text-left"
+                              }`}
+                            >
+                              <span className="w-8"><User className="h-4 w-4" /></span>
+                              {t("common.dashboard")}
+                            </Button>
+                          </Link>
+                          <Link href="/settings">
+                            <Button
+                              variant="ghost"
+                              className={`w-full justify-start text-base ${
+                                isRTL ? "text-right" : "text-left"
+                              }`}
+                            >
+                              <span className="w-8"><Settings className="h-4 w-4" /></span>
+                              {t("common.settings")}
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            className={`w-full justify-start text-base ${
+                              isRTL ? "text-right" : "text-left"
+                            }`}
+                            onClick={handleLogout}
+                          >
+                            <span className="w-8"><LogOut className="h-4 w-4" /></span>
+                            {t("common.logout")}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Link href="/auth">
+                            <Button
+                              variant="ghost"
+                              className={`w-full justify-start text-base ${
+                                isRTL ? "text-right" : "text-left"
+                              }`}
+                            >
+                              <span className="w-8"><User className="h-4 w-4" /></span>
+                              {t("common.login")}
+                            </Button>
+                          </Link>
+                          <Link href="/auth?register=true">
+                            <Button
+                              variant="default"
+                              className={`w-full justify-start text-base ${
+                                isRTL ? "text-right" : "text-left"
+                              }`}
+                            >
+                              <span className="w-8"><UserPlus className="h-4 w-4" /></span>
+                              {t("common.register")}
+                            </Button>
+                          </Link>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </SheetContent>

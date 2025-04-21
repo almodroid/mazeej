@@ -3,6 +3,12 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Import settings schema
+import { settings, siteSettings, insertSettingSchema, insertSiteSettingsSchema } from "./schema-settings";
+
+// Re-export settings schema
+export { settings, siteSettings, insertSettingSchema, insertSiteSettingsSchema };
+
 // User role enum
 export const userRoleEnum = pgEnum('user_role', ['client', 'freelancer', 'admin']);
 
