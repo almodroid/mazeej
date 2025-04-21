@@ -42,7 +42,10 @@ export function registerRoutes(app: Express): Server {
   // Create HTTP server
   const httpServer = createServer(app);
   
-
+  // Health check endpoint for Render
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
 
   // Portfolio API Routes
   app.get('/api/portfolio/:id?', async (req, res) => {
