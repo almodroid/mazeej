@@ -35,9 +35,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Set up static files folder for uploads
+// Set up static files folder for uploads and assets
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use(express.static(path.join(__dirname, 'dist/public')));
+app.use('/attached_assets', express.static(path.join(__dirname, 'attached_assets')));
 
 // Create uploads directory if it doesn't exist
 const uploadDir = path.join(__dirname, 'uploads');
@@ -47,11 +47,6 @@ if (!fs.existsSync(uploadDir)) {
 
 // Register all API routes
 const httpServer = registerRoutes(app);
-
-// Fallback to index.html for SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist/public', 'index.html'));
-});
 
 // Start the server
 httpServer.listen(PORT, '0.0.0.0', () => {
