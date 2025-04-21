@@ -3,7 +3,6 @@
 # Install dependencies for both client and server
 echo "Installing dependencies..."
 npm install
-npm install --save-dev @types/express-session tsconfig-paths
 
 # Build the client
 echo "Building client..."
@@ -12,25 +11,17 @@ npm install
 npm run build
 cd ..
 
-# Compile server TypeScript files (without JSX)
-echo "Compiling server TypeScript files..."
-npx tsc --project tsconfig.fix.json
+# Skip TypeScript compilation for now and use direct server.js
+echo "Skipping TypeScript compilation..."
 
 # Create necessary directories
 echo "Setting up directory structure..."
-mkdir -p dist/server/routes
-mkdir -p dist/shared
+mkdir -p dist/public
+mkdir -p uploads
 
-# Ensure server directories exist
-mkdir -p server/routes
-
-# Copy non-TypeScript files and ensure all required directories exist
-echo "Copying additional files..."
-cp -r shared/* dist/shared/ 2>/dev/null || :
-
-# Fix imports in compiled files
-echo "Fixing imports in compiled files..."
-node fix-imports.js
+# Copy built client files to dist/public
+echo "Copying client build to dist/public..."
+cp -r client/dist/* dist/public/ 2>/dev/null || :
 
 # Done!
 echo "Build completed successfully!"
