@@ -1,5 +1,5 @@
 {
-  "include": ["server/**/*", "shared/**/*"],
+  "include": ["server/**/*", "shared/**/*", "server/types.d.ts"],
   "exclude": ["node_modules", "build", "client", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
@@ -19,7 +19,9 @@
     "paths": {
       "@shared/*": ["./shared/*"]
     },
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "typeRoots": ["./node_modules/@types", "./server"],
+    "types": ["node", "express", "express-session"]
   },
   "ts-node": {
     "esm": true
