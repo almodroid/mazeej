@@ -38,6 +38,9 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true
       }
+    },
+    allowedHosts:{
+      devserver-main--mazeej.netlify.app
     }
   },
 });
