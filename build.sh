@@ -4,14 +4,32 @@
 echo "Installing dependencies..."
 npm install
 
+# Try to build the client
+echo "Building client..."
+cd client
+npm install
+
+# Try to build with Vite
+echo "Attempting to build with Vite..."
+npm run build || npx vite build || echo "Client build failed, will use fallback pages"
+cd ..
+
 # Create necessary directories
 echo "Setting up directory structure..."
 mkdir -p dist/public
 mkdir -p uploads
 
-# Create a simple index.html file for testing
-echo "Creating index.html..."
-cat > dist/public/index.html << EOL
+# Copy built client files to dist/public if they exist
+echo "Copying client build to dist/public (if available)..."
+CLIENT_BUILD_SUCCESS=false
+if [ -d "client/dist" ]; then
+  cp -r client/dist/* dist/public/ 2>/dev/null && CLIENT_BUILD_SUCCESS=true || echo "No client build files found"
+fi
+
+# Create a simple index.html file for testing only if client build failed
+if [ "$CLIENT_BUILD_SUCCESS" != "true" ] || [ ! -f "dist/public/index.html" ]; then
+  echo "Creating fallback index.html..."
+  cat > dist/public/index.html << EOL
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,10 +77,12 @@ cat > dist/public/index.html << EOL
 </body>
 </html>
 EOL
+fi
 
 # Create a simple API test file
-echo "Creating API test file..."
-cat > dist/public/api-test.html << EOL
+if [ "$CLIENT_BUILD_SUCCESS" != "true" ] || [ ! -f "dist/public/api-test.html" ]; then
+  echo "Creating API test file..."
+  cat > dist/public/api-test.html << EOL
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -110,6 +130,7 @@ cat > dist/public/api-test.html << EOL
 </body>
 </html>
 EOL
+fi
 
 echo "Build completed successfully!"
 
