@@ -2,7 +2,9 @@ services:
   - type: web
     name: mazeej-backend
     env: node
-    buildCommand: npm install && npm run build
+    runtime: node
+    nodeVersion: 18.x
+    buildCommand: npm ci && npm run build
     startCommand: npm run start
     envVars:
       - key: DATABASE_URL
