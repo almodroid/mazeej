@@ -20,7 +20,7 @@ if (!fs.existsSync('dist/server')) {
 function runCommand(command, errorMessage) {
   try {
     console.log(`Running: ${command}`);
-    execSync(command, { stdio: 'inherit' });
+    execSync(command, { stdio: 'inherit', shell: true });
     return true;
   } catch (error) {
     console.error(`Error: ${errorMessage}`);
@@ -38,7 +38,7 @@ if (!fs.existsSync('index.html') && fs.existsSync('client/index.html')) {
 }
 
 // Build the frontend using direct path to vite binary
-if (!runCommand('./node_modules/.bin/vite build', 'Frontend build failed')) {
+if (!runCommand('npx vite build', 'Frontend build failed')) {
   process.exit(1);
 }
 
@@ -49,7 +49,7 @@ if (fs.existsSync('index.html') && !fs.existsSync('client/index.html')) {
 
 // Build backend
 console.log('\n=== Building Backend ===');
-if (!runCommand('./node_modules/.bin/esbuild server/index.ts server/migrate.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/server', 'Backend build failed')) {
+if (!runCommand('npx vite build server/index.ts server/migrate.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/server', 'Backend build failed')) {
   process.exit(1);
 }
 
