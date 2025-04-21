@@ -14,7 +14,7 @@ cd ..
 
 # Compile server TypeScript files (without JSX)
 echo "Compiling server TypeScript files..."
-npx tsc --project tsconfig.server.json
+npx tsc --project tsconfig.fix.json
 
 # Create necessary directories
 echo "Setting up directory structure..."
