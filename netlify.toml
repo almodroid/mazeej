@@ -1,0 +1,7 @@
+[build]
+  command = "npm run build"
+  publish = "client/dist"
+
+[dev]
+  command = "npm run dev:all"
+  port = 3000
