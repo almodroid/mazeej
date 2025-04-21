@@ -80,7 +80,31 @@ app.get('/api/status', async (req, res) => {
 
 // Fallback to index.html for SPA
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist/public', 'index.html'));
+  const indexPath = path.join(__dirname, 'dist/public', 'index.html');
+  
+  // Check if index.html exists
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    // Create a basic HTML response if the file doesn't exist
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mazeej</title>
+</head>
+<body>
+  <div id="root">
+    <h1>Welcome to Mazeej</h1>
+    <p>The application is starting up. If you continue to see this message, please check the server logs.</p>
+  </div>
+</body>
+</html>`;
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  }
 });
 
 // Start the server
