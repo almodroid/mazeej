@@ -1,19 +1,13 @@
 services:
   - type: web
-    name: mazeej-backend
+    name: mazeej
     env: node
-    runtime: node
-    nodeVersion: 18.x
-    buildCommand: npm ci && npm run build:render
-    startCommand: npm run start
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: PORT
-        value: 10000
       - key: NODE_ENV
         value: production
-    disk:
-      name: uploads
-      mountPath: /opt/render/project/src/uploads
-      sizeGB: 1
+      - key: DATABASE_URL
+        value: postgresql://postgres:NewAlmo2030@@db.abkbhsfmgvcfdjmatffl.supabase.co:5432/postgres
+      - key: PORT
+        value: 10000
