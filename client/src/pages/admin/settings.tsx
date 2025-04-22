@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -34,6 +35,13 @@ import {
   Share2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAdminSettings } from "@/lib/useAdminSettings";
@@ -108,6 +116,7 @@ export default function AdminSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const isRTL = i18n.language === "ar";
   const [activeTab, setActiveTab] = useState("general");
+  const isMobile = useIsMobile();
   
   // State for social media links
   const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>([
@@ -208,33 +217,63 @@ export default function AdminSettingsPage() {
             
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full" dir={isRTL ? "rtl" : "ltr"}>
-              <TabsList className="grid grid-cols-6 mb-6">
-                <TabsTrigger value="general" className="flex items-center gap-2">
-                  <SettingsIcon className="h-4 w-4" />
-                  {t("common.generalSettings")}
-                </TabsTrigger>
-                <TabsTrigger value="seo" className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  {t("common.seoSettings", {defaultValue: "SEO & Meta"})}
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="flex items-center gap-2">
-                  <BarChart className="h-4 w-4" />
-                  {t("common.analyticsSettings", {defaultValue: "Analytics"})}
-                </TabsTrigger>
-                <TabsTrigger value="search-console" className="flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  {t("common.searchConsole", {defaultValue: "Search Console"})}
-                </TabsTrigger>
-                <TabsTrigger value="social" className="flex items-center gap-2">
-                  <Share2 className="h-4 w-4" />
-                  {t("common.socialMedia", {defaultValue: "Social Media"})}
-                </TabsTrigger>
-                <TabsTrigger value="pixels" className="flex items-center gap-2">
-                  <Code className="h-4 w-4" />
-                  {t("common.pixelsAndApi", {defaultValue: "Pixels & API"})}
-                </TabsTrigger>
-              </TabsList>
+            <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full" dir={isRTL ? 'rtl' : 'ltr'}>
+              {isMobile ? (
+                <div className="mb-6">
+                  <Select value={activeTab} onValueChange={setActiveTab}>
+                    <SelectTrigger className="w-full" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="general">
+                        {t("common.generalSettings")}
+                      </SelectItem>
+                      <SelectItem value="seo">
+                        {t("common.seoSettings", {defaultValue: "SEO & Meta"})}
+                      </SelectItem>
+                      <SelectItem value="analytics">
+                        {t("common.analyticsSettings", {defaultValue: "Analytics"})}
+                      </SelectItem>
+                      <SelectItem value="search-console">
+                        {t("common.searchConsole", {defaultValue: "Search Console"})}
+                      </SelectItem>
+                      <SelectItem value="social">
+                        {t("common.socialMedia", {defaultValue: "Social Media"})}
+                      </SelectItem>
+                      <SelectItem value="pixels">
+                        {t("common.pixelsAndApi", {defaultValue: "Pixels & API"})}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <TabsList className="grid grid-cols-6 mb-6" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <TabsTrigger value="general" className="flex items-center gap-2">
+                    <SettingsIcon className="h-4 w-4" />
+                    {t("common.generalSettings")}
+                  </TabsTrigger>
+                  <TabsTrigger value="seo" className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    {t("common.seoSettings", {defaultValue: "SEO & Meta"})}
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="flex items-center gap-2">
+                    <BarChart className="h-4 w-4" />
+                    {t("common.analyticsSettings", {defaultValue: "Analytics"})}
+                  </TabsTrigger>
+                  <TabsTrigger value="search-console" className="flex items-center gap-2">
+                    <Search className="h-4 w-4" />
+                    {t("common.searchConsole", {defaultValue: "Search Console"})}
+                  </TabsTrigger>
+                  <TabsTrigger value="social" className="flex items-center gap-2">
+                    <Share2 className="h-4 w-4" />
+                    {t("common.socialMedia", {defaultValue: "Social Media"})}
+                  </TabsTrigger>
+                  <TabsTrigger value="pixels" className="flex items-center gap-2">
+                    <Code className="h-4 w-4" />
+                    {t("common.pixelsAndApi", {defaultValue: "Pixels & API"})}
+                  </TabsTrigger>
+                </TabsList>
+              )}
               
               <TabsContent value="general" className="space-y-6">
                 <div className="grid gap-3">

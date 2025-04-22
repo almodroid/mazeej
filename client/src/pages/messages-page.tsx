@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useMediaQuery } from 'react-responsive';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Message {
   id: number;
@@ -70,7 +70,7 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesPollingRef = useRef<(() => void) | null>(null);
   const isRTL = i18n.language === "ar";
-  const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
+  const isMobile = useIsMobile();
   const [showConversationList, setShowConversationList] = useState(true);
   
   // Media upload state
