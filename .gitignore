@@ -4,4 +4,20 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Sensitive files
+.env.local
+.env.development
+.env.production
+.env.test
 .env
+
+# Firebase config
+firebase-config.json
+
+# IDE specific files
+.idea/
+.vscode/
+
+# System files
+Thumbs.db
