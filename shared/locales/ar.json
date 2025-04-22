@@ -172,6 +172,9 @@
     "verificationToken": "وسم التحقق",
     "sitemapUrl": "رابط خريطة الموقع"
   },
+  "errors": {
+    "phoneExists": "رقم الجوال مستخدم بالفعل"
+  },
   "hireMe": {
     "title": "وظفني", 
     "description": "وصف المشروع",
@@ -528,10 +531,13 @@
     "fullName": "الاسم الكامل",
     "username": "اسم المستخدم",
     "email": "البريد الإلكتروني",
-    "phone": "رقم الهاتف",
+    "phone": "رقم الجوال",
+    "phonePlaceholder": "ادخل رقم جوالك",
     "country": "الدولة",
     "city": "المدينة",
+    "cityPlaceholder": "ادخل مدينتك",
     "bio": "نبذة شخصية",
+    "bioPlaceholder": "اكتب نبذة شخصية",
     "skills": "المهارات",
     "addSkill": "إضافة مهارة",
     "experience": "الخبرات",
@@ -629,6 +635,7 @@
     "proposal": "عرض",
     "projectUpdate": "تحديث المشروع",
     "payment": "دفعة",
+    
     "paymentDetails": {
       "withdrawalRequestTitle": "طلب سحب جديد",
       "withdrawalRequestContent": "تم تقديم طلب سحب جديد بقيمة {{amount}} من قبل {{username}}.",

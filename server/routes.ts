@@ -6,6 +6,7 @@ import path from "path";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./routes/auth";
 import adminSettingsRoutes from "./routes/admin-settings";
+import phoneVerificationRoutes from "./routes/phone-verification";
 
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
@@ -43,6 +44,9 @@ export function registerRoutes(app: Express): Server {
   
   // Setup admin settings routes
   app.use('/api/admin', adminSettingsRoutes);
+  
+  // Setup phone verification routes
+  app.use('/api', phoneVerificationRoutes);
 
   // Create HTTP server
   const httpServer = createServer(app);
@@ -1335,6 +1339,28 @@ export function registerRoutes(app: Express): Server {
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
           updateData[field] = req.body[field];
+        }
+      }
+
+      // Phone uniqueness check
+      if (updateData.phone) {
+        // Normalize phone if needed (same as registration/verification)
+        let formattedPhone = updateData.phone.replace(/\D/g, "");
+        if (formattedPhone.startsWith("0")) {
+          formattedPhone = formattedPhone.substring(1);
+        }
+        if (!formattedPhone.startsWith("966")) {
+          formattedPhone = "966" + formattedPhone;
+        }
+        updateData.phone = formattedPhone;
+
+        // Check if another user has this phone
+        const allUsers = await storage.getAllUsers();
+        const phoneTaken = allUsers.some(
+          (u: any) => u.phone === formattedPhone && u.id !== req.user.id
+        );
+        if (phoneTaken) {
+          return res.status(400).json({ message: t('errors.phoneExists') });
         }
       }
       

@@ -58,6 +58,7 @@ export const users = pgTable("users", {
   country: text("country"),
   city: text("city"),
   phone: text("phone"),
+  phoneVerified: boolean("phone_verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   isVerified: boolean("is_verified").default(false),
   isBlocked: boolean("is_blocked").default(false),

@@ -71,6 +71,13 @@
       "when": 1745251552247,
       "tag": "0009_nostalgic_the_watchers",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1745305994662,
+      "tag": "0010_powerful_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

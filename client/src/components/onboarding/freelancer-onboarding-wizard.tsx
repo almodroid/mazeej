@@ -10,12 +10,13 @@ import {
   CheckCircle, 
   ArrowRight, 
   X, 
-  Upload, 
   UserCheck, 
-  FileText,
   ChevronLeft,
-  Check
+  Check,
+  Phone,
+  ArrowLeft
 } from "lucide-react";
+import { PhoneVerification } from "@/components/onboarding/phone-verification";
 
 import {
   Dialog,
@@ -62,8 +63,11 @@ interface Category {
 
 // Step indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
+  
   return (
-    <div className="flex items-center justify-center space-x-2 mb-6">
+    <div className={`flex items-center justify-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} mb-6`}>
       {Array.from({ length: totalSteps }).map((_, index) => (
         <div
           key={index}
@@ -88,14 +92,36 @@ export default function FreelancerOnboardingWizard() {
     fullName: "",
     phone: "",
     bio: "",
-    hourlyRate: "",
+    city: "",
     selectedSkills: [] as number[],
-    document: {
-      type: "id_card",
-      file: null as File | null,
-      additionalInfo: "",
-    },
+    phoneVerified: false,
   });
+
+  // Check if onboarding is completed
+  const checkOnboardingStatus = () => {
+    // Check if user has completed the necessary fields for onboarding
+    const hasCompletedBasicInfo = user?.fullName && user?.bio && user?.city;
+    const hasPhoneVerified = user?.phoneVerified;
+    
+    // If user has skills, they've likely completed that step
+    const hasSkills = formData.selectedSkills && formData.selectedSkills.length > 0;
+    
+    // Set completed status based on these checks
+    const isOnboardingCompleted = Boolean(hasCompletedBasicInfo && hasPhoneVerified && hasSkills);
+    setIsCompleted(isOnboardingCompleted);
+    
+    // If not completed and not already open, show the floating button
+    if (!isOnboardingCompleted && !isOpen) {
+      // Determine which step to start with
+      let startStep = 0;
+      if (hasCompletedBasicInfo) startStep = 1;
+      if (hasCompletedBasicInfo && hasSkills) startStep = 2;
+      
+      setCurrentStep(startStep);
+    }
+    
+    return isOnboardingCompleted;
+  };
 
   // Determine if RTL
   const isRTL = i18n.language === "ar";
@@ -106,6 +132,50 @@ export default function FreelancerOnboardingWizard() {
     visible: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: isRTL ? 50 : -50 },
   };
+
+  // Check onboarding status when component mounts
+  useEffect(() => {
+    const onboardingCompleted = checkOnboardingStatus();
+    
+    // If user is a new freelancer and hasn't completed onboarding, show the dialog automatically
+    // We can check if they're new by seeing if they have no skills and no bio
+    const isNewFreelancer = !user?.bio && (!formData.selectedSkills || formData.selectedSkills.length === 0);
+    
+    if (!onboardingCompleted && isNewFreelancer) {
+      // Small delay to ensure the component is fully mounted
+      const timer = setTimeout(() => setIsOpen(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  // Fetch user profile data to check onboarding status
+  const { data: userData, isLoading: isUserDataLoading } = useQuery({
+    queryKey: ["/api/users/profile"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/users/profile");
+      if (!response.ok) throw new Error("Failed to fetch user profile");
+      return response.json();
+    }
+  });
+
+  // Handle user data updates when data is available
+  useEffect(() => {
+    if (userData) {
+      // Update form data with existing user data
+      setFormData(prev => ({
+        ...prev,
+        fullName: userData.fullName || "",
+        bio: userData.bio || "",
+        phone: userData.phone || "",
+        hourlyRate: userData.hourlyRate?.toString() || "",
+        phoneVerified: userData.phoneVerified || false,
+        selectedSkills: userData.selectedSkills?.map((s: any) => s.id) || []
+      }));
+      
+      // Re-check onboarding status with fresh data
+      checkOnboardingStatus();
+    }
+  }, [userData]);
 
   // Fetch categories and skills
   const { data: categories = [], isLoading: isCategoriesLoading } = useQuery<Category[]>({
@@ -168,7 +238,7 @@ export default function FreelancerOnboardingWizard() {
           fullName: data.fullName || prev.fullName,
           phone: data.phone || prev.phone,
           bio: data.bio || prev.bio,
-          hourlyRate: data.hourlyRate?.toString() || prev.hourlyRate,
+          city: data.city || prev.city,
         }));
       }
       
@@ -376,18 +446,14 @@ export default function FreelancerOnboardingWizard() {
     }
   };
 
-  // Submit verification request mutation
+  // Submit verification mutation
   const submitVerificationMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
+    mutationFn: async (phoneData: { phone: string }) => {
       try {
-        const response = await apiRequest("POST", "/api/verification-requests", formData, {
-          headers: {
-            // Don't set Content-Type, browser will set it with the correct boundary for FormData
-          }
-        });
+        const response = await apiRequest("POST", "/api/phone-verification", phoneData);
         
         if (!response.ok) {
-          let errorMessage = "Failed to submit verification request";
+          let errorMessage = "Failed to submit phone verification";
           try {
             const errorData = await response.text();
             
@@ -409,23 +475,22 @@ export default function FreelancerOnboardingWizard() {
       }
     },
     onSuccess: () => {
+      // Update the profile data in the cache
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
+      // Show success message
       toast({
-        title: t("verification.requestSubmitted"),
-        description: t("verification.requestSubmittedDesc"),
+        title: t("verification.phoneVerified"),
+        description: t("verification.phoneVerifiedDesc"),
       });
-      setCurrentStep(prev => prev + 1);
+      
+      // Move to the next step
+      setCurrentStep(3);
       setIsCompleted(true);
-      
-      // Invalidate any related queries
-      queryClient.invalidateQueries({ queryKey: ["/api/verification-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      
-      // Save completion status to localStorage
-      localStorage.setItem("freelancer_onboarding_completed", "true");
     },
     onError: (error: Error) => {
       toast({
-        title: t("common.error"),
+        title: t("verification.verificationFailed"),
         description: error.message,
         variant: "destructive",
       });
@@ -439,7 +504,7 @@ export default function FreelancerOnboardingWizard() {
         fullName: formData.fullName,
         phone: formData.phone,
         bio: formData.bio,
-        hourlyRate: formData.hourlyRate ? parseInt(formData.hourlyRate) : undefined,
+        city: formData.city,
       });
     } catch (error) {
       toast({
@@ -532,37 +597,24 @@ export default function FreelancerOnboardingWizard() {
 
   // Handler for submitting verification
   const handleVerificationSubmit = () => {
-    if (!formData.document.file) {
+    if (!formData.phoneVerified) {
       toast({
-        title: t("verification.noFileSelected"),
-        description: t("verification.pleaseSelectFile"),
+        title: t("verification.phoneNotVerified"),
+        description: t("verification.pleaseVerifyPhone"),
         variant: "destructive",
       });
       return;
     }
 
-    const formDataToSubmit = new FormData();
-    formDataToSubmit.append("documentType", formData.document.type);
-    formDataToSubmit.append("document", formData.document.file);
-    
-    if (formData.document.additionalInfo) {
-      formDataToSubmit.append("additionalInfo", formData.document.additionalInfo);
-    }
-
-    submitVerificationMutation.mutate(formDataToSubmit);
+    submitVerificationMutation.mutate({ phone: formData.phone });
   };
 
-  // Handle file change
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        document: {
-          ...prev.document,
-          file: e.target.files![0],
-        },
-      }));
-    }
+  // Handle phone verification complete
+  const handlePhoneVerificationComplete = () => {
+    setFormData(prev => ({
+      ...prev,
+      phoneVerified: true,
+    }));
   };
 
   // Initialize form data from user when it becomes available
@@ -666,15 +718,14 @@ export default function FreelancerOnboardingWizard() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="hourlyRate">{t("profile.hourlyRate")}</Label>
+                <Label htmlFor="city">{t("profile.city")}</Label>
                 <Input
-                  id="hourlyRate"
-                  type="number"
-                  value={formData.hourlyRate}
+                  id="city"
+                  value={formData.city}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, hourlyRate: e.target.value }))
+                    setFormData((prev) => ({ ...prev, city: e.target.value }))
                   }
-                  placeholder={t("profile.hourlyRatePlaceholder")}
+                  placeholder={t("profile.cityPlaceholder")}
                 />
               </div>
             </div>
@@ -806,65 +857,21 @@ export default function FreelancerOnboardingWizard() {
             exit="exit"
             className="space-y-4"
           >
-            <div className="space-y-2">
-              <Label htmlFor="documentType">{t("verification.documentType")}</Label>
-              <Select
-                value={formData.document.type}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    document: { ...prev.document, type: value },
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("verification.selectDocumentType")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="id_card">{t("verification.idCard")}</SelectItem>
-                  <SelectItem value="passport">{t("verification.passport")}</SelectItem>
-                  <SelectItem value="driving_license">{t("verification.drivingLicense")}</SelectItem>
-                  <SelectItem value="professional_certificate">{t("verification.professionalCertificate")}</SelectItem>
-                  <SelectItem value="other">{t("verification.otherDocument")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="document">{t("verification.uploadDocument")}</Label>
-              <div className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => document.getElementById("document")?.click()}>
-                <input
-                  id="document"
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  accept="image/*, application/pdf"
-                />
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm font-medium">
-                  {formData.document.file ? formData.document.file.name : t("verification.dragAndDrop")}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("verification.supportedFormats")}
-                </p>
+            <div className="text-center mb-4">
+              <div className="bg-primary/10 p-3 rounded-full w-12 h-12 mx-auto mb-2 flex items-center justify-center">
+                <Phone className="h-6 w-6 text-primary" />
               </div>
+              <h3 className="text-lg font-medium">{t("verification.verifyPhone")}</h3>
+              <p className="text-sm text-muted-foreground">
+                {t("verification.verifyPhoneDescription")}
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="additionalInfo">{t("verification.additionalInfo")}</Label>
-              <Textarea
-                id="additionalInfo"
-                value={formData.document.additionalInfo}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    document: { ...prev.document, additionalInfo: e.target.value },
-                  }))
-                }
-                placeholder={t("verification.additionalInfoPlaceholder")}
-                rows={3}
-              />
-            </div>
+            <PhoneVerification 
+              phone={formData.phone} 
+              onVerificationComplete={handlePhoneVerificationComplete}
+              onPhoneChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
+            />
           </motion.div>
         );
       case 3:
@@ -896,6 +903,25 @@ export default function FreelancerOnboardingWizard() {
         );
       default:
         return null;
+    }
+  };
+
+  // Step validation: ensure all required fields are filled before allowing next
+  const isStepValid = () => {
+    switch (currentStep) {
+      case 0:
+        return (
+          formData.fullName.trim() !== "" &&
+          formData.phone.trim() !== "" &&
+          formData.bio.trim() !== "" &&
+          formData.city.trim() !== ""
+        );
+      case 1:
+        return formData.selectedSkills.length > 0;
+      case 2:
+        return !!formData.phoneVerified;
+      default:
+        return true;
     }
   };
 
@@ -961,7 +987,12 @@ export default function FreelancerOnboardingWizard() {
                       break;
                   }
                 }}
-                disabled={updateProfileMutation.isPending || addSkillMutation.isPending || submitVerificationMutation.isPending}
+                disabled={
+                  !isStepValid() ||
+                  updateProfileMutation.isPending ||
+                  addSkillMutation.isPending ||
+                  submitVerificationMutation.isPending
+                }
               >
                 {updateProfileMutation.isPending || addSkillMutation.isPending || submitVerificationMutation.isPending ? (
                   <div className="flex items-center">
@@ -971,7 +1002,7 @@ export default function FreelancerOnboardingWizard() {
                 ) : (
                   <>
                     {currentStep === 2 ? t("common.submit") : t("common.next")}
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    {isRTL ? <ArrowLeft className="h-4 w-4 ml-2" /> : <ArrowRight className="h-4 w-4 ml-2" />}
                   </>
                 )}
               </Button>
