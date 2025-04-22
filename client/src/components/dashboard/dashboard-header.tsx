@@ -13,7 +13,8 @@ import {
   Moon,
   Sun,
   Laptop,
-  Languages
+  Languages,
+  Home
 } from "lucide-react";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { MessagesDropdown } from "@/components/messages/messages-dropdown";
@@ -127,10 +128,16 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
           "flex items-center gap-2 ml-auto",
           isRTL && "ml-0 mr-auto"
         )}>
+          {/* homepage */}
+          <Link href="/">
+            <Button variant="ghost" size="icon" className="h-9 w-9" title={t("common.home")}>
+              <Home className="h-[1.2rem] w-[1.2rem]" />
+            </Button>
+          </Link>
           {/* Language Switcher */}
           <DropdownMenu dir={isRTL ? "rtl" : "ltr"}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Button variant="ghost" size="icon" className="h-9 w-9" title={t("settings.language")}>
                 <Languages className="h-[1.2rem] w-[1.2rem]" />
               </Button>
             </DropdownMenuTrigger>
@@ -147,7 +154,7 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
           {/* Theme Switcher */}
           <DropdownMenu dir={isRTL ? "rtl" : "ltr"}> 
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Button variant="ghost" size="icon" className="h-9 w-9" title={t("settings.theme")}>
                 {theme === "light" && <Sun className="h-[1.2rem] w-[1.2rem]" />}
                 {theme === "dark" && <Moon className="h-[1.2rem] w-[1.2rem]" />}
                 {theme === "system" && <Laptop className="h-[1.2rem] w-[1.2rem]" />}

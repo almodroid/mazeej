@@ -33,10 +33,10 @@ export default function CategoriesPage() {
       <main className="flex-grow py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h1 className="text-3xl font-cairo font-bold text-neutral-900 mb-4">
+            <h1 className="text-3xl font-cairo font-bold text-neutral-900 mb-4 dark:text-white">
               {t("categories.title")}
             </h1>
-            <p className="text-xl text-neutral-600">
+            <p className="text-xl text-neutral-600 dark:text-gray-400">
               {t("categories.subtitle")}
             </p>
           </div>
@@ -53,11 +53,11 @@ export default function CategoriesPage() {
                 ))}
               </div>
 
-              <Tabs defaultValue={categories[0]?.id?.toString()} className="w-full">
+              <Tabs defaultValue={categories[0]?.id?.toString()} className="w-full dark:bg-gray-800" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
                 <Card>
                   <CardHeader>
-                    <CardTitle>{t("freelancers.title")}</CardTitle>
-                    <CardDescription>{t("freelancers.topByCategory")}</CardDescription>
+                    <CardTitle className="text-neutral-900 dark:text-white">{t("freelancers.title")}</CardTitle>
+                    <CardDescription className="text-neutral-600 dark:text-gray-400">{t("freelancers.topByCategory")}</CardDescription>
                     <TabsList className="mt-2">
                       {categories.slice(0, 5).map((category) => (
                         <TabsTrigger key={category.id} value={category.id.toString()}>

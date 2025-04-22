@@ -82,7 +82,7 @@ export function NotificationsDropdown() {
   return (
     <DropdownMenu dir={isRTL ? "rtl" : "ltr"}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full" title={t("notification.title")}>
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge 

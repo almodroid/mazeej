@@ -61,7 +61,7 @@ export function MessagesDropdown() {
   return (
     <DropdownMenu dir={isRTL ? "rtl" : "ltr"}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full" title={t("messages.title")}>
           <MessageSquare className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge 

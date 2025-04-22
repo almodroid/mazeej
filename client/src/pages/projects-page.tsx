@@ -95,7 +95,7 @@ export default function ProjectsPage() {
             )}
           </div>
           
-          <div className="mb-8 bg-white p-6 rounded-lg shadow-sm">
+          <div className="mb-8 bg-white p-6 rounded-lg shadow-sm dark:bg-gray-800">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-grow">
                 <Input
@@ -153,7 +153,7 @@ export default function ProjectsPage() {
             </div>
           ) : (
             <div className="text-center py-20">
-              <h3 className="text-lg font-medium text-neutral-900 mb-2">
+              <h3 className="text-lg font-medium text-neutral-900 dark:text-neutral-100 mb-2">
                 {t("projects.noProjects")}
               </h3>
               {user?.role === 'client' && (

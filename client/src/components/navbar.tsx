@@ -28,6 +28,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
+import { MessagesDropdown } from "@/components/messages/messages-dropdown";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { changeLanguage } from "@/lib/i18n";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -95,11 +96,10 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled
-          ? "bg-background/90 dark:bg-gray-900/90 backdrop-blur-md shadow-md"
-          : "bg-background dark:bg-gray-900"
-      }`}
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${scrolled
+        ? "bg-background/90 dark:bg-gray-900/90 backdrop-blur-md shadow-md"
+        : "bg-background dark:bg-gray-900"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
@@ -107,8 +107,8 @@ export default function Navbar() {
             <div className="flex-shrink-0 flex items-center">
               <Link href="/">
                 <div className="flex items-center gap-2 animate-fade-in">
-                <img src={LogoPng} alt="Mazeej Logo" className="h-8 w-auto" />
-                  
+                  <img src={LogoPng} alt="Mazeej Logo" className="h-8 w-auto" />
+
                 </div>
               </Link>
             </div>
@@ -165,9 +165,6 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center gap-1">
                 <NotificationsDropdown />
-
-                
-
                 <DropdownMenu dir={isRTL ? "rtl" : "ltr"}>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -248,18 +245,41 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <div className="flex items-center lg:hidden">
             <Sheet>
-              <SheetTrigger asChild>
+              {/* Mobile menu trigger and switchers */}
+              <div className={`flex items-center gap-2 lg:hidden`}>
+                {/* Notifications */}
+                <NotificationsDropdown />
+                {/* Messages */}
+                <MessagesDropdown />
+                {/* Language Switcher */}
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label="Menu"
-                  className="lg:hidden"
+                  aria-label="Language"
+                  className="p-2"
+                  onClick={toggleLanguage}
                 >
-                  <Menu className="h-6 w-6" />
+                  <Languages className="h-5 w-5" />
+                  <span className="sr-only">{isRTL ? "EN" : "ع"}</span>
                 </Button>
-              </SheetTrigger>
-              <SheetContent side={isRTL ? "right" : "left"} className="w-72">
-                <div className="mt-6 flow-root">
+                {/* Theme Switcher */}
+                <div className="p-1">
+                  <ThemeSwitcher />
+                </div>
+                {/* Mobile Menu Button */}
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Menu"
+                    className=""
+                  >
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SheetTrigger>
+              </div>
+              <SheetContent side={isRTL ? "left" : "right"} className={`w-72 flex flex-col h-full ${isRTL ? 'left-0 right-auto' : 'right-0 left-auto'}`}>
+                <div className="mt-12 flex-1 overflow-y-auto border-t border-border">
                   <div className="space-y-2">
                     {navLinks.map((item) => (
                       <Link key={item.href} href={item.href}>
@@ -267,81 +287,85 @@ export default function Navbar() {
                           variant={
                             location === item.href ? "default" : "ghost"
                           }
-                          className={`w-full justify-start text-base ${
-                            isRTL ? "text-right" : "text-left"
-                          }`}
+                          className={`w-full justify-start text-base mt-2 ${isRTL ? "text-right" : "text-left"}`}
                         >
                           <span className="w-8">{item.icon}</span>
                           {item.label}
                         </Button>
                       </Link>
                     ))}
-                    
-                    {/* Login/Register buttons for mobile menu */}
-                    <div className="pt-4 border-t border-border">
-                      {user ? (
-                        <>
-                          <Link href="/dashboard">
-                            <Button
-                              variant="ghost"
-                              className={`w-full justify-start text-base ${
-                                isRTL ? "text-right" : "text-left"
-                              }`}
-                            >
-                              <span className="w-8"><User className="h-4 w-4" /></span>
-                              {t("common.dashboard")}
-                            </Button>
-                          </Link>
-                          <Link href="/settings">
-                            <Button
-                              variant="ghost"
-                              className={`w-full justify-start text-base ${
-                                isRTL ? "text-right" : "text-left"
-                              }`}
-                            >
-                              <span className="w-8"><Settings className="h-4 w-4" /></span>
-                              {t("common.settings")}
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            className={`w-full justify-start text-base ${
-                              isRTL ? "text-right" : "text-left"
-                            }`}
-                            onClick={handleLogout}
-                          >
-                            <span className="w-8"><LogOut className="h-4 w-4" /></span>
-                            {t("common.logout")}
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Link href="/auth">
-                            <Button
-                              variant="ghost"
-                              className={`w-full justify-start text-base ${
-                                isRTL ? "text-right" : "text-left"
-                              }`}
-                            >
-                              <span className="w-8"><User className="h-4 w-4" /></span>
-                              {t("common.login")}
-                            </Button>
-                          </Link>
-                          <Link href="/auth?register=true">
-                            <Button
-                              variant="default"
-                              className={`w-full justify-start text-base ${
-                                isRTL ? "text-right" : "text-left"
-                              }`}
-                            >
-                              <span className="w-8"><UserPlus className="h-4 w-4" /></span>
-                              {t("common.register")}
-                            </Button>
-                          </Link>
-                        </>
-                      )}
-                    </div>
                   </div>
+                </div>
+                {/* Login/Register buttons for mobile menu */}
+                <div className="pt-4 border-t border-border">
+                  {user ? (
+                    <>
+                      <div className="flex flex-col items-start gap-2 mb-2 bg-gray-100 rounded-md p-2 dark:bg-gray-900">
+                        {/* Profile Avatar */}
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user?.profileImage || undefined} alt={user?.fullName || "Profile"} />
+                            <AvatarFallback>{(user?.fullName?.slice(0,2) || user?.username?.slice(0,2) || "U").toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-base capitalize">
+                              {user?.fullName || user?.username}
+                            </span>
+                            <span className="text-xs text-muted-foreground dark:text-gray-400">
+                              {user?.email}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Link href="/dashboard">
+                        <Button
+                          variant="ghost"
+                          className={`w-full justify-start text-base ${isRTL ? "text-right" : "text-left"}`}
+                        >
+                          <span className="w-8"><User className="h-4 w-4" /></span>
+                          {t("common.dashboard")}
+                        </Button>
+                      </Link>
+                      <Link href="/settings">
+                        <Button
+                          variant="ghost"
+                          className={`w-full justify-start text-base ${isRTL ? "text-right" : "text-left"}`}
+                        >
+                          <span className="w-8"><Settings className="h-4 w-4" /></span>
+                          {t("common.settings")}
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        className={`w-full justify-start text-base ${isRTL ? "text-right" : "text-left"}`}
+                        onClick={handleLogout}
+                      >
+                        <span className="w-8"><LogOut className="h-4 w-4" /></span>
+                        {t("common.logout")}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/auth">
+                        <Button
+                          variant="ghost"
+                          className={`w-full justify-start text-base ${isRTL ? "text-right" : "text-left"}`}
+                        >
+                          <span className="w-8"><User className="h-4 w-4" /></span>
+                          {t("common.login")}
+                        </Button>
+                      </Link>
+                      <Link href="/auth?register=true">
+                        <Button
+                          variant="default"
+                          className={`w-full justify-start text-base ${isRTL ? "text-right" : "text-left"}`}
+                        >
+                          <span className="w-8"><UserPlus className="h-4 w-4" /></span>
+                          {t("common.register")}
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
