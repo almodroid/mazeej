@@ -112,7 +112,7 @@ export default function ReviewsReceivedPage() {
 
       <div className="space-y-4">
         {reviews.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
             <p className="text-neutral-500">{t("reviews.noReviews")}</p>
           </div>
         ) : (

@@ -19,6 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface EarningPeriod {
   id: string;
@@ -40,8 +41,9 @@ interface PayoutAccount {
 interface WithdrawalRequest {
   id: string;
   amount: number;
+  status: string;
   paymentMethod: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  reference?: string;
   requestedAt: string;
   processedAt?: string;
   notes?: string;
@@ -68,6 +70,7 @@ export default function EarningsPage() {
   const isRTL = i18n.language === "ar";
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'history' | 'withdrawals'>('history');
 
   // Fetch earnings data
   const { data: earnings = { total: 0, pending: 0, thisMonth: 0, periods: [], available: 0 } } = useQuery({
@@ -290,29 +293,70 @@ export default function EarningsPage() {
               <CardDescription>{t("earnings.earningsHistoryDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <div className={`grid grid-cols-5 bg-neutral-50 p-4 text-sm font-medium text-neutral-500 ${isRTL ? "rtl" : ""}`}>
-                  <div>{t("earnings.project")}</div>
-                  <div>{t("earnings.client")}</div>
-                  <div>{t("earnings.date")}</div>
-                  <div>{t("earnings.amount")}</div>
-                  <div>{t("earnings.status")}</div>
-                </div>
-                {earnings.periods && earnings.periods.map((period: EarningPeriod) => (
-                  <div key={period.id} className={`grid grid-cols-5 p-4 text-sm border-t ${isRTL ? "rtl" : ""}`}>
-                    <div className="font-medium">{period.projectTitle}</div>
-                    <div>{period.clientName}</div>
-                    <div>{formatDate(period.date)}</div>
-                    <div>{period.amount} <SaudiRiyal className="h-6 w-6" /></div>
-                    <div>{getStatusBadge(period.status)}</div>
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'history' | 'withdrawals')} dir={isRTL ? "rtl" : "ltr"}>
+                <TabsList className="grid grid-cols-2 w-[250px] mb-4">
+                  <TabsTrigger value="history">{t("earnings.history")}</TabsTrigger>
+                  <TabsTrigger value="withdrawals">{t("earnings.withdrawals")}</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="history">
+                  <div className="rounded-md border">
+                    <div className={`grid grid-cols-5 dark:bg-gray-800 bg-neutral-50 p-4 text-sm font-medium text-neutral-500 ${isRTL ? "rtl" : ""}`}>
+                      <div>{t("earnings.project")}</div>
+                      <div>{t("earnings.client")}</div>
+                      <div>{t("earnings.date")}</div>
+                      <div>{t("earnings.amount")}</div>
+                      <div>{t("earnings.status")}</div>
+                    </div>
+                    {earnings.periods && earnings.periods.map((period: EarningPeriod) => (
+                      <div key={period.id} className={`grid grid-cols-5 p-4 text-sm border-t ${isRTL ? "rtl" : ""}`}>
+                        <div className="font-medium">{period.projectTitle}</div>
+                        <div>{period.clientName}</div>
+                        <div>{formatDate(period.date)}</div>
+                        <div>{period.amount} <SaudiRiyal className="h-6 w-6" /></div>
+                        <div>{getStatusBadge(period.status)}</div>
+                      </div>
+                    ))}
+                    {(!earnings.periods || earnings.periods.length === 0) && (
+                      <div className="p-4 text-center text-sm text-neutral-500">
+                        {t("earnings.noEarningsRecorded")}
+                      </div>
+                    )}
                   </div>
-                ))}
-                {(!earnings.periods || earnings.periods.length === 0) && (
-                  <div className="p-4 text-center text-sm text-neutral-500">
-                    {t("earnings.noEarningsRecorded")}
+                </TabsContent>
+                
+                <TabsContent value="withdrawals">
+                  <div className="rounded-md border">
+                    <div className={`grid grid-cols-5 bg-neutral-50 dark:bg-gray-800 p-4 text-sm font-medium text-neutral-500 ${isRTL ? "rtl" : ""}`}>
+                      <div>{t("earnings.date")}</div>
+                      <div>{t("earnings.amount")}</div>
+                      <div>{t("earnings.status")}</div>
+                      <div>{t("earnings.method")}</div>
+                      <div>{t("earnings.reference")}</div>
+                    </div>
+                    
+                    {withdrawalRequests.length > 0 ? (
+                      withdrawalRequests.map((request) => (
+                        <div key={request.id} className="grid grid-cols-5 p-4 border-t">
+                          <div>{formatDate(request.requestedAt)}</div>
+                          <div>{request.amount} <SaudiRiyal className="h-4 w-4 inline" /></div>
+                          <div>
+                            <Badge variant={request.status === 'completed' ? 'default' : 'secondary'}>
+                              {request.status}
+                            </Badge>
+                          </div>
+                          <div>{request.paymentMethod}</div>
+                          <div className="text-xs text-neutral-500">{request.reference}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-neutral-500">
+                        {t("earnings.noWithdrawals")}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
@@ -325,15 +369,15 @@ export default function EarningsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-md border border-blue-200 text-blue-700">
+                <div className="p-4 bg-blue-50 dark:bg-gray-800 rounded-md border border-blue-200 dark:border-gray-700 text-blue-700 dark:text-blue-400">
                   <h4 className="font-medium mb-1">{t("earnings.availableBalance", { defaultValue: "Available Balance" })}</h4>
                   <p className="text-2xl font-bold flex align-middle items-center">{availableBalance} <SaudiRiyal className="h-6 w-6" /></p>
                   {availableBalance < 100 && (
-                    <p className="text-xs mt-2 text-amber-600">
+                    <p className="text-xs mt-2 text-amber-600 dark:text-amber-400">
                       {t("payments.minAmount", { amount: "100" })}
                     </p>
                   )}
-                  <div className="mt-2 text-xs text-blue-600">
+                  <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
                     <p>{t("earnings.totalBalance", { defaultValue: "Total Earnings" })}: {earnings.total} <SaudiRiyal className="h-4 w-4 inline" /></p>
                     <p>{t("earnings.pendingWithdrawals", { defaultValue: "Pending Withdrawals" })}: {earnings.total - availableBalance} <SaudiRiyal className="h-4 w-4 inline" /></p>
                   </div>
@@ -355,7 +399,7 @@ export default function EarningsPage() {
                     <DialogHeader>
                       <DialogTitle>{t("earnings.withdraw.title", { defaultValue: "Withdraw Funds" })}</DialogTitle>
                       <DialogDescription>
-                        {t("earnings.withdraw.withdrawDescription", { defaultValue: "Request a withdrawal to your chosen payout account" })}
+                        {t("earnings.withdraw.description", { defaultValue: "Request a withdrawal to your chosen payout account" })}
                       </DialogDescription>
                     </DialogHeader>
                     {payoutAccounts.length === 0 ? (
@@ -391,7 +435,7 @@ export default function EarningsPage() {
                                 <FormDescription>
                                   <div className="space-y-1">
                                     <p>{t("payments.minAmount", { amount: "100" })}</p>
-                                    <p className="font-medium text-blue-600">
+                                    <p className="font-medium text-blue-600 dark:text-blue-400">
                                       {t("earnings.availableToWithdraw", { defaultValue: "Available to withdraw" })}: {availableBalance} <SaudiRiyal className="h-4 w-4 inline" />
                                     </p>
                                     {field.value > availableBalance && (
@@ -429,7 +473,7 @@ export default function EarningsPage() {
                                           )}
                                           {account.name}
                                           {account.isDefault && (
-                                            <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
+                                            <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700">
                                               {t("payments.default")}
                                             </Badge>
                                           )}
@@ -497,73 +541,10 @@ export default function EarningsPage() {
                     )}
                   </DialogContent>
                 </Dialog>
-
-                <div className="mt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium">{t("earnings.withdraw.recentRequests", { defaultValue: "Recent Withdrawal Requests" })}</h4>
-                    {withdrawalRequests.length > 0 && (
-                      <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => refetchWithdrawals()}>
-                        <Loader2 className={`h-3 w-3 mr-1 ${withdrawalMutation.isPending ? 'animate-spin' : ''}`} />
-                        {t("common.refresh")}
-                      </Button>
-                    )}
-                  </div>
-                  <div className="space-y-3">
-                    {withdrawalRequests.length === 0 ? (
-                      <div className="text-sm text-muted-foreground p-3 text-center border rounded-md">
-                        {t("earnings.withdraw.noRequests", { defaultValue: "No withdrawal requests yet" })}
-                      </div>
-                    ) : (
-                      withdrawalRequests.slice(0, 5).map((request) => (
-                        <div key={request.id} className="p-3 border rounded-md space-y-1">
-                          <div className="flex justify-between items-center">
-                            <p className="font-medium flex align-middle items-center">{request.amount} <SaudiRiyal className="h-6 w-6" /></p>
-                            <div>
-                              {getStatusBadge(request.status)}
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-center text-xs text-muted-foreground">
-                            <p>
-                              {t("earnings.requestedAt")}: {formatDate(request.requestedAt)}
-                            </p>
-                            <p>
-                              {request.paymentMethod}
-                            </p>
-                          </div>
-                          {request.status === 'rejected' && request.notes && (
-                            <div className="mt-1 text-xs p-1 bg-red-50 text-red-700 rounded">
-                              {request.notes}
-                            </div>
-                          )}
-                          {request.status === 'approved' && (
-                            <div className="mt-1 text-xs p-1 bg-blue-50 text-blue-700 rounded">
-                              {t("earnings.withdraw.processingNote", { defaultValue: "Your withdrawal is being processed" })}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      </div>
-
-      <div className={`flex justify-end ${isRTL ? "rtl" : ""}`}>
-        <Button variant="outline" className={isRTL ? "ml-2" : "mr-2"}>
-          <Download size={16} className={isRTL ? "ml-2" : "mr-2"} />
-          {t("earnings.downloadCSV")}
-        </Button>
-        
-        {/* Debug button for development only */}
-        {process.env.NODE_ENV !== 'production' && (
-          <Button variant="secondary" onClick={generateTestEarnings}>
-            <Plus size={16} className={isRTL ? "ml-2" : "mr-2"} />
-            Generate Test Earnings (Debug)
-          </Button>
-        )}
       </div>
     </DashboardLayout>
   );

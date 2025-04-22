@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Loader2, Paperclip, Video, Image, File, Send, X } from "lucide-react";
+import { Search, Loader2, Paperclip, Video, Image, File, Send, X, ChevronLeft } from "lucide-react";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMediaQuery } from 'react-responsive';
 
 interface Message {
   id: number;
@@ -69,6 +70,8 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesPollingRef = useRef<(() => void) | null>(null);
   const isRTL = i18n.language === "ar";
+  const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
+  const [showConversationList, setShowConversationList] = useState(true);
   
   // Media upload state
   const [mediaUploadOpen, setMediaUploadOpen] = useState(false);
@@ -338,6 +341,10 @@ export default function MessagesPage() {
     
     // Set up new fetching
     fetchMessages(partnerId);
+    
+    if (isMobile) {
+      setShowConversationList(false);
+    }
   };
 
   // Scroll to bottom of message list
@@ -503,10 +510,10 @@ export default function MessagesPage() {
           </div>
         </div>
       ) : (
-        <div className="flex h-[calc(100vh-12rem)] overflow-hidden">
+        <div className="flex h-[calc(100vh-12rem)] overflow-hidden flex-col md:flex-row">
           {/* Conversations List */}
-          <div className={`w-1/3 border-r border-neutral-200 flex flex-col ${isRTL ? "border-r-0 border-l" : ""}`}>
-            <div className="p-4 border-b border-neutral-200">
+          <div className={`${isMobile ? (showConversationList ? 'flex' : 'hidden') : 'flex'} w-full md:w-1/3 ${isMobile ? '' : 'border-r border-neutral-200'} flex-col ${isRTL && !isMobile ? "border-r-0 border-l" : ""}`}>
+            <div className={`p-4 ${isMobile ? '' : 'border-b border-neutral-200'}`}>
               <div className="relative">
                 <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 transform -translate-y-1/2 text-neutral-500`} size={18} />
                 <Input 
@@ -532,7 +539,7 @@ export default function MessagesPage() {
                 filteredConversations.map((conv) => (
                   <div 
                     key={conv.id}
-                    className={`p-4 border-b border-neutral-200 cursor-pointer hover:bg-neutral-50 ${selectedConversation === conv.id ? 'bg-neutral-100' : ''}`}
+                    className={`p-4 border-b border-neutral-200 cursor-pointer hover:bg-neutral-50 ${selectedConversation === conv.id ? 'bg-neutral-100 dark:bg-gray-800' : ''}`}
                       onClick={() => selectConversation(conv.id, conv.participantId)}
                   >
                     <div className="flex items-center">
@@ -567,10 +574,20 @@ export default function MessagesPage() {
           </div>
 
           {/* Messages Area */}
-          <div className="w-2/3 flex flex-col">
+          <div className={`${isMobile ? (showConversationList ? 'hidden' : 'flex') : 'flex'} w-full md:w-2/3 flex-col`}>
             {selectedConversation && selectedPartnerId ? (
               <>
-                <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
+                <div className="p-4 ${isMobile ? '' : 'border-b border-neutral-200'} flex items-center justify-between">
+                  {isMobile && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setShowConversationList(true)}
+                      className="mr-2"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                  )}
                   <div className="flex items-center">
                     <Avatar className={`h-10 w-10 ${isRTL ? "ml-3" : "mr-3"}`}>
                       <AvatarImage 
