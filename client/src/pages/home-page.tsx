@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import HeroSection from "@/components/home/hero-section";
-import HowItWorksSection from "@/components/home/how-it-works-section";
+import AboutSection from "@/components/home/about";
 import FreelancersSection from "@/components/home/freelancers-section";
 import ProjectsSection from "@/components/home/projects-section";
 import CategoriesSection from "@/components/home/categories-section";
@@ -25,7 +25,7 @@ export default function HomePage() {
       <Navbar />
       <main className="flex-grow">
         <HeroSection />
-        <HowItWorksSection />
+        <AboutSection />
         <FreelancersSection />
         <ProjectsSection />
         <CategoriesSection />
