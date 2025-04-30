@@ -125,30 +125,30 @@ export default function HowItWorksSection() {
         </div>
       </div>
       {/* Chunk 2: Features Section */}
-      <div className="container mx-auto">
-        <h3 className="text-2xl font-extrabold text-primary dark:text-primary mb-8 text-center">مايميز مزيج</h3>
+      <div className="container mx-auto py-16">
+        <h3 className="text-2xl font-extrabold text-primary dark:text-primary mb-16 text-center">مايميز مزيج</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Feature 1 */}
-          <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
-            <Brain className="mb-3 text-primary dark:text-primary"/>
+          <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
+            <Brain className="mb-3 text-primary dark:text-primary w-10 h-10"/>
             <div className="font-bold mb-2 dark:text-gray-100">ذكاء اصطناعي</div>
             <div className="text-sm text-gray-600 dark:text-gray-300">يدعمك من الفكرة حتى الإنتاج</div>
           </div>
           {/* Feature 2 */}
-          <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
-            <Group className="mb-3 text-primary dark:text-primary"/>
+          <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
+            <Group className="mb-3 text-primary dark:text-primary w-10 h-10"/>
             <div className="font-bold mb-2 dark:text-gray-100">إنتاج مشترك</div>
             <div className="text-sm text-gray-600 dark:text-gray-300">مع محترفين وشركاء الرحلة</div>
           </div>
           {/* Feature 3 */}
-          <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
-            <User className="mb-3 text-primary dark:text-primary"/>
+          <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
+            <User className="mb-3 text-primary dark:text-primary w-10 h-10 "/>
             <div className="font-bold mb-2 dark:text-gray-100">هوية رقمية</div>
             <div className="text-sm text-gray-600 dark:text-gray-300">تعبر عنك وتبني حضورك</div>
           </div>
           {/* Feature 4 */}
-          <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
-            <Briefcase className="mb-3 text-primary dark:text-primary"/>
+          <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
+            <Briefcase className="mb-3 text-primary dark:text-primary w-10 h-10"/>
             <div className="font-bold mb-2 dark:text-gray-100">فرص دخل</div>
             <div className="text-sm text-gray-600 dark:text-gray-300">مستدامة لصناع المحتوى</div>
           </div>

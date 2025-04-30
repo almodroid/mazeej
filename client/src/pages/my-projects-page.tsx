@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { AlertCircle, Plus, Search, Star } from "lucide-react";
+import { AlertCircle, Edit, Loader2, Plus, Search, Star, Trash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { projectApi, reviewApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 // Placeholder type for Review data - adjust as per actual schema/API
 interface ReviewInput {
@@ -41,6 +42,7 @@ export default function MyProjectsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
@@ -57,6 +59,12 @@ export default function MyProjectsPage() {
     date: '',
     image: null
   });
+  
+  // Project edit/delete state
+  const [showProjectEditDialog, setShowProjectEditDialog] = useState(false);
+  const [showProjectDeleteDialog, setShowProjectDeleteDialog] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
+  const [projectEditData, setProjectEditData] = useState<Partial<Project>>({});
 
   // Fetch client projects
   const { data: projects = [], isLoading } = useQuery<Project[]>({
@@ -68,6 +76,34 @@ export default function MyProjectsPage() {
   const clientProjects = projects.filter(project => 
     user && project.clientId === user.id
   );
+  
+  // Fetch proposals for all projects to determine if they can be edited/deleted
+  const { data: projectProposals = {} } = useQuery<Record<number, Proposal[]>>({  
+    queryKey: ["/api/projects/proposals"],
+    queryFn: async () => {
+      // Create an object to store proposals for each project
+      const proposalsByProject: Record<number, Proposal[]> = {};
+      
+      // Fetch proposals for each project
+      await Promise.all(clientProjects.map(async (project) => {
+        try {
+          const response = await fetch(`/api/projects/${project.id}/proposals`);
+          if (response.ok) {
+            const proposals = await response.json();
+            proposalsByProject[project.id] = proposals;
+          } else {
+            proposalsByProject[project.id] = [];
+          }
+        } catch (error) {
+          console.error(`Error fetching proposals for project ${project.id}:`, error);
+          proposalsByProject[project.id] = [];
+        }
+      }));
+      
+      return proposalsByProject;
+    },
+    enabled: clientProjects.length > 0
+  });
   
   // Fetch accepted proposal to get freelancer ID when a project is selected for review
   useQuery<Proposal[]>({
@@ -196,6 +232,58 @@ export default function MyProjectsPage() {
     }
   });
 
+  // Mutation to update project
+  const updateProjectMutation = useMutation({
+    mutationFn: async (data: Partial<Project>) => {
+      if (!projectToEdit?.id) throw new Error("Project ID is required");
+      const response = await apiRequest("PATCH", `/api/projects/${projectToEdit.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: t("projects.updateSuccess", { defaultValue: "Project updated" }),
+        description: t("projects.updateSuccessDescription", { defaultValue: "Your project has been updated successfully." }),
+      });
+      // Refetch projects
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      setShowProjectEditDialog(false);
+      setProjectToEdit(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t("common.error"),
+        description: error.message || t("projects.updateError", { defaultValue: "Failed to update project." }),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to delete project
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      if (!projectToEdit?.id) throw new Error("Project ID is required");
+      const response = await apiRequest("DELETE", `/api/projects/${projectToEdit.id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: t("projects.deleteSuccess", { defaultValue: "Project deleted" }),
+        description: t("projects.deleteSuccessDescription", { defaultValue: "Your project has been deleted successfully." }),
+      });
+      // Refetch projects
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      setShowProjectDeleteDialog(false);
+      setProjectToEdit(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t("common.error"),
+        description: error.message || t("projects.deleteError", { defaultValue: "Failed to delete project." }),
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handle review submission
   const handleReviewSubmit = () => {
     if (!projectToReview || !freelancerId || !user) return;
@@ -212,6 +300,40 @@ export default function MyProjectsPage() {
   // Handle finalize project click
   const handleFinalizeClick = (projectId: number) => {
     updateStatusMutation.mutate(projectId);
+  };
+
+  // Handle edit project click
+  const handleEditProject = (project: Project) => {
+    setProjectToEdit(project);
+    setProjectEditData({
+      title: project.title,
+      description: project.description,
+      budget: project.budget,
+      deadline: project.deadline
+    });
+    setShowProjectEditDialog(true);
+  };
+
+  // Handle delete project click
+  const handleDeleteProject = (project: Project) => {
+    setProjectToEdit(project);
+    setShowProjectDeleteDialog(true);
+  };
+
+  // Handle project edit form submit
+  const handleProjectEditSubmit = () => {
+    const title = (document.getElementById('edit-title') as HTMLInputElement)?.value;
+    const description = (document.getElementById('edit-description') as HTMLTextAreaElement)?.value;
+    const budget = Number((document.getElementById('edit-budget') as HTMLInputElement)?.value);
+    const deadlineStr = (document.getElementById('edit-deadline') as HTMLInputElement)?.value;
+    const deadline = deadlineStr ? new Date(deadlineStr) : null;
+    
+    updateProjectMutation.mutate({ title, description, budget, deadline });
+  };
+
+  // Handle project delete confirmation
+  const handleProjectDeleteConfirm = () => {
+    deleteProjectMutation.mutate();
   };
 
   // Ensure the document has the correct RTL direction
@@ -309,24 +431,67 @@ export default function MyProjectsPage() {
                           <span>${project.budget}</span>
                           <span>{project.createdAtDisplay}</span>
                         </div>
-                        {project.status === 'in_progress' && user && user.role === 'client' && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full mt-2"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleFinalizeClick(project.id);
-                                }}
-                                disabled={updateStatusMutation.isPending}
-                            >
-                                {updateStatusMutation.isPending && updateStatusMutation.variables === project.id
-                                    ? t("common.loading")
-                                    : t("myProjects.finalizeProject")
-                                }
-                            </Button>
-                        )}
+                        <div className="flex justify-between items-center gap-2">
+                          {project.status === 'in_progress' && user && user.role === 'client' && (
+                              <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1"
+                                  onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleFinalizeClick(project.id);
+                                  }}
+                                  disabled={updateStatusMutation.isPending}
+                              >
+                                  {updateStatusMutation.isPending && updateStatusMutation.variables === project.id
+                                      ? t("common.loading")
+                                      : t("myProjects.finalizeProject")
+                                  }
+                              </Button>
+                          )}
+                          
+                          {/* Edit and Delete buttons - only show if project has no proposals */}
+                          {(project.status === 'open' || project.status === 'pending') && (
+                            <div className="flex gap-2 ml-auto">
+                              {/* Check if project has no proposals before showing edit/delete buttons */}
+                              {(!projectProposals[project.id] || projectProposals[project.id].length === 0) ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="px-2"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleEditProject(project);
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    {t("common.edit", { defaultValue: "Edit" })}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="px-2 text-red-500 hover:text-red-700"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleDeleteProject(project);
+                                    }}
+                                  >
+                                    <Trash className="h-4 w-4 mr-1" />
+                                    {t("common.delete", { defaultValue: "Delete" })}
+                                  </Button>
+                                </>
+                              ) : (
+                                <span className="text-sm text-gray-500 italic">
+                                  {t("myProjects.cannotEditWithProposals", { defaultValue: "Cannot edit (has proposals)" })}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
 
@@ -397,6 +562,90 @@ export default function MyProjectsPage() {
                     ? t("common.submitting")
                     : t("myProjects.reviewDialog.submit")
                }
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Edit Dialog */}
+      <Dialog open={showProjectEditDialog} onOpenChange={setShowProjectEditDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{t("projects.edit", { defaultValue: "Edit Project" })}</DialogTitle>
+            <DialogDescription>
+              {t("projects.editDescription", { defaultValue: "Update your project details" })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("projects.title")}</label>
+              <Input 
+                defaultValue={projectEditData.title}
+                id="edit-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("projects.description")}</label>
+              <Textarea 
+                defaultValue={projectEditData.description}
+                id="edit-description"
+                className="min-h-[150px]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("projects.budget")}</label>
+                <Input 
+                  type="number" 
+                  defaultValue={projectEditData.budget}
+                  id="edit-budget"
+                  min={0}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("projects.deadline")}</label>
+                <Input 
+                  type="date" 
+                  defaultValue={projectEditData.deadline ? new Date(projectEditData.deadline).toISOString().split('T')[0] : undefined}
+                  id="edit-deadline"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProjectEditDialog(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleProjectEditSubmit} disabled={updateProjectMutation.isPending}>
+              {updateProjectMutation.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("common.saving")}</>
+              ) : (
+                t("common.save")
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Delete Confirmation Dialog */}
+      <Dialog open={showProjectDeleteDialog} onOpenChange={setShowProjectDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("projects.confirmDelete", { defaultValue: "Delete Project" })}</DialogTitle>
+            <DialogDescription>
+              {t("projects.confirmDeleteDescription", { defaultValue: "Are you sure you want to delete this project? This action cannot be undone." })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProjectDeleteDialog(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="destructive" onClick={handleProjectDeleteConfirm} disabled={deleteProjectMutation.isPending}>
+              {deleteProjectMutation.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("common.deleting")}</>
+              ) : (
+                t("common.delete")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

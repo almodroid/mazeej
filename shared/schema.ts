@@ -99,7 +99,7 @@ export const projects = pgTable("projects", {
   clientId: integer("client_id").notNull().references(() => users.id),
   freelancerId: integer("freelancer_id").references(() => users.id),
   budget: integer("budget").notNull(),
-  status: projectStatusEnum("status").default('open'),
+  status: projectStatusEnum("status").default('pending'),
   category: integer("category_id").notNull().references(() => categories.id),
   deadline: timestamp("deadline"),
   createdAt: timestamp("created_at").defaultNow(),

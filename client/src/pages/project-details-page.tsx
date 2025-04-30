@@ -625,6 +625,16 @@ export default function ProjectDetailsPage() {
   const handleEditProject = () => {
     if (!project) return;
     
+    // Check if project has proposals before allowing edit
+    if (proposals.length > 0) {
+      toast({
+        title: t("projects.cannotEdit", { defaultValue: "Cannot edit project" }),
+        description: t("projects.cannotEditWithProposals", { defaultValue: "This project already has proposals and cannot be edited." }),
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setProjectEditData({
       title: project.title,
       description: project.description,
@@ -637,6 +647,18 @@ export default function ProjectDetailsPage() {
 
   // Delete project
   const handleDeleteProject = () => {
+    if (!project) return;
+    
+    // Check if project has proposals before allowing delete
+    if (proposals.length > 0) {
+      toast({
+        title: t("projects.cannotDelete", { defaultValue: "Cannot delete project" }),
+        description: t("projects.cannotDeleteWithProposals", { defaultValue: "This project already has proposals and cannot be deleted." }),
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setShowProjectDeleteDialog(true);
   };
 
@@ -706,7 +728,7 @@ export default function ProjectDetailsPage() {
             project={project}
             hasSubmittedProposal={hasSubmittedProposal}
             canSubmitProposal={canSubmitProposal}
-            canEditProject={isProjectOwner && !proposals.length}
+            canEditProject={isProjectOwner && proposals.length === 0}
             isFreelancer={isFreelancer}
             onNavigateToSubmitProposal={navigateToSubmitProposal}
             onEditProposal={() => {

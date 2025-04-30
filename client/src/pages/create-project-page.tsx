@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -75,7 +75,15 @@ export default function CreateProjectPage() {
       category: 0,
       deadlineDate: undefined,
     },
+    mode: "onSubmit",
   });
+
+  // Update form default values when categories are loaded
+  useEffect(() => {
+    if (categories.length > 0 && form.getValues().category === 0) {
+      form.setValue('category', categories[0].id);
+    }
+  }, [categories, form]);
 
   // Create project mutation
   const createProjectMutation = useMutation({
@@ -89,7 +97,12 @@ export default function CreateProjectPage() {
         budget: formData.budget,
         category: Number(formData.category),
         deadline: formData.deadlineDate ? new Date(formData.deadlineDate).toISOString() : undefined,
+        consultationDate: formData.deadlineDate ? new Date(formData.deadlineDate).toISOString() : null,
+        projectType: 'standard',
+        status: 'pending', // Set initial status to pending for admin approval
       };
+      
+      console.log("Submitting project data:", projectData);
       
       const response = await apiRequest("POST", "/api/projects", projectData);
       const projectResult = await response.json();
@@ -101,14 +114,16 @@ export default function CreateProjectPage() {
       
       return projectResult;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Project created successfully:", data);
       toast({
         title: t("projects.createdSuccess"),
-        description: t("projects.createdSuccessDescription"),
+        description: t("projects.createdSuccessDescription", { defaultValue: "Your project has been created and is pending admin approval." }),
       });
       navigate("/projects");
     },
     onError: (error: Error) => {
+      console.error("Error creating project:", error);
       toast({
         title: t("common.error"),
         description: error.message || t("projects.creationError"),
@@ -198,8 +213,34 @@ export default function CreateProjectPage() {
   };
 
   // Form submission handler
-  function onSubmit(data: ProjectFormValues) {
-    createProjectMutation.mutate(data);
+  const onSubmit = async (data: ProjectFormValues) => {
+    console.log("Form submitted with data:", data);
+    
+    // Validate category is selected
+    if (!data.category) {
+      toast({
+        title: t("common.error"),
+        description: t("projects.categoryRequired", { defaultValue: "Please select a category" }),
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Ensure we're not already submitting
+      if (isLoading || createProjectMutation.isPending) {
+        return;
+      }
+      
+      createProjectMutation.mutate(data);
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      toast({
+        title: t("common.error"),
+        description: error instanceof Error ? error.message : t("projects.creationError"),
+        variant: "destructive",
+      });
+    }
   }
 
   // Render functions
@@ -209,7 +250,13 @@ export default function CreateProjectPage() {
         <h1 className="text-2xl font-bold mb-6">{t("projects.createNew")}</h1>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              form.handleSubmit(onSubmit)(e);
+            }} 
+            className="space-y-6"
+          >
             <FormField
               control={form.control}
               name="title"
@@ -270,8 +317,12 @@ export default function CreateProjectPage() {
                   <FormItem>
                     <FormLabel>{t("projects.category")}</FormLabel>
                     <Select 
-                      onValueChange={(value) => field.onChange(Number(value))}
-                      defaultValue={field.value.toString()}
+                      onValueChange={(value) => {
+                        console.log("Category selected:", value);
+                        field.onChange(Number(value));
+                      }}
+                      value={field.value ? field.value.toString() : undefined}
+                      defaultValue={categories.length > 0 ? categories[0].id.toString() : undefined}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -414,8 +465,14 @@ export default function CreateProjectPage() {
                 {t("common.cancel")}
               </Button>
               <Button 
-                type="submit" 
+                type="button" 
                 disabled={isLoading || createProjectMutation.isPending || isUploadingFiles}
+                onClick={() => {
+                  console.log("Submit button clicked");
+                  const formData = form.getValues();
+                  console.log("Form data:", formData);
+                  onSubmit(formData);
+                }}
               >
                 {isLoading || createProjectMutation.isPending || isUploadingFiles ? (
                   <span className="flex items-center">
