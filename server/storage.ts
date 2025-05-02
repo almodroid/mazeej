@@ -132,6 +132,7 @@ export interface IStorage {
   // Proposal operations
   getProposalById(id: number): Promise<Proposal | undefined>;
   getProposalsByProject(projectId: number): Promise<Proposal[]>;
+  getProposalsByProjectId(projectId: number): Promise<Proposal[]>;
   getProposalsByFreelancer(freelancerId: number): Promise<Proposal[]>;
   createProposal(proposal: InsertProposal, freelancerId: number): Promise<Proposal>;
   updateProposalStatus(id: number, status: string): Promise<Proposal | undefined>;
@@ -564,6 +565,11 @@ export class MemStorage implements IStorage {
     return Array.from(this.proposals.values()).filter(
       (proposal) => proposal.freelancerId === freelancerId
     );
+  }
+
+  async getProposalsByProjectId(projectId: number): Promise<Proposal[]> {
+    // This is an alias for getProposalsByProject to maintain API compatibility
+    return this.getProposalsByProject(projectId);
   }
 
   async createProposal(proposal: InsertProposal, freelancerId: number): Promise<Proposal> {

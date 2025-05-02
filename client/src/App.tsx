@@ -35,6 +35,7 @@ import { Redirect } from "wouter";
 import { lazy, Suspense } from "react";
 import TracksPage from "@/pages/tracks";
 import PortfolioPage from "./pages/portfolio-page";
+import AdminPlansPage from "./pages/admin/plans";
 
 // Lazy load admin components
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
@@ -161,6 +162,13 @@ function Router() {
         <ProtectedRoute>
           <Suspense fallback={<div>Loading...</div>}>
             <AdminCategories />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/plans">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminPlansPage />
           </Suspense>
         </ProtectedRoute>
       </Route>

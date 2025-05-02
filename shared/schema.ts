@@ -6,8 +6,14 @@ import { z } from "zod";
 // Import settings schema
 import { settings, siteSettings, insertSettingSchema, insertSiteSettingsSchema } from "./schema-settings";
 
+// Import plans schema
+import { plans, userPlans, insertPlanSchema, insertUserPlanSchema } from "./schema-plans";
+
 // Re-export settings schema
 export { settings, siteSettings, insertSettingSchema, insertSiteSettingsSchema };
+
+// Re-export plans schema
+export { plans, userPlans, insertPlanSchema, insertUserPlanSchema };
 
 // User role enum
 export const userRoleEnum = pgEnum('user_role', ['client', 'freelancer', 'admin']);

@@ -95,6 +95,11 @@ const adminNavItems = [
     icon: CreditCard
   },
   {
+    title: "plans",
+    href: "/admin/plans",
+    icon: Layers
+  },
+  {
     title: "settings",
     href: "/admin/settings",
     icon: Settings
@@ -463,4 +468,4 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </footer>
     </div>
   );
-} 
+}

@@ -507,6 +507,42 @@ export class DatabaseStorage implements IStorage {
     return updatedProject;
   }
 
+  async deleteProject(id: number): Promise<boolean> {
+    try {
+      // Delete related data first
+      // Delete project skills
+      await db
+        .delete(projectSkills)
+        .where(eq(projectSkills.projectId, id));
+
+      // Delete proposals for this project
+      await db
+        .delete(proposals)
+        .where(eq(proposals.projectId, id));
+
+      // Delete reviews for this project
+      await db
+        .delete(reviews)
+        .where(eq(reviews.projectId, id));
+
+      // Delete project files
+      await db
+        .delete(files)
+        .where(eq(files.projectId, id));
+
+      // Finally delete the project
+      const result = await db
+        .delete(projects)
+        .where(eq(projects.id, id))
+        .returning();
+
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      return false;
+    }
+  }
+
   // Proposal operations
   async getProposalById(id: number): Promise<Proposal | undefined> {
     const [proposal] = await db
@@ -578,6 +614,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(proposals.id, id));
     
     return !!result;
+  }
+
+  async getProposalsByProjectId(projectId: number): Promise<Proposal[]> {
+    // This is an alias for getProposalsByProject to maintain API compatibility
+    return this.getProposalsByProject(projectId);
   }
 
   // Message operations

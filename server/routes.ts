@@ -6,6 +6,7 @@ import path from "path";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./routes/auth";
 import adminSettingsRoutes from "./routes/admin-settings";
+import adminPlansRoutes from "./routes/admin-plans";
 import phoneVerificationRoutes from "./routes/phone-verification";
 
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
@@ -44,6 +45,9 @@ export function registerRoutes(app: Express): Server {
   
   // Setup admin settings routes
   app.use('/api/admin', adminSettingsRoutes);
+  
+  // Setup admin plans routes
+  app.use('/api/admin', adminPlansRoutes);
   
   // Setup phone verification routes
   app.use('/api', phoneVerificationRoutes);
@@ -373,6 +377,40 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error('Error sending media message:', error);
       res.status(500).json({ message: 'Failed to send media message' });
+    }
+  });
+
+  // Delete project
+  app.delete('/api/projects/:id', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to delete projects' });
+    }
+    
+    try {
+      const projectId = parseInt(req.params.id);
+      
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: 'Invalid project ID' });
+      }
+      
+      // Get the project to check ownership
+      const projects = await storage.getProjects(projectId);
+      const project = Array.isArray(projects) ? projects[0] : projects;
+      
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Only allow project owner or admin to delete
+      if (project.clientId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'You can only delete your own projects' });
+      }
+      
+      await storage.deleteProject(projectId);
+      res.json({ message: 'Project deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      res.status(500).json({ message: 'Failed to delete project' });
     }
   });
 
@@ -2315,12 +2353,12 @@ export function registerRoutes(app: Express): Server {
 
   app.patch('/api/projects/:id', async (req, res) => {
     try {
-      if (!req.isAuthenticated() || req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Only admins can edit projects' });
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
       }
 
       const projectId = parseInt(req.params.id);
-      const { title, description, budget, category } = req.body;
+      const { title, description, budget, category, deadline } = req.body;
       
       // Get the project to make sure it exists
       const project = await storage.getProjectById(projectId);
@@ -2328,12 +2366,33 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: 'Project not found' });
       }
       
+      // Check if user is admin, project owner, or if there are proposals
+      const isAdmin = req.user.role === 'admin';
+      const isProjectOwner = project.clientId === req.user.id;
+      
+      if (!isAdmin && !isProjectOwner) {
+        return res.status(403).json({ message: 'You do not have permission to edit this project' });
+      }
+      
+      // If not admin, check if project has proposals and is not in 'open' status
+      if (!isAdmin && isProjectOwner) {
+        // Only restrict editing if the project is not in 'open' status
+        if (project.status !== 'open') {
+          // Get proposals for this project
+          const proposals = await storage.getProposalsByProjectId(projectId);
+          if (proposals && proposals.length > 0) {
+            return res.status(403).json({ message: 'Cannot edit project that has proposals and is not in open status' });
+          }
+        }
+      }
+      
       // Update project
       const updatedProject = await storage.updateProject(projectId, {
         title,
         description,
         budget,
-        category
+        category,
+        deadline
       });
       
       res.json(updatedProject);
