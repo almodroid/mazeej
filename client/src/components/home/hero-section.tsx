@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, Search, Briefcase, Star, Users, Globe, ArrowLeft } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import SearchBar from "@/components/search/search-bar";
 
 export default function HeroSection() {
   const { t, i18n } = useTranslation();
@@ -46,25 +47,19 @@ export default function HeroSection() {
           {t('hero.subtitle')}
         </p>
         <div className="w-full max-w-2xl mx-auto mb-4">
-          <div className="flex items-center shadow-2xl rounded-md border border-input bg-white/80 dark:bg-card/90 overflow-hidden">
-            <input
-              type="text"
-              placeholder={t('hero.searchPlaceholder')}
-              className="py-3 px-4 flex-1 bg-transparent border-0 focus:outline-none text-primary placeholder:text-primary text-right"
-            />
-            <button className="py-2 px-8 mx-1 flex-shrink-0 bg-primary text-white rounded-md hover:bg-secondary hover:text-white transition-colors text-md shadow-lg">
-              {t('hero.searchButton')}
-            </button>
-          </div>  
+          <div className="w-full">
+            <SearchBar />
+          </div>
         </div>
         {/* Popular searches row */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md mx-auto m-4">
-          <button className="flex-1 py-3 px-6 rounded-md bg-primary text-white hover:bg-secondary hover:shadow-lg hover:transition-shadow transition-colors text-md shadow-lg"
-          >
-            {t("hero.clientButton")}
+          <button className="flex-1 py-3 px-5 rounded-md bg-primary text-white hover:bg-secondary hover:shadow-lg hover:transition-shadow transition-colors text-md shadow-lg"
+          > <a href="/auth?register=true"> {t("hero.clientButton")}</a>
+            
+            
           </button>
           
-          <button className="flex-1 py-3 px-3 rounded-md border-2 bg-secondary text-white  hover:border-primary hover:bg-primary hover:text-white hover:shadow-lg hover:transition-shadow transition-colors text-md shadow-lg"
+          <button className="flex-1 py-3 px-4 rounded-md bg-secondary text-white  hover:border-primary hover:bg-primary hover:text-white hover:shadow-lg hover:transition-shadow transition-colors text-md shadow-lg"
           >
             {t("hero.freelancerButton")}
           </button>

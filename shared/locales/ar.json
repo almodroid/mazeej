@@ -78,6 +78,11 @@
     "pending": "قيد المراجعة",
     "client": "عميل",
     "admin": "مدير",
+    "graphicDesinger": "مصمم جرافيكي",
+    "webDesigner": "مصمم مواقع الويب",
+    "webDeveloper": "مطور مواقع الويب",
+    "mobileDeveloper": "مطور تطبيقات الجوال",
+    "videoEditor": "محرر الفيديو",
     "allUsers": "جميع المستخدمين المسجلين",
     "allProjects": "جميع المشاريع النشطة",
     "allCategories": "جميع فئات الخدمات",
@@ -113,7 +118,7 @@
     "contactUs": "اتصل بنا",
     "termsOfService": "شروط الخدمة",
     "privacyPolicy": "سياسة الخصوصية",
-    "copyright": "© 2023 مزيج. جميع الحقوق محفوظة.",
+    "copyright": "© 2025 مزيج. جميع الحقوق محفوظة.",
     "creating": "جاري الإنشاء",
     "submitting": "جاري الإرسال",
     "unavailable": "غير متاح",
@@ -172,7 +177,8 @@
     "enableTracking": "تفعيل تتبع التحليلات",
     "anonymizeIp": "تعمية عناوين IP",
     "verificationToken": "وسم التحقق",
-    "sitemapUrl": "رابط خريطة الموقع"
+    "sitemapUrl": "رابط خريطة الموقع",
+    "mohammed": "محمد"
   },
   "errors": {
     "phoneExists": "رقم الجوال مستخدم بالفعل"
@@ -393,6 +399,40 @@
     "step3Title": "استلام العمل",
     "step3Description": "تابع تقدم العمل واستلم المشروع النهائي بعد إتمامه"
   },
+  "about": {
+    "title": "ما يميز مزيج",
+    "subtitle": "هي منصة رقمية مبتكرة تجمع نخبة من المستقلين المبدعين في صناعة المحتوى، وتوفر بيئة احترافية للتعاون والإنتاج المشتركة",
+    "mission": "مهمتنا",
+    "missionDesc": "لتوفير منصة تربط المستقلين والعملاء ، وتمكينهم من العمل معًا بسلاسة وأمان.",
+    "vision": "رؤيتنا",
+    "visionDesc": "لكي تكون المنصة الرائدة في المنطقة العربية ، حيث توفر منصة سلسة وآمنة للمصدرين المستقلين والعملاء للعمل معًا.",
+    "team": "Our Team",
+    "teamDesc": "We are a team of passionate freelancers and clients who are dedicated to providing the best service possible to our users.",
+    "values": "Our Values",
+    "valuesDesc": "We believe in transparency, integrity, and honesty in all our dealings.",
+    "testimonials": "Testimonials",
+    "testimonialsDesc": "What our users say about us",
+    "readMore": "Read More",
+    "readLess": "Read Less",
+    "aboutUs": "؟من نحن",
+    "feature1": {
+      "title" : "الذكاء الاصطناعي",
+      "description": "يدعمك من الفكرة حتى الانتاج"
+    },
+    "feature2": {
+      "title" : "إنتاج مشترك",
+      "description": "مع محترفين وشركاء الرحلة"
+    },
+    "feature3": {
+      "title" : "هوية رقمية",
+      "description": "تعبر عنك وتبني حضورك"
+    },
+    "feature4": {
+      "title" : "فرص دخل",
+      "description": "مستدامة لصناع المحتوى"
+    }
+  },
+
   "freelancers": {
     "title": "مستقلون مميزون",
     "viewAll": "عرض الكل",
@@ -487,12 +527,16 @@
     "forFreelancers": "للمستقلين",
     "forClients": "للعملاء",
     "aboutPlatform": "عن المنصة",
-    "howToStart": "كيف تبدأ",
+    "startNow": "ابدأ الآن",
+    "faq": "الأسئلة الشائعة",
+    "emailPlaceholder": "أدخل بريدك الإلكتروني",
+    "howToStart": "كيف تبدأ (للمستقلين)",
+    "helpCenter": "مركز المساعدة",
     "browseProjects": "تصفح المشاريع",
     "earningMethods": "طرق الربح",
     "ratingsReviews": "التقييمات والتعليقات",
     "premiumAccounts": "الحسابات المميزة",
-    "postProject": "نشر مشروع",
+    "postProject": "نشر مشروع (للعملاء)",
     "findFreelancers": "البحث عن مستقلين",
     "projectManagement": "إدارة المشاريع",
     "paymentMethods": "طرق الدفع",
@@ -502,7 +546,7 @@
     "privacyPolicy": "سياسة الخصوصية",
     "support": "الدعم والمساعدة",
     "contactUs": "التواصل معنا",
-    "copyright": "© 2023 منصة خبراء - جميع الحقوق محفوظة",
+    "copyright": "© 2025 منصة مزيج - جميع الحقوق محفوظة",
     "getInTouch": "تواصل معنا",
     "newsletter": "النشرة الإخبارية",
     "subscribe": "اشترك الآن",

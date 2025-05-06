@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import SearchBar from "@/components/search/search-bar";
 import LogoPng from "@/assets/images/logo.png";
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ import {
   Sparkles,
   Languages,
   UserPlus,
+  SearchIcon,
 } from "lucide-react";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { MessagesDropdown } from "@/components/messages/messages-dropdown";
@@ -138,14 +140,9 @@ export default function Navbar() {
           <div className="hidden lg:flex lg:items-center lg:gap-2">
             {!isHomePage && (
               <div className="relative mr-2">
-                <div className="flex items-center border border-input dark:border-gray-700 rounded-full px-3 py-1 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-200 bg-muted/50 dark:bg-gray-800/50 hover:bg-muted dark:hover:bg-gray-800">
-                  <Search className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder={t("common.search")}
-                    className={`bg-transparent border-none focus:outline-none text-sm px-2 py-1 w-40 ${isRTL ? "text-right" : "text-left"} dark:text-gray-300 dark:placeholder:text-gray-500`}
-                  />
-                </div>
+                <a href="/search">
+                  <Search className="h-6 w-6" />
+                </a>
               </div>
             )}
 

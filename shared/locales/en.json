@@ -49,6 +49,12 @@
     "pending": "Pending",
     "client": "Client",
     "admin": "Admin",
+    "graphicDesinger": "Graphic Designer",
+    "webDesigner": "Web Designer",
+    "webDeveloper": "Web Developer",
+    "mobileDeveloper": "Mobile Developer",
+    "videoEditor": "Video Editor",
+    "mohammed": "Mohammed",
     "allUsers": "All registered users",
     "allProjects": "All active projects",
     "allCategories": "All service categories",
@@ -83,7 +89,7 @@
     "contactUs": "Contact Us",
     "termsOfService": "Terms of Service",
     "privacyPolicy": "Privacy Policy",
-    "copyright": " 2023 Mazeej. All rights reserved.",
+    "copyright": " 2025 Mazeej. All rights reserved.",
     "creating": "Creating",
     "submitting": "Submitting",
     "unavailable": "Unavailable",
@@ -280,10 +286,11 @@
     }
   },
   "hero": {
-    "title": "Best Freelancers in One Place",
+    "title": "Top Freelancers",
+    "description": "Best Freelancers in One Place",
     "subtitle": "Find trusted professionals for your projects or offer your services to clients looking for your expertise",
     "clientButton": "I'm looking for freelancers",
-    "freelancerButton": "I'm a freelancer looking for work"
+    "freelancerButton": "I'm a looking for work"
   },
   "howItWorks": {
     "title": "How Khobaraa Platform Works",
@@ -364,12 +371,17 @@
     "forFreelancers": "For Freelancers",
     "forClients": "For Clients",
     "aboutPlatform": "About Platform",
-    "howToStart": "How to Start",
+    "howToStart": "How to Start (Freelancers)",
+    "newsletterDesc": "Subscribe to our newsletter to receive the latest news and updates",
     "browseProjects": "Browse Projects",
     "earningMethods": "Earning Methods",
+    "faq": "FAQ",
+    "emailPlaceholder": "Enter your email address",
+    "helpCenter": "Help Center",
+    "startNow": "Start Now",
     "ratingsReviews": "Ratings & Reviews",
     "premiumAccounts": "Premium Accounts",
-    "postProject": "Post a Project",
+    "postProject": "Post a Project (Clients)",
     "findFreelancers": "Find Freelancers",
     "projectManagement": "Project Management",
     "paymentMethods": "Payment Methods",
@@ -379,7 +391,40 @@
     "privacyPolicy": "Privacy Policy",
     "support": "Support & Help",
     "contactUs": "Contact Us",
-    "copyright": " 2023 Khobaraa Platform - All Rights Reserved"
+    "copyright": " 2025 Mazeej Platform - All Rights Reserved"
+  },
+  "about": {
+    "title": "What Make Us The Best",
+    "aboutUs": "? Who We Are",
+    "subtitle": "We are a leading platform connecting freelancers with clients and facilitating project execution efficiently and securely.",
+    "mission": "Our Mission",
+    "missionDesc": "To provide a platform that connects freelancers and clients, enabling them to work together seamlessly and securely.",
+    "vision": "Our Vision",
+    "visionDesc": "To be the leading platform in the Arab region, providing a seamless and secure platform for freelancers and clients to work together.",
+    "team": "Our Team",
+    "teamDesc": "We are a team of passionate freelancers and clients who are dedicated to providing the best service possible to our users.",
+    "values": "Our Values",
+    "valuesDesc": "We believe in transparency, integrity, and honesty in all our dealings.",
+    "testimonials": "Testimonials",
+    "testimonialsDesc": "What our users say about us",
+    "readMore": "Read More",
+    "readLess": "Read Less",
+    "feature1": {
+      "title": "Artificial Intelligence",
+      "description": "It supports you from the idea to production"
+    },
+    "feature2": {
+      "title": "Collepretive",
+      "description": "With professionals and flight partners"
+    },
+    "feature3": {
+      "title": "Digital identity",
+      "description": "It expresses you and adopts your presence"
+    },
+    "feature4": {
+      "title": "Earnings",
+      "description": "Sustainable for content makers"
+    }
   },
   "chat": {
     "title": "Conversations",

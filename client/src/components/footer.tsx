@@ -10,7 +10,8 @@ import {
   MessageCircle, 
   Phone, 
   MapPin,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
@@ -94,22 +95,51 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Freelancers section */}
+          {/* About Platform section */}
           <div className="lg:col-span-1">
             <h3 className="text-base font-cairo font-semibold mb-5 text-foreground dark:text-white">
-              {t("footer.forFreelancers")}
+              {t("footer.aboutPlatform")}
             </h3>
             <ul className="space-y-3">
               {[
-                'howToStart', 'browseProjects', 'earningMethods', 
-                'ratingsReviews', 'premiumAccounts'
+                'aboutUs', 'termsOfUse', 'privacyPolicy'
               ].map((item) => (
                 <li key={item}>
                   <a 
                     href="#" 
                     className="text-muted-foreground dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors duration-200 flex items-center group"
                   >
-                    <ChevronRight className={`h-3 w-3 ${isRTL ? 'order-2 ml-1' : 'mr-1'} transition-transform group-hover:translate-x-1`} />
+                    {isRTL? 
+                    <ChevronLeft className={`h-3 w-3 order-2 ml-1 mr-1' transition-transform group-hover:translate-x-[-3px]`} />
+                    :
+                    <ChevronRight className={`h-3 w-3 order-2 ml-1 mr-1 transition-transform group-hover:translate-x-1`} />
+                    }
+                    <span>{t(`footer.${item}`)}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Freelancers section */}
+          <div className="lg:col-span-1">
+            <h3 className="text-base font-cairo font-semibold mb-5 text-foreground dark:text-white">
+              {t("footer.startNow")}
+            </h3>
+            <ul className="space-y-3">
+              {[
+                'postProject', 'howToStart',  'earningMethods'
+              ].map((item) => (
+                <li key={item}>
+                  <a 
+                    href="#" 
+                    className="text-muted-foreground dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors duration-200 flex items-center group"
+                  >
+                    {isRTL? 
+                    <ChevronLeft className={`h-3 w-3 order-2 ml-1 mr-1' transition-transform group-hover:translate-x-[-3px]`} />
+                    :
+                    <ChevronRight className={`h-3 w-3 order-2 ml-1 mr-1 transition-transform group-hover:translate-x-1`} />
+                    }
                     <span>{t(`footer.${item}`)}</span>
                   </a>
                 </li>
@@ -120,42 +150,22 @@ export default function Footer() {
           {/* Clients section */}
           <div className="lg:col-span-1">
             <h3 className="text-base font-cairo font-semibold mb-5 text-foreground dark:text-white">
-              {t("footer.forClients")}
+              {t("footer.support")}
             </h3>
             <ul className="space-y-3">
               {[
-                'postProject', 'findFreelancers', 'projectManagement', 
-                'paymentMethods', 'qualityAssurance'
+                'helpCenter', 'faq','contactUs'
               ].map((item) => (
                 <li key={item}>
                   <a 
                     href="#" 
                     className="text-muted-foreground dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors duration-200 flex items-center group"
                   >
-                    <ChevronRight className={`h-3 w-3 ${isRTL ? 'order-2 ml-1' : 'mr-1'} transition-transform group-hover:translate-x-1`} />
-                    <span>{t(`footer.${item}`)}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* About Platform section */}
-          <div className="lg:col-span-1">
-            <h3 className="text-base font-cairo font-semibold mb-5 text-foreground dark:text-white">
-              {t("footer.aboutPlatform")}
-            </h3>
-            <ul className="space-y-3">
-              {[
-                'aboutUs', 'termsOfUse', 'privacyPolicy', 
-                'support', 'contactUs'
-              ].map((item) => (
-                <li key={item}>
-                  <a 
-                    href="#" 
-                    className="text-muted-foreground dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors duration-200 flex items-center group"
-                  >
-                    <ChevronRight className={`h-3 w-3 ${isRTL ? 'order-2 ml-1' : 'mr-1'} transition-transform group-hover:translate-x-1`} />
+                   {isRTL? 
+                    <ChevronLeft className={`h-3 w-3 order-2 ml-1 mr-1' transition-transform group-hover:translate-x-[-3px]`} />
+                    :
+                    <ChevronRight className={`h-3 w-3 order-2 ml-1 mr-1 transition-transform group-hover:translate-x-1`} />
+                    }
                     <span>{t(`footer.${item}`)}</span>
                   </a>
                 </li>
@@ -193,13 +203,13 @@ export default function Footer() {
               <img src="https://cdn.worldvectorlogo.com/logos/visa-2.svg" alt="Visa" className="h-6" />
             </div>
             <div className="p-2 bg-background dark:bg-gray-800 rounded-md border border-border dark:border-gray-700 hover:shadow-sm transition-shadow">
-              <img src="https://cdn.worldvectorlogo.com/logos/mastercard-2.svg" alt="MasterCard" className="h-6" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Mastercard_2019_logo.svg/250px-Mastercard_2019_logo.svg.png" alt="MasterCard" className="h-6" />
             </div>
             <div className="p-2 bg-background dark:bg-gray-800 rounded-md border border-border dark:border-gray-700 hover:shadow-sm transition-shadow">
-              <img src="https://is1-ssl.mzstatic.com/image/thumb/Purple122/v4/24/23/b2/2423b2a5-a59c-912f-a5f9-6dec0ab693ef/AppIcon-0-0-1x_U007emarketing-0-0-0-7-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/246x0w.webp" alt="Apple Pay" className="h-6" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/120px-Apple_Pay_logo.svg.png" alt="Apple Pay" className="h-6" />
             </div>
             <div className="p-2 bg-background dark:bg-gray-800 rounded-md border border-border dark:border-gray-700 hover:shadow-sm transition-shadow">
-              <img src="https://www.aramex.com/themes/aramex/images/svg/payment-methods/mada.svg" alt="Mada" className="h-6" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Mada_Logo.svg/1200px-Mada_Logo.svg.png" alt="Mada" className="h-6" />
             </div>
           </div>
         </div>

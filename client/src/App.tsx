@@ -36,6 +36,7 @@ import { lazy, Suspense } from "react";
 import TracksPage from "@/pages/tracks";
 import PortfolioPage from "./pages/portfolio-page";
 import AdminPlansPage from "./pages/admin/plans";
+import SearchPage from "@/pages/search-page";
 
 // Lazy load admin components
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
@@ -235,6 +236,9 @@ function Router() {
       </Route>
       <Route path="/tracks">
         <TracksPage />
+      </Route>
+      <Route path="/search">
+        <SearchPage />
       </Route>
       <Route>
         <NotFound />

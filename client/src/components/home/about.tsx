@@ -16,8 +16,9 @@ import {
 import { useTheme } from "@/components/theme-provider";
 
 export default function HowItWorksSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
+  const isRTL = i18n.language === 'ar';
 
   const steps = [
     {
@@ -38,13 +39,13 @@ export default function HowItWorksSection() {
   ];
 
   return (
-    <section className="py-12 bg-white dark:bg-background" dir="rtl">
+    <section className="py-12 bg-white dark:bg-background" dir={isRTL ? "rtl" : "ltr"}>
       {/* Chunk 1: About Section */}
-      <h2 className="text-3xl font-bold text-primary text-center dark:text-primary mb-12">من نحن ؟</h2>
+      <h2 className="text-3xl font-bold text-primary text-center dark:text-primary mb-12">{t('about.aboutUs')}</h2>
       <div className="container mx-auto flex flex-col lg:flex-row items-center gap-12 mb-16">
         {/* About Content */}
         <div className="flex-1">
-          <p className="text-2xl mb-2 dark:text-gray-100 max-w-xl pb-8" style={{ lineHeight: "3" }}><span className="text-primary dark:text-primary font-bold">مزيج</span> هي منصة رقمية مبتكرة تجمع نخبة من المستقلين المبدعين في صناعة المحتوى، وتوفر بيئة احترافية للتعاون والإنتاج المشترك</p>
+          <p className="text-2xl mb-2 dark:text-gray-100 max-w-xl pb-8" style={{ lineHeight: "3" }}><span className="text-primary dark:text-primary font-bold">{t('common.appName')}</span>{t('about.subtitle')}</p>
           {/* Stats */}
           <div className="flex flex-wrap gap-6 mt-4">
             <div className="flex flex-col items-center">
@@ -118,39 +119,39 @@ export default function HowItWorksSection() {
               <img src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=256&q=80&facepad=2" alt="مستقل سعودي" className="h-[150px] w-full object-cover border-2 rounded-lg shadow-xl bg-zinc-100 dark:bg-zinc-800 dark:shadow-gray-700/50" />
             </div>
             <div className="text-center mt-2 p-4">
-              <div className="font-bold dark:text-gray-100">محمد</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">مصمم جرافيك</div>
+              <div className="font-bold dark:text-gray-100">{t('common.mohammed')}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('common.graphicDesinger')}</div>
             </div>
           </div>
         </div>
       </div>
       {/* Chunk 2: Features Section */}
       <div className="container mx-auto py-16">
-        <h3 className="text-2xl font-extrabold text-primary dark:text-primary mb-16 text-center">مايميز مزيج</h3>
+        <h3 className="text-2xl font-extrabold text-primary dark:text-primary mb-16 text-center">{t('about.title')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Feature 1 */}
           <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
             <Brain className="mb-3 text-primary dark:text-primary w-10 h-10"/>
-            <div className="font-bold mb-2 dark:text-gray-100">ذكاء اصطناعي</div>
-            <div className="text-sm text-gray-600 dark:text-gray-300">يدعمك من الفكرة حتى الإنتاج</div>
+            <div className="font-bold mb-2 dark:text-gray-100">{t('about.feature1.title')}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">{t('about.feature1.description')}</div>
           </div>
           {/* Feature 2 */}
           <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
             <Group className="mb-3 text-primary dark:text-primary w-10 h-10"/>
-            <div className="font-bold mb-2 dark:text-gray-100">إنتاج مشترك</div>
-            <div className="text-sm text-gray-600 dark:text-gray-300">مع محترفين وشركاء الرحلة</div>
+            <div className="font-bold mb-2 dark:text-gray-100">{t('about.feature2.title')}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">{t('about.feature2.description')}</div>
           </div>
           {/* Feature 3 */}
           <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
             <User className="mb-3 text-primary dark:text-primary w-10 h-10 "/>
-            <div className="font-bold mb-2 dark:text-gray-100">هوية رقمية</div>
-            <div className="text-sm text-gray-600 dark:text-gray-300">تعبر عنك وتبني حضورك</div>
+            <div className="font-bold mb-2 dark:text-gray-100">{t('about.feature3.title')}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">{t('about.feature3.description')}</div>
           </div>
           {/* Feature 4 */}
           <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center text-center shadow dark:bg-gray-800 dark:text-gray-100">
             <Briefcase className="mb-3 text-primary dark:text-primary w-10 h-10"/>
-            <div className="font-bold mb-2 dark:text-gray-100">فرص دخل</div>
-            <div className="text-sm text-gray-600 dark:text-gray-300">مستدامة لصناع المحتوى</div>
+            <div className="font-bold mb-2 dark:text-gray-100">{t('about.feature4.title')}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">{t('about.feature4.description')}</div>
           </div>
         </div>
       </div>

@@ -55,7 +55,53 @@ export function registerRoutes(app: Express): Server {
   // Create HTTP server
   const httpServer = createServer(app);
   
-
+  // Search API Route
+  app.get('/api/search', async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      
+      if (!query?.trim()) {
+        return res.json({ freelancers: [], categories: [], skills: [] });
+      }
+      
+      const searchTerm = query.toLowerCase();
+      
+      // Search freelancers
+      const allFreelancers = await storage.getFreelancers();
+      const freelancers = allFreelancers.filter(freelancer => {
+        const nameMatch = (freelancer.fullName || '').toLowerCase().includes(searchTerm);
+        const usernameMatch = (freelancer.username || '').toLowerCase().includes(searchTerm);
+        const bioMatch = (freelancer.bio || '').toLowerCase().includes(searchTerm);
+        return nameMatch || usernameMatch || bioMatch;
+      });
+      
+      // Search categories
+      const allCategories = await storage.getCategories();
+      const categories = allCategories.filter(category => {
+        const nameMatch = category.name.toLowerCase().includes(searchTerm);
+        
+        return nameMatch;
+      });
+      
+      // Search skills
+      const allSkills = await storage.getSkills();
+      const skills = allSkills.filter(skill => 
+        skill.name.toLowerCase().includes(searchTerm)
+      );
+      
+      // Remove password from freelancer objects
+      const freelancersWithoutPassword = freelancers.map(({ password, ...rest }) => rest);
+      
+      res.json({
+        freelancers: freelancersWithoutPassword,
+        categories,
+        skills
+      });
+    } catch (error) {
+      console.error('Error performing search:', error);
+      res.status(500).json({ message: 'Failed to perform search' });
+    }
+  });
 
   // Portfolio API Routes
   app.get('/api/portfolio/:id?', async (req, res) => {
