@@ -2,7 +2,9 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 const HowItWorksSection: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+
   const steps = [
     {
       icon: (
@@ -65,7 +67,7 @@ const HowItWorksSection: React.FC = () => {
                 )}
               </div>
               {idx < steps.length - 1 && (
-                <span className="hidden md:block absolute top-8 right-40 w-full max-w-[175px] h-0.5 border-dashed border-t-2 border-primary" style={{left: '100%'}} ></span>
+                <span className="hidden md:block absolute top-8 rtl:right-40 left-40 w-full max-w-[175px] h-0.5 border-dashed border-t-2 border-primary" style={isRTL ? {left: '100%'} : {right:'100%'}} ></span>
               )}
             </div>
           ))}
