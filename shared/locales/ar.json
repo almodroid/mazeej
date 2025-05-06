@@ -381,7 +381,7 @@
     "design": "تصميم",
     "freelancers": "مستقلون",
     "projects": "مشاريع",
-    "categories": "فئات",
+    "categories": "فئة",
     "clients": "عملاء",
     "satisfaction": "نسبة الرضا",
     "trustedBy": "موثوق بنا من قبل",
@@ -392,12 +392,16 @@
   "howItWorks": {
     "title": "كيف تعمل منصة مزيج",
     "subtitle": "خطوات بسيطة للوصول إلى النتائج التي تريدها",
-    "step1Title": "نشر المشروع",
+    "step1Title": "اختر مجالك",
     "step1Description": "وصف احتياجاتك بالتفصيل وحدد ميزانيتك والمهارات المطلوبة",
-    "step2Title": "اختيار العروض",
+    "step2Title": "أنشئ مشروعك او ملفك",
     "step2Description": "راجع عروض المستقلين واختر الأفضل لمشروعك",
-    "step3Title": "استلام العمل",
-    "step3Description": "تابع تقدم العمل واستلم المشروع النهائي بعد إتمامه"
+    "step3Title": "تواصل وابدا التعاون",
+    "step3Description": "تابع تقدم العمل واستلم المشروع النهائي بعد إتمامه",
+    "step4Title": "استلم العمل وشارك النجاح",
+    "step4Description": "استلم العمل الاحترافي وانطلق إلى عالم المحتوى",
+    "step5Title": "شارك النجاح",
+    "step5Description": "شارك النجاح الذي حصلت عليه في المشاريع والمهارات التي استخدمتها"
   },
   "about": {
     "title": "ما يميز مزيج",
@@ -414,6 +418,10 @@
     "testimonialsDesc": "What our users say about us",
     "readMore": "Read More",
     "readLess": "Read Less",
+    "loading": "تحميل الملفات...",
+    "design" :"تصميم",
+    "visual" :"الهوية_البصرية",
+    "logo" :"الشعار",
     "aboutUs": "؟من نحن",
     "feature1": {
       "title" : "الذكاء الاصطناعي",

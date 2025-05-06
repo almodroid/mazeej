@@ -213,7 +213,7 @@
     "loginSubtitle": "Sign in to access your account",
     "joinCommunity": "Join Our Community!",
     "registerSubtitle": "Create an account to get started",
-    "platformFeatures": "Why Choose Khobaraa Platform?",
+    "platformFeatures": "Why Choose Mazeej Platform?",
     "platformDescription": "We connect skilled freelancers with clients looking for quality work across various fields",
     "trustedPlatform": "Trusted by thousands of users worldwide",
     "users": "users",
@@ -290,18 +290,32 @@
     "description": "Best Freelancers in One Place",
     "subtitle": "Find trusted professionals for your projects or offer your services to clients looking for your expertise",
     "clientButton": "I'm looking for freelancers",
-    "freelancerButton": "I'm a looking for work"
+    "freelancerButton": "I'm a looking for work",
+    "freelancers": "Freelancers",
+    "clients": "Clients",
+    "projects": "Projects",
+    "categories": "Categories",
+    "skills": "Skills",
+    "satisfaction": "Satisfaction",
+    "noFreelancers": "No freelancers available at the moment",
+    "noProjects": "No projects available at the moment",
+    "noCategories": "No categories available at the moment",
+    "noSkills": "No skills available at the moment"
   },
   "howItWorks": {
-    "title": "How Khobaraa Platform Works",
+    "title": "How Mazeej Platform Works",
     "subtitle": "Simple steps to get the results you want",
-    "step1Title": "Post a Project",
+    "step1Title": "Choose your field",
     "step1Description": "Describe your needs in detail and set your budget and required skills",
-    "step2Title": "Choose Offers",
+    "step2Title": "Create your project or file",
     "step2Description": "Review freelancers' proposals and choose the best for your project",
-    "step3Title": "Receive Work",
-    "step3Description": "Track progress and receive the final project upon completion"
-  },
+    "step3Title": "Contact and start cooperation",
+    "step3Description": "Track progress and receive the final project upon completion",
+    "step4Title": "Receive the work and share success",
+    "step4Description": "",
+    "step5Title": "",
+    "step5Description": ""
+    },
   "freelancers": {
     "title": "Featured Freelancers",
     "viewAll": "View All",
@@ -361,7 +375,7 @@
     "subtitle": "What clients and freelancers say about their experience with us"
   },
   "cta": {
-    "title": "Ready to Start Your Journey with Khobaraa Platform",
+    "title": "Ready to Start Your Journey with Mazeej Platform",
     "subtitle": "Join thousands of freelancers and clients on our platform",
     "clientButton": "Register as Client",
     "freelancerButton": "Join as Freelancer"
@@ -395,7 +409,7 @@
   },
   "about": {
     "title": "What Make Us The Best",
-    "aboutUs": "? Who We Are",
+    "aboutUs": "Who We Are?",
     "subtitle": "We are a leading platform connecting freelancers with clients and facilitating project execution efficiently and securely.",
     "mission": "Our Mission",
     "missionDesc": "To provide a platform that connects freelancers and clients, enabling them to work together seamlessly and securely.",
@@ -409,6 +423,10 @@
     "testimonialsDesc": "What our users say about us",
     "readMore": "Read More",
     "readLess": "Read Less",
+    "loading": "Loading files...",
+    "design" :"Design",
+    "visual" :"Visual_identity",
+    "logo" :"Logo",
     "feature1": {
       "title": "Artificial Intelligence",
       "description": "It supports you from the idea to production"

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 
-export default function HowItWorksSection() {
+export default function AboutSection() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isRTL = i18n.language === 'ar';
@@ -49,20 +49,20 @@ export default function HowItWorksSection() {
           {/* Stats */}
           <div className="flex flex-wrap gap-6 mt-4">
             <div className="flex flex-col items-center">
-              <span className="text-primary dark:text-primary text-xl font-bold">+56K</span>
-              <span className="text-gray-600 text-sm dark:text-gray-300">مستقلون</span>
+              <span className="text-primary dark:text-primary text-xl font-bold">+500</span>
+              <span className="text-gray-600 text-sm dark:text-gray-300">{t('hero.freelancers')}</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-primary dark:text-primary text-xl font-bold">+15K</span>
-              <span className="text-gray-600 text-sm dark:text-gray-300">عملاء</span>
+              <span className="text-primary dark:text-primary text-xl font-bold">+150</span>
+              <span className="text-gray-600 text-sm dark:text-gray-300">{t('hero.clients')}</span>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-primary dark:text-primary text-xl font-bold">+20</span>
-              <span className="text-gray-600 text-sm dark:text-gray-300">فئات</span>
+              <span className="text-gray-600 text-sm dark:text-gray-300">{t('hero.categories')}</span>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-primary dark:text-primary text-xl font-bold ">90%</span>
-              <span className="text-gray-600 text-sm dark:text-gray-300">نسبة الرضا</span>
+              <span className="text-gray-600 text-sm dark:text-gray-300">{t('hero.satisfaction')}</span>
             </div>
           </div>
         </div>
@@ -70,13 +70,13 @@ export default function HowItWorksSection() {
         <div className="flex-shrink-0 flex flex-row-reverse items-center gap-4">
           <div className="rounded-2xl h-[300px] shadow-2xl shadow-gray-400/50 bg-gray-50 dark:bg-zinc-800 dark:shadow-gray-400/50 dark:shadow-gray-700/50 p-6 w-56 mb-2 text-center items-center">
             <Folder className="mb-2 text-center items-center mx-auto fill-primary dark:fill-primary"/>
-            <div className="font-bold text-gray-700 dark:text-gray-200 mb-6">تحميل الملفات...</div>
+            <div className="font-bold text-gray-700 dark:text-gray-200 mb-6">{t('about.loading')}</div>
             <ul className="space-y-6 text-xs ">
               <li className="flex justify-between items-end">
                 <div className="flex items-center w-full">
                 <FileIcon className="mr-2 border rounded-sm  border-primary/20 px-2 w-8 h-8" />
                 <div className="flex flex-col w-full max-w-[100px] items-start">
-                  <div className="mb-2">التصميم.psd</div>
+                  <div className="mb-2">{t('about.design')}.psd</div>
                   <div className="w-full rounded-full bg-gray-200 dark:bg-gray-700">
                     <div className="w-full rounded-full bg-primary dark:bg-primary" style={{ width: "50%", height: "5px" }} />
                   </div>
@@ -88,7 +88,7 @@ export default function HowItWorksSection() {
                 <div className="flex items-center w-full">
                 <FileIcon className="mr-2 border rounded-sm  border-primary/20 px-2 w-8 h-8" />
                 <div className="flex flex-col w-full max-w-[100px] items-start">
-                  <div className="mb-2">الهوية_البصرية.docx</div>
+                  <div className="mb-2">{t('about.visual')}.docx</div>
                   <div className="w-full rounded-full bg-gray-200 dark:bg-gray-700">
                     <div className="w-full rounded-full bg-primary dark:bg-primary" style={{ width: "32%", height: "5px" }} />
                   </div>
@@ -100,7 +100,7 @@ export default function HowItWorksSection() {
                 <div className="flex items-center w-full">
                 <FileIcon className="mr-2 border rounded-sm  border-primary/20 px-2 w-8 h-8" />
                 <div className="flex flex-col w-full max-w-[100px] items-start">
-                  <div className="text-start mb-2">الشعار.docx</div>
+                  <div className="text-start mb-2">{t('about.logo')}.docx</div>
                   <div className="w-full rounded-full bg-gray-200 dark:bg-gray-700">
                     <div className="w-full rounded-full bg-primary dark:bg-primary" style={{ width: "100%", height: "5px" }} />
                   </div>
@@ -110,8 +110,8 @@ export default function HowItWorksSection() {
               </li>
             </ul>
           </div>
-          <div className="card bg-white dark:bg-zinc-800 rounded-xl shadow-2xl relative top-10 right-12 w-40 p-2 dark:shadow-gray-700/50 dark:shadow-gray-700/50">
-            <div className="absolute top-[-10px] right-[-12px] flex gap-2 z-10">
+          <div className="card bg-white dark:bg-zinc-800 rounded-xl shadow-2xl relative top-10 rtl:right-12 left-12 w-40 p-2 dark:shadow-gray-700/50 dark:shadow-gray-700/50">
+            <div className="absolute top-[-10px] rtl:right-[-12px] left-[-12px] flex gap-2 z-10">
               <Phone className="bg-white p-1 rounded-md shadow fill-teal-400 w-8 h-8 px-2 dark:bg-gray-700 text-teal-400"/>
               <MessageCircle className="bg-white p-1 rounded-md shadow fill-purple-400 w-8 h-8 px-2 dark:bg-gray-700 text-purple-400"/>
             </div>
