@@ -179,7 +179,8 @@
     "verificationToken": "وسم التحقق",
     "sitemapUrl": "رابط خريطة الموقع",
     "mohammed": "محمد",
-    "subscribe": "اشترك الان"
+    "subscribe": "اشترك الان",
+    "riyal": "ريال"
   },
   "errors": {
     "phoneExists": "رقم الجوال مستخدم بالفعل"
@@ -689,7 +690,20 @@
     "skillRemoveFailed": "فشل إزالة المهارة",
     "skillRemoveFailedDesc": "لا يمكن إزالة المهارة أكثر من مرة",
     "skillRemovedDesc": "تم إزالة المهارة بنجاح",
-    "updateSuccessDesc": "تم تحديث الملف الشخصي بنجاح"
+    "updateSuccessDesc": "تم تحديث الملف الشخصي بنجاح",
+    "skillsHelp" : "ملاحظة:",
+    "profileUpdated" : "تم تحديث الملف الشخصي بنجاح",
+    "profileUpdateFailed" : "فشل تحديث الملف الشخصي",
+    "profileUpdatedDesc" : "تم تحديث الملف الشخصي بنجاح",
+    "noSkillsSelected" : "لم يتم اختيار مهارات",
+    "noSkillsSelectedDesc" : "يجب اختيار مهارات",
+    "skillsSaved" : "تم حفظ المهارات بنجاح",
+    "skillsSavedDesc" : "تم حفظ المهارات بنجاح",
+    "skillsSavedError" : "خطأ في حفظ المهارات",
+    "skillsSavedErrorDesc" : "حدث خطأ في حفظ المهارات",
+    "noSkillsInCategory" : "لا توجد مهارات في هذه الفئة",
+    "noSkillsInCategoryDesc" : "لا توجد مهارات في هذه الفئة",
+    "noSkillsSelected" : "لم يتم اختيار مهارات"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -832,6 +846,7 @@
 
   "proposals": {
     "title": "العروض",
+    "projectProposal": "العرض",
     "createProposal": "إنشاء عرض",
     "description": "وصف العرض",
     "price": "السعر",
@@ -893,7 +908,14 @@
     "proposalRejected": "تم رفض العرض",
     "proposalRejectedDescription": "تم رفض عرضك لمشروع \"{{projectTitle}}\"",
     "proposalPending": "عرض معلقة",
-    "proposalPendingDescription": "تم تقديم عرضك لمشروع \"{{projectTitle}}\" وسيتم إعلامك عند اتخاذ قرار"
+    "proposalPendingDescription": "تم تقديم عرضك لمشروع \"{{projectTitle}}\" وسيتم إعلامك عند اتخاذ قرار",
+    "projectProposals": "عروض المشروع",
+    "projectProposalsDescription": "عروض مشروعك",
+    "noProposalsYet": "لا توجد عروض بعد",
+    "noProposalsYetDescription": "لا توجد عروض بعد. يمكنك الآن تقديم عرضًا جديدًا.",
+    "proposalStatusUpdated": "تم تحديث حالة العرض",
+    "proposalStatusUpdatedDescription": "تم تحديث حالة العرض بنجاح.",
+    "proposalStatusUpdateError": "فشل في تحديث حالة العرض"
   },
   "reviews": {
     "title": "التقييمات",
@@ -1097,7 +1119,12 @@
     "allVerificationDesc" : "عرض جميع طلبات التحقق",
     "pendingVerificationDesc" : "طلبات التحقق المعلقة",
     "approvedVerificationDesc" : "طلبات التحقق المؤكدة ",
-    "rejectedVerificationDesc" : "طلبات التحقق المرفوضة"
+    "rejectedVerificationDesc" : "طلبات التحقق المرفوضة",
+    "sendCode": "إرسال الكود",
+    "verifyPhone": "التحقق من الهاتف",
+    "verifyPhoneDescription": "أدخل رقم الهاتف الخاص بك للتحقق منه.",
+    "phoneNumber": "رقم الهاتف",
+    "phoneHelp" : "ادخل رقم الهاتف الذي يمكنك الوصول إليه في أي وقت"
   },
   "project": {
     "statusOpen": "مفتوح",
@@ -1385,6 +1412,8 @@
     "daysRemaining_plural": "{{count}} أيام متبقية",
     "renewNow": "جدد الآن",
     "upgrade": "ترقية الخطة",
+    "upgradeBenefits": "احصل على هذه الميزات بالترقية",
+    "free": "خطة مجانية",
     "renewalError": "فشل في معالجة التجديد. يرجى المحاولة مرة أخرى."
   },
   "admin": {

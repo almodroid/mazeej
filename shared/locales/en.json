@@ -165,7 +165,8 @@
     "sitemapUrl": "Sitemap URL",
     "not-found" : "Page not found",
     "not-found-desc" : "The page you are looking for does not exist.",
-    "back-home": "Back to Home"
+    "back-home": "Back to Home",
+    "riyal": "SAR"
   },
   "auth": {
     "login": "Login",
@@ -1130,7 +1131,7 @@
       "successDescription": "Your withdrawal request has been submitted and is being processed",
       "error": "Withdrawal Error",
       "errorDescription": "There was an error processing your withdrawal request. Please try again.",
-      "minWithdrawal": "Minimum withdrawal amount is {{amount}} ريال",
+      "minWithdrawal": "Minimum withdrawal amount is {{amount}} SAR",
       "insufficientFunds": "Insufficient funds for withdrawal"
     },
     "availableBalance": "Available Balance",
@@ -1202,6 +1203,8 @@
     "daysRemaining_plural": "{{count}} days remaining",
     "renewNow": "Renew Now",
     "upgrade": "Upgrade Plan",
+    "upgradeBenefits": "Unlock these features by upgrading",
+    "free": "Free Plan",
     "renewalError": "Failed to process renewal. Please try again."
   },
   "error": {

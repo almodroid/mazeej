@@ -106,22 +106,6 @@ export default function DashboardHeader({ onMobileMenuOpen }: DashboardHeaderPro
           </Link>
         </div>
         
-        {/* Search bar */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search className={cn(
-              "absolute top-1/2 transform -translate-y-1/2 text-neutral-400",
-              isRTL ? "right-3" : "left-3"
-            )} size={16} />
-            <Input 
-              className={cn(
-                "h-9 bg-muted",
-                isRTL ? "pr-10" : "pl-10"
-              )}
-              placeholder={t("common.search")}
-            />
-          </div>
-        </div>
         
         {/* Right side actions */}
         <div className={cn(

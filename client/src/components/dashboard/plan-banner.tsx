@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { planApi } from "@/lib/api";
 import { Plan } from "@shared/schema-plans";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Calendar, CheckCircle, XCircle, Clock } from "lucide-react";
+import { ArrowRight, Sparkles, Calendar, CheckCircle, XCircle, Clock, ChevronUp, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -96,6 +96,38 @@ export default function PlanBanner() {
     }
   });
 
+  // Fetch all plans to determine the next tier for upgrade
+  const { data: allPlans = [] } = useQuery<Plan[]>({
+    queryKey: ["/api/plans"],
+    queryFn: async () => {
+      return planApi.getPlans();
+    },
+    enabled: !!userPlan?.plan // Only fetch all plans if user has a plan
+  });
+
+  // Determine if current plan is the free Wameed plan (which doesn't expire)
+  const isWameedPlan = userPlan?.plan?.key?.toLowerCase() === "wameed";
+
+  // Find the next tier plan for upgrade benefits
+  const getNextTierPlan = () => {
+    if (!userPlan?.plan || !allPlans?.length) return null;
+    
+    // Sort plans by price value
+    const sortedPlans = [...allPlans].sort((a, b) => a.priceValue - b.priceValue);
+    
+    // Find current plan index
+    const currentPlanIndex = sortedPlans.findIndex(p => p.id === userPlan.plan?.id);
+    
+    // Return next plan if exists
+    if (currentPlanIndex >= 0 && currentPlanIndex < sortedPlans.length - 1) {
+      return sortedPlans[currentPlanIndex + 1];
+    }
+    
+    return null;
+  };
+
+  const nextTierPlan = getNextTierPlan();
+
   const handleRenewal = async () => {
     if (!userPlan?.plan) return;
     
@@ -156,8 +188,8 @@ export default function PlanBanner() {
   const colorClasses = getColorClasses(plan?.key);
   
   // Status info
-  const isExpired = subscription?.isExpired;
-  const isExpiringSoon = subscription?.isExpiringSoon;
+  const isExpired = !isWameedPlan && subscription?.isExpired;
+  const isExpiringSoon = !isWameedPlan && subscription?.isExpiringSoon;
   const daysRemaining = subscription?.daysRemaining || 0;
   const progressPercent = Math.max(0, Math.min(100, (daysRemaining / 30) * 100));
 
@@ -180,31 +212,52 @@ export default function PlanBanner() {
                 </Badge>
               ) : (
                 <Badge variant="default" className={cn("ml-2", colorClasses.badge)}>
-                  {t("subscriptions.active")}
+                  {isWameedPlan ? t("subscriptions.free") : t("subscriptions.active")}
                 </Badge>
               )}
             </div>
             
-            <div className="text-sm text-muted-foreground mt-2 flex flex-col md:flex-row gap-4 md:gap-8 mb-4">
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                <span>
-                  {t("subscriptions.validUntil")}: {formatDate(subscription?.endDate || "")}
-                </span>
+            {/* Different content based on plan type */}
+            {isWameedPlan ? (
+              <div className="mt-2">
+                {nextTierPlan && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-primary mb-2">
+                      {t("subscriptions.upgradeBenefits")}:
+                    </p>
+                    <div className="space-y-2">
+                      {nextTierPlan.features.slice(0, 2).map((feature, index) => (
+                        <div key={index} className="flex items-center text-sm text-muted-foreground">
+                          <ChevronUp className="h-4 w-4 mr-2 text-primary" />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                <span>
-                  {isExpired 
-                    ? t("subscriptions.expired") 
-                    : t("subscriptions.daysRemaining", { count: daysRemaining })}
-                </span>
+            ) : (
+              <div className="text-sm text-muted-foreground mt-2 flex flex-col md:flex-row gap-4 md:gap-8 mb-4">
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                  <span>
+                    {t("subscriptions.validUntil")}: {formatDate(subscription?.endDate || "")}
+                  </span>
+                </div>
+                
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                  <span>
+                    {isExpired 
+                      ? t("subscriptions.expired") 
+                      : t("subscriptions.daysRemaining", { count: daysRemaining })}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
             
-            {/* Progress bar for days remaining */}
-            {!isExpired && (
+            {/* Progress bar for days remaining - only for non-Wameed plans */}
+            {!isWameedPlan && !isExpired && (
               <div className="w-full mt-2">
                 <Progress
                   value={progressPercent}
@@ -228,16 +281,32 @@ export default function PlanBanner() {
               <div className="flex flex-col items-end">
                 {isRouterAvailable ? (
                   <Link to="/tracks">
-                    <Button variant="outline" size="sm" className="whitespace-nowrap">
+                    <Button 
+                      variant={isWameedPlan ? "default" : "outline"} 
+                      size="sm" 
+                      className={cn("whitespace-nowrap", isWameedPlan && nextTierPlan && colorClasses.buttonColor)}
+                    >
                       {t("subscriptions.upgrade")}
-                      <Sparkles className="ml-2 h-4 w-4" />
+                      {isWameedPlan ? (
+                        <ArrowUpRight className="ml-2 h-4 w-4" />
+                      ) : (
+                        <Sparkles className="ml-2 h-4 w-4" />
+                      )}
                     </Button>
                   </Link>
                 ) : (
                   <a href="/tracks">
-                    <Button variant="outline" size="sm" className="whitespace-nowrap">
+                    <Button 
+                      variant={isWameedPlan ? "default" : "outline"} 
+                      size="sm" 
+                      className={cn("whitespace-nowrap", isWameedPlan && nextTierPlan && colorClasses.buttonColor)}
+                    >
                       {t("subscriptions.upgrade")}
-                      <Sparkles className="ml-2 h-4 w-4" />
+                      {isWameedPlan ? (
+                        <ArrowUpRight className="ml-2 h-4 w-4" />
+                      ) : (
+                        <Sparkles className="ml-2 h-4 w-4" />
+                      )}
                     </Button>
                   </a>
                 )}

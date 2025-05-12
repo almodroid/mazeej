@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, SaudiRiyal } from "lucide-react";
 
 type RecentProjectsProps = {
   projects: Project[];
@@ -13,6 +13,7 @@ type RecentProjectsProps = {
 
 export default function RecentProjects({ projects }: RecentProjectsProps) {
   const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
 
   // Format the date based on the current language
   const formatDate = (date: Date) => {
@@ -60,16 +61,16 @@ export default function RecentProjects({ projects }: RecentProjectsProps) {
         <div className="divide-y divide-neutral-200">
           {projects.map((project) => (
             <Link key={project.id} href={`/projects/${project.id}`}>
-              <a className="block p-4 hover:bg-neutral-50 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium text-neutral-900">{project.title}</h3>
+              <a className="block p-4 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors">
+                <div className="flex justify-between items-start mb-2 ">
+                  <h3 className="font-medium text-neutral-900 dark:text-gray-200 ">{project.title}</h3>
                   {getStatusBadge(project.status || '')}
                 </div>
-                <p className="text-neutral-600 text-sm line-clamp-2 mb-2">
+                <p className="text-neutral-600 text-sm line-clamp-2 mb-2 dark:text-gray-200">
                   {project.description}
                 </p>
-                <div className="flex justify-between items-center text-sm text-neutral-500">
-                  <span>{project.budget} ريال</span>
+                <div className="flex justify-between items-center align-center text-lg text-neutral-500 dark:text-blue-200">
+                  <span className="flex">{project.budget} {isRTL ? <SaudiRiyal className="h-4 w-4 text-neutral-300 m-[6px] dark:text-blue-200" /> : "SAR"}</span>
                   <span>{project.createdAt && formatDate(project.createdAt)}</span>
                 </div>
               </a>

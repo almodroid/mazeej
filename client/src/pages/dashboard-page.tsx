@@ -12,6 +12,7 @@ import { Project, Proposal } from "@shared/schema";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {SaudiRiyal } from "lucide-react";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -144,8 +145,8 @@ export default function DashboardPage() {
         />
         <StatCard 
           title={user.role === "freelancer" ? t("dashboard.totalEarnings") : t("dashboard.totalSpending")} 
-          value={`${totalEarnings} ريال `} 
-          icon="dollar-sign" 
+          value={`${totalEarnings} ${t('common.riyal')}`} 
+          icon="saudi-sign" 
           trend="up" 
         />
       </div>

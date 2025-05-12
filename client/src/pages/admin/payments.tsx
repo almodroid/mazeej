@@ -20,7 +20,6 @@ import {
   Search,
   Settings,
   CreditCard,
-  DollarSign,
   ArrowDownToLine,
   ArrowUpFromLine,
   Clock,
@@ -460,7 +459,7 @@ export default function AdminPaymentsPage() {
                 {(payments as Payment[])
                   .filter(payment => payment.status === 'completed')
                   .reduce((total, payment) => total + payment.amount, 0)
-                  .toFixed(2)} <SaudiRiyal className="h-6 w-6" />
+                  .toFixed(2)} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {(payments as Payment[]).filter(payment => payment.status === 'completed').length} {t("common.transactions")}
@@ -477,7 +476,7 @@ export default function AdminPaymentsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground  flex align-middle items-center">
-                {totalEarnings.toFixed(2)} <SaudiRiyal className="h-6 w-6" />
+                {totalEarnings.toFixed(2)} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 5% {t("payments.platformFee")}
@@ -497,7 +496,7 @@ export default function AdminPaymentsPage() {
                 {(payments as Payment[])
                   .filter(payment => payment.status === 'pending')
                   .reduce((total, payment) => total + payment.amount, 0)
-                  .toFixed(2)} <SaudiRiyal className="h-6 w-6" />
+                  .toFixed(2)} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {(payments as Payment[]).filter(payment => payment.status === 'pending').length} {t("common.transactions")}
@@ -596,7 +595,7 @@ export default function AdminPaymentsPage() {
                             <TableRow key={payment.id}>
                               <TableCell className="font-medium">{String(payment.id).substring(0, 8)}</TableCell>
                               <TableCell>{payment.username || String(payment.userId).substring(0, 8)}</TableCell>
-                              <TableCell>{payment.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6 text-primary" /></TableCell>
+                              <TableCell>{payment.amount.toFixed(2)} {isRTL ? <SaudiRiyal className="h-6 w-6 text-primary" /> : "SAR"}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(getTypeBadgeVariant(payment.type))}>
                                   {t(`payments.type.${payment.type}`, { defaultValue: payment.type })}
@@ -715,7 +714,7 @@ export default function AdminPaymentsPage() {
                               <TableCell className="font-medium">{String(transaction.id).substring(0, 8)}</TableCell>
                               <TableCell>{String(transaction.paymentId).substring(0, 8)}</TableCell>
                               <TableCell>{transaction.username || String(transaction.userId).substring(0, 8)}</TableCell>
-                              <TableCell>{transaction.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6" /></TableCell>
+                              <TableCell>{transaction.amount.toFixed(2)} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(getTypeBadgeVariant(transaction.type))}>
                                   {t(`payments.type.${transaction.type}`, { defaultValue: transaction.type })}
@@ -806,7 +805,7 @@ export default function AdminPaymentsPage() {
                             <TableRow key={withdrawal.id}>
                               <TableCell className="font-medium">{String(withdrawal.id).substring(0, 8)}</TableCell>
                               <TableCell>{withdrawal.username || String(withdrawal.userId).substring(0, 8)}</TableCell>
-                              <TableCell>{withdrawal.amount.toFixed(2)} <SaudiRiyal className="h-6 w-6" /></TableCell>
+                              <TableCell>{withdrawal.amount.toFixed(2)} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}</TableCell>
                               <TableCell>{withdrawal.paymentMethod}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(
@@ -951,7 +950,7 @@ export default function AdminPaymentsPage() {
                       <FormLabel>{t("payments.amount")}</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <SaudiRiyal className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        {isRTL ? <SaudiRiyal className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /> : "SAR"}
                           <Input type="number" step="0.01" className="pl-8" {...field} />
                         </div>
                       </FormControl>

@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { DollarSign, Calendar, User, SaudiRiyal, Wallet  } from "lucide-react";
+import {  Calendar, User, SaudiRiyal, Wallet  } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Project } from "@shared/schema";
 import {
@@ -27,7 +27,7 @@ export default function ProjectDetails({ project, isProjectOwner }: ProjectDetai
           <Wallet  className="h-5 w-5 text-muted-foreground mr-3" />
           <div>
             <p className="text-sm text-muted-foreground">{t("projects.budget")}</p>
-            <p className={cn("font-medium flex align-middle items-center", isRTL && "flex-row-reverse")}><SaudiRiyal  className="h-4 w-4 mr-3" />{project.budget}</p>
+            <p className={cn("font-medium flex align-middle items-center", isRTL && "flex-row-reverse")}>{isRTL ? <SaudiRiyal  className="h-4 w-4 mr-3" /> : "SAR"}{project.budget}</p>
           </div>
         </div>
         {project.deadline && (

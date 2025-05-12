@@ -106,7 +106,7 @@ export default function ProposalCard({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="text-sm text-muted-foreground">{t("proposals.proposedPrice")}</div>
-            <div className={"font-medium flex items-center"}>{proposal.price}<SaudiRiyal  className="h-5 w-5 text-muted-foreground mx-1" /></div>
+            <div className={"font-medium flex items-center"}>{proposal.price}{isRTL ? <SaudiRiyal  className="h-5 w-5 text-muted-foreground mx-1" /> : "SAR"}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">{t("proposals.deliveryTime")}</div>
@@ -158,7 +158,7 @@ export default function ProposalCard({
           <>
             {onCheckout && (isClient || isAdmin) && (
               <Button variant="default" onClick={() => onCheckout(proposal)}>
-                <SaudiRiyal className="h-4 w-4 mr-2" />
+                {isRTL ? <SaudiRiyal className="h-4 w-4 mr-2" /> : "SAR"}
                 {t("proposals.proceedToPayment")}
               </Button>
             )}

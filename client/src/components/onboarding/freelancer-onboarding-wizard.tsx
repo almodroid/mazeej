@@ -15,7 +15,8 @@ import {
   Check,
   Phone,
   ArrowLeft,
-  CreditCard
+  CreditCard,
+  ChevronRight
 } from "lucide-react";
 import { PhoneVerification } from "@/components/onboarding/phone-verification";
 import { planApi } from "@/lib/api";
@@ -1229,7 +1230,7 @@ export default function FreelancerOnboardingWizard() {
       }}>
         <DialogContent className="sm:max-w-md md:max-w-lg">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle >
               {currentStep < 4
                 ? t("onboarding.completeYourProfile")
                 : t("onboarding.congratulations")}
@@ -1254,7 +1255,8 @@ export default function FreelancerOnboardingWizard() {
                 onClick={() => setCurrentStep((prev) => prev - 1)}
                 className={isRTL ? "ml-auto" : "mr-auto"}
               >
-                <ChevronLeft className="h-4 w-4 mr-2" />
+                
+                {isRTL ? <ArrowRight className="h-4 w-4 mr-2" /> : <ArrowLeft className="h-4 w-4 mr-2" />}
                 {t("common.back")}
               </Button>
             ) : (
@@ -1310,4 +1312,4 @@ export default function FreelancerOnboardingWizard() {
       </Dialog>
     </>
   );
-} 
+}

@@ -6,6 +6,9 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "../storage";
 import { User, User as SelectUser } from "@shared/schema";
+import { db } from "../db";
+import { plans, userPlans } from "@shared/schema-plans";
+import { eq } from "drizzle-orm";
 
 declare global {
   namespace Express {
@@ -126,6 +129,29 @@ export function setupAuth(app: Express) {
       const user = await storage.createUser(userData);
       
       console.log(`User created with ID: ${user.id}, username: ${user.username}`);
+      
+      // Get the Wameed (free) plan
+      const [wameedPlan] = await db.select().from(plans).where(eq(plans.key, "wameed"));
+      
+      if (wameedPlan) {
+        // Calculate subscription dates
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 1);
+
+        // Assign the Wameed plan to the new user
+        await db.insert(userPlans).values({
+          userId: user.id,
+          planId: wameedPlan.id,
+          startDate,
+          endDate,
+          isActive: true
+        });
+        
+        console.log(`Wameed free plan (ID: ${wameedPlan.id}) automatically assigned to new user: ${user.username}`);
+      } else {
+        console.warn("Wameed free plan not found in the database - could not assign to new user");
+      }
       
       // Remove password from response
       const { password: pwd, ...userWithoutPassword } = user;

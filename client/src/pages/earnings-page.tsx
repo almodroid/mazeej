@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Proposal } from "@shared/schema";
-import { Download, DollarSign, TrendingUp, Calendar, SaudiRiyal, BanknoteIcon, CreditCard, Loader2, Plus } from "lucide-react";
+import { Download, TrendingUp, Calendar, SaudiRiyal, BanknoteIcon, CreditCard, Loader2, Plus } from "lucide-react";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -264,10 +264,10 @@ export default function EarningsPage() {
             <div className="flex items-center justify-between ">
               <div>
                 <p className="text-sm text-neutral-500">{t("earnings.totalEarnings")}</p>
-                <h3 className="text-2xl font-bold mt-1  flex align-middle items-center">{earnings.total} <SaudiRiyal className="h-6 w-6" /></h3>
+                <h3 className="text-2xl font-bold mt-1  flex align-middle items-center">{earnings.total} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}</h3>
               </div>
               <div className="bg-primary/10 p-3 rounded-full ">
-                <SaudiRiyal className="h-6 w-6 text-primary" />
+                {isRTL ? <SaudiRiyal className="h-6 w-6 text-primary" /> : "SAR"}
               </div>
             </div>
           </CardContent>
@@ -278,7 +278,7 @@ export default function EarningsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-neutral-500">{t("earnings.pendingPayments")}</p>
-                <h3 className="text-2xl font-bold mt-1  flex align-middle items-center">{earnings.pending} <SaudiRiyal className="h-6 w-6" /></h3>
+                <h3 className="text-2xl font-bold mt-1  flex align-middle items-center">{earnings.pending} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}</h3>
               </div>
               <div className="bg-yellow-100 p-3 rounded-full">
                 <Calendar className="h-6 w-6 text-yellow-600" />
@@ -292,7 +292,7 @@ export default function EarningsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-neutral-500">{t("earnings.thisMonth")}</p>
-                <h3 className="text-2xl font-bold mt-1  flex align-middle items-center">{earnings.thisMonth} <SaudiRiyal className="h-6 w-6" /></h3>
+                <h3 className="text-2xl font-bold mt-1  flex align-middle items-center">{earnings.thisMonth} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}</h3>
               </div>
               <div className="bg-green-100 p-3 rounded-full">
                 <TrendingUp className="h-6 w-6 text-green-600" />
@@ -330,7 +330,7 @@ export default function EarningsPage() {
                         <div className="font-medium">{transaction.projectTitle || t("earnings.generalTransaction")}</div>
                         <div>{t(`earnings.transactionType.${transaction.type}`)}</div>
                         <div>{formatDate(transaction.createdAt)}</div>
-                        <div>{transaction.amount} <SaudiRiyal className="h-6 w-6" /></div>
+                        <div>{transaction.amount} {isRTL ?  <SaudiRiyal className="h-6 w-6" /> : "SAR"}</div>
                         <div>{getStatusBadge(transaction.status)}</div>
                       </div>
                     ))}
@@ -356,7 +356,7 @@ export default function EarningsPage() {
                       withdrawalRequests.map((request) => (
                         <div key={request.id} className="grid grid-cols-5 p-4 border-t">
                           <div>{formatDate(request.requestedAt)}</div>
-                          <div>{request.amount} <SaudiRiyal className="h-4 w-4 inline" /></div>
+                          <div>{request.amount} {isRTL ? <SaudiRiyal className="h-4 w-4 inline" /> : "SAR"}</div>
                           <div>
                             <Badge variant={request.status === 'completed' ? 'default' : 'secondary'}>
                               {request.status}
@@ -388,15 +388,15 @@ export default function EarningsPage() {
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 dark:bg-gray-800 rounded-md border border-blue-200 dark:border-gray-700 text-blue-700 dark:text-blue-400">
                   <h4 className="font-medium mb-1">{t("earnings.availableBalance", { defaultValue: "Available Balance" })}</h4>
-                  <p className="text-2xl font-bold flex align-middle items-center">{availableBalance} <SaudiRiyal className="h-6 w-6" /></p>
+                  <p className="text-2xl font-bold flex align-middle items-center">{availableBalance} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}</p>
                   {availableBalance < 100 && (
                     <p className="text-xs mt-2 text-amber-600 dark:text-amber-400">
                       {t("payments.minAmount", { amount: "100" })}
                     </p>
                   )}
                   <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                    <p>{t("earnings.totalBalance", { defaultValue: "Total Earnings" })}: {earnings.total} <SaudiRiyal className="h-4 w-4 inline" /></p>
-                    <p>{t("earnings.pendingWithdrawals", { defaultValue: "Pending Withdrawals" })}: {earnings.total - availableBalance} <SaudiRiyal className="h-4 w-4 inline" /></p>
+                    <p>{t("earnings.totalBalance", { defaultValue: "Total Earnings" })}: {earnings.total} {isRTL ? <SaudiRiyal className="h-4 w-4 inline" /> : "SAR"}</p>
+                    <p>{t("earnings.pendingWithdrawals", { defaultValue: "Pending Withdrawals" })}: {earnings.total - availableBalance} {isRTL ? <SaudiRiyal className="h-4 w-4 inline" /> : "SAR"}</p>
                   </div>
                 </div>
 
@@ -453,7 +453,7 @@ export default function EarningsPage() {
                                   <div className="space-y-1">
                                     <p>{t("payments.minAmount", { amount: "100" })}</p>
                                     <p className="font-medium text-blue-600 dark:text-blue-400">
-                                      {t("earnings.availableToWithdraw", { defaultValue: "Available to withdraw" })}: {availableBalance} <SaudiRiyal className="h-4 w-4 inline" />
+                                      {t("earnings.availableToWithdraw", { defaultValue: "Available to withdraw" })}: {availableBalance} {isRTL ? <SaudiRiyal className="h-4 w-4 inline" /> : "SAR"}
                                     </p>
                                     {field.value > availableBalance && (
                                       <p className="text-red-500">

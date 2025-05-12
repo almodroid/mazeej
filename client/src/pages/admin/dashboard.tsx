@@ -15,12 +15,12 @@ import {
   Users, 
   Folder, 
   Layers, 
-  BarChart4, 
-  DollarSign,
+  BarChart4,
   TrendingUp,
   ArrowUpRight,
   ShoppingCart,
-  Clock
+  Clock,
+  SaudiRiyal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
@@ -238,7 +238,7 @@ export default function AdminDashboardPage() {
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base font-medium">{t("dashboard.totalEarnings")}</CardTitle>
               <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              {isRTL ? <SaudiRiyal className="h-10 w-10 text-neutral-300 mx-auto mb-3" /> : "SAR"}
               </div>
             </CardHeader>
             <CardContent>

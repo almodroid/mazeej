@@ -301,7 +301,7 @@ export default function MyProposalsPage() {
           )} size={18} />
           <Input 
             className={cn(
-              "bg-white",
+              "bg-white dark:bg-gray-900",
               isRTL ? "pr-10" : "pl-10"
             )}
             placeholder={t("myProposals.searchPlaceholder")}
@@ -346,11 +346,11 @@ export default function MyProposalsPage() {
                 <div className="divide-y divide-neutral-200">
                   {displayProposals.map((proposal) => (
                     <Link key={proposal.id} href={`/projects/${proposal.projectId}`}>
-                      <div className="block p-4 hover:bg-neutral-50 transition-colors relative">
+                      <div className="block p-4 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors relative">
                         <div className={cn(
-                          "flex justify-between items-start mb-2",
+                          "flex justify-between items-start mb-6",
                         )}>
-                          <h2 className="font-cairo font-bold text-neutral-900">
+                          <h2 className="font-cairo font-bold text-neutral-900 dark:text-gray-300">
                             {getProjectTitle(proposal.projectId)}
                           </h2>
                           <div className="flex items-center gap-2">
@@ -379,11 +379,11 @@ export default function MyProposalsPage() {
                             )}
                           </div>
                         </div>
-                        <p className="text-neutral-600 text-sm line-clamp-2 mb-2">
+                        <p className="text-neutral-600 text-sm line-clamp-2 mb-6 dark:text-gray-200">
                           {proposal.description}
                         </p>
                         <div className={cn(
-                          "flex justify-between items-center text-sm text-neutral-500",
+                          "flex justify-between items-center text-sm text-neutral-500 dark:text-gray-200",
                           isRTL && "flex-row"
                         )}>
                           <span>${proposal.price} • {proposal.deliveryTime} {t("common.days")}</span>

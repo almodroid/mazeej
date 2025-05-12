@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, SaudiRiyal } from "lucide-react";
 
 type RecentProposalsProps = {
   proposals: Proposal[];
@@ -13,6 +13,7 @@ type RecentProposalsProps = {
 
 export default function RecentProposals({ proposals }: RecentProposalsProps) {
   const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
 
   // Format the date based on the current language
   const formatDate = (date: Date) => {
@@ -57,19 +58,19 @@ export default function RecentProposals({ proposals }: RecentProposalsProps) {
       <CardContent className="p-0">
         <div className="divide-y divide-neutral-200">
           {proposals.map((proposal) => (
-            <Link key={proposal.id} href={`/proposals/${proposal.id}`}>
-              <a className="block p-4 hover:bg-neutral-50 transition-colors">
+            <Link key={proposal.id} href={`/projects/${proposal.projectId}`}>
+              <a className="block p-4 hover:bg-neutral-50  dark:hover:bg-gray-900 transition-colors">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium text-neutral-900">
+                  <h3 className="font-medium text-neutral-900 dark:text-gray-200">
                     {t("proposals.projectProposal")} #{proposal.projectId}
                   </h3>
                   {getStatusBadge(proposal.status || '')}
                 </div>
-                <p className="text-neutral-600 text-sm line-clamp-2 mb-2">
+                <p className="text-neutral-600 text-sm line-clamp-2 mb-2 dark:text-gray-200">
                   {proposal.description}
                 </p>
-                <div className="flex justify-between items-center text-sm text-neutral-500">
-                  <span>${proposal.price}</span>
+                <div className="flex justify-between items-center text-lg text-neutral-500 dark:text-blue-200" >
+                  <span className="flex rtl:flex-row-reverse" > {isRTL ? <SaudiRiyal className="h-4 w-4 text-neutral-300  m-[6px] dark:text-blue-200" /> : "SAR"}{proposal.price}</span>
                   <span>{proposal.createdAt && formatDate(proposal.createdAt)}</span>
                 </div>
               </a>

@@ -729,7 +729,7 @@ export default function PaymentsPage() {
                 <div className="text-center py-10">{t("common.loading")}</div>
               ) : transactions.length === 0 ? (
                 <div className="text-center py-10 border rounded-md">
-                  <SaudiRiyal className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
+                  {isRTL ? <SaudiRiyal className="h-10 w-10 text-neutral-300 mx-auto mb-3" /> : "SAR"}
                   <p className="text-neutral-500">{t("payments.noTransactions")}</p>
                 </div>
               ) : (

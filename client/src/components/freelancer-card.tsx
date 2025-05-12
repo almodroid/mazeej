@@ -243,7 +243,7 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
               </span>
               <span className="font-cairo font-bold text-foreground flex items-center gap-1 dark:text-white">
                 <span className="flex items-center gap-1 flex-row-reverse">
-                  <SaudiRiyal className="h-4 w-4" />
+                {isRTL ? <SaudiRiyal className="h-4 w-4" /> : "SAR"}
                 
                 {hourlyRate}
                 </span>

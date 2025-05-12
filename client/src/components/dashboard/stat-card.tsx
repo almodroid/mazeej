@@ -6,11 +6,11 @@ import {
   Briefcase,
   CheckCircle,
   FileText,
-  DollarSign,
   Users,
   Star,
   Clock,
-  Activity
+  Activity,
+  SaudiRiyal
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -29,7 +29,7 @@ export default function StatCard({
   trend = "neutral",
   percent = 0
 }: StatCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // Icon mapping
   const iconMap: Record<string, React.ReactNode> = {
@@ -37,7 +37,7 @@ export default function StatCard({
     briefcase: <Briefcase className="h-6 w-6" />,
     "check-circle": <CheckCircle className="h-6 w-6" />,
     "file-text": <FileText className="h-6 w-6" />,
-    "dollar-sign": <DollarSign className="h-6 w-6" />,
+    "saudi-sign": i18n.language === "ar" ? <SaudiRiyal className="h-6 w-6" /> : "SAR",
     users: <Users className="h-6 w-6" />,
     star: <Star className="h-6 w-6" />,
     clock: <Clock className="h-6 w-6" />,
