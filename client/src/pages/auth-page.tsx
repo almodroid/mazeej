@@ -9,6 +9,8 @@ import RegisterForm from "@/components/auth/register-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Briefcase, UserCheck, ShieldCheck, Users, Monitor, Award, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import LogoPng from "@/assets/images/logo.png";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AuthPage() {
   const { t, i18n } = useTranslation();
@@ -17,11 +19,14 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const search = useSearch();
   const isRTL = i18n.language === "ar";
+  const { toast } = useToast();
 
-  // Parse the query string to check for register=true
+  // Parse the query string to check for parameters
   const searchParams = new URLSearchParams(search);
   const register = searchParams.get("register");
   const role = searchParams.get("role") || "client";
+  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const planId = searchParams.get("plan");
 
   // Set the active tab based on the URL parameter
   useEffect(() => {
@@ -30,10 +35,58 @@ export default function AuthPage() {
     }
   }, [register]);
 
+  // Handle plan subscription parameter
+  useEffect(() => {
+    if (planId) {
+      // Store plan ID for post-auth handling
+      localStorage.setItem("pendingPlanId", planId);
+      
+      // Show a message that they need to register/login for the free plan
+      toast({
+        title: t("auth.registerForPlan"),
+        description: t("auth.registerForPlanDesc"),
+      });
+      
+      // Switch to register tab for new users
+      setActiveTab("register");
+    }
+  }, [planId, toast, t]);
+
+  // Handler for successful authentication (login or register)
+  const onAuthSuccess = () => {
+    // Check if there was a pending plan subscription
+    const pendingPlanId = localStorage.getItem("pendingPlanId");
+    
+    if (pendingPlanId) {
+      // Clear the stored plan ID
+      localStorage.removeItem("pendingPlanId");
+      
+      // Show a message about processing the plan
+      toast({
+        title: t("auth.processingPlan"),
+        description: t("auth.processingPlanDesc"),
+      });
+      
+      // Redirect to tracks page to complete the plan selection
+      navigate("/tracks");
+      return;
+    }
+    
+    // Standard redirect if no pending plan
+    navigate(redirectTo);
+  };
+
   // Redirect to home if already logged in
   useEffect(() => {
     if (user && !isLoading) {
-      navigate("/dashboard");
+      // If already logged in, check for pending plan
+      const pendingPlanId = localStorage.getItem("pendingPlanId");
+      if (pendingPlanId) {
+        localStorage.removeItem("pendingPlanId");
+        navigate("/tracks"); // Redirect to tracks to complete plan selection
+      } else {
+        navigate("/dashboard");
+      }
     }
   }, [user, isLoading, navigate]);
 
@@ -75,7 +128,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       
-      <main className="flex-grow py-10 lg:py-0">
+      <main className="flex-grow py-12 lg:py-16">
         <div className="container mx-auto h-full">
           <div className="flex flex-col lg:flex-row h-full rounded-3xl overflow-hidden shadow-2xl border border-border">
             {/* Left Panel (Form) */}
@@ -86,7 +139,7 @@ export default function AuthPage() {
                   <h1 className="text-3xl font-cairo font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     {activeTab === "login" ? t("auth.welcomeBack") : t("auth.joinCommunity")}
                   </h1>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground pt-3">
                     {activeTab === "login" ? t("auth.loginSubtitle") : t("auth.registerSubtitle")}
                   </p>
                 </div>
@@ -97,7 +150,7 @@ export default function AuthPage() {
                   onValueChange={setActiveTab} 
                   className="w-full"
                 >
-                  <TabsList className="grid w-full grid-cols-2 mb-8 rounded-full h-12">
+                  <TabsList className="grid w-full grid-cols-2 mb-8 rounded-full h-12 px-3">
                     <TabsTrigger 
                       value="login" 
                       className="rounded-full data-[state=active]:shadow-md transition-all"
@@ -113,7 +166,7 @@ export default function AuthPage() {
                   </TabsList>
                   
                   <TabsContent value="login" className="animate-fade-in">
-                    <LoginForm />
+                    <LoginForm onAuthSuccess={onAuthSuccess} />
                     <div className="mt-6 text-center">
                       <p className="text-sm text-muted-foreground">
                         {t("auth.noAccount")}{" "}
@@ -128,7 +181,7 @@ export default function AuthPage() {
                   </TabsContent>
                   
                   <TabsContent value="register" className="animate-fade-in">
-                    <RegisterForm initialRole={role as "client" | "freelancer"} />
+                    <RegisterForm initialRole={role as "client" | "freelancer"} onAuthSuccess={onAuthSuccess} />
                     <div className="mt-6 text-center">
                       <p className="text-sm text-muted-foreground">
                         {t("auth.haveAccount")}{" "}
@@ -142,37 +195,6 @@ export default function AuthPage() {
                     </div>
                   </TabsContent>
                 </Tabs>
-                
-                <div className="mt-8">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border"></div>
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-background px-2 text-muted-foreground">
-                        {t("auth.orContinueWith")}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 grid grid-cols-3 gap-3">
-                    <Button variant="outline" className="w-full">
-                      <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12.0003 2C6.47731 2 2.00031 6.477 2.00031 12C2.00031 16.991 5.65731 21.128 10.4383 21.879V14.89H7.89831V12H10.4383V9.797C10.4383 7.291 11.9313 5.907 14.2153 5.907C15.3093 5.907 16.4543 6.102 16.4543 6.102V8.562H15.1913C13.9513 8.562 13.5623 9.333 13.5623 10.124V12H16.3363L15.8923 14.89H13.5623V21.879C18.3433 21.129 22.0003 16.99 22.0003 12C22.0003 6.477 17.5233 2 12.0003 2Z" />
-                      </svg>
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.477 2 2 6.477 2 12C2 16.991 5.657 21.128 10.438 21.879V14.89H7.898V12H10.438V9.797C10.438 7.291 11.93 5.907 14.215 5.907C15.309 5.907 16.453 6.102 16.453 6.102V8.562H15.193C13.95 8.562 13.563 9.333 13.563 10.124V12H16.334L15.891 14.89H13.563V21.879C18.343 21.129 22 16.99 22 12C22 6.477 17.523 2 12 2Z" />
-                      </svg>
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12.0003 2C6.47731 2 2.00031 6.477 2.00031 12C2.00031 16.991 5.65731 21.128 10.4383 21.879V14.89H7.89831V12H10.4383V9.797C10.4383 7.291 11.9313 5.907 14.2153 5.907C15.3093 5.907 16.4543 6.102 16.4543 6.102V8.562H15.1913C13.9513 8.562 13.5623 9.333 13.5623 10.124V12H16.3363L15.8923 14.89H13.5623V21.879C18.3433 21.129 22.0003 16.99 22.0003 12C22.0003 6.477 17.5233 2 12.0003 2Z" />
-                      </svg>
-                    </Button>
-                  </div>
-                </div>
               </div>
             </div>
             
@@ -185,11 +207,7 @@ export default function AuthPage() {
               
               <div className="h-full flex flex-col justify-center p-12 text-white relative z-10">
                 <div className="mb-8 animate-fade-in">
-                  <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-white/10 backdrop-blur-sm mb-4">
-                    <div className="h-8 w-8 rounded-md bg-white flex items-center justify-center">
-                      <span className="text-lg font-cairo font-bold text-primary">F</span>
-                    </div>
-                  </div>
+                  
                   <h2 className="text-4xl font-cairo font-bold mb-4">
                     {t("auth.platformFeatures")}
                   </h2>

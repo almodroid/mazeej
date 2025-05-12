@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { CreditCard, Plus, Download, DollarSign, BanknoteIcon, Trash, Loader2 } from "lucide-react";
+import { CreditCard, Plus, Download, SaudiRiyal, BanknoteIcon, Trash, Loader2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -31,11 +31,13 @@ interface Transaction {
 
 interface PayoutAccount {
   id: number;
-  type: "bank_account" | "paypal";
+  type: "bank_account" | "paypal" | "card";
   name: string;
   isDefault: boolean;
   accountDetails: any;
   createdAt: string;
+  token?: string;
+  transactionRef?: string;
 }
 
 // Schema for bank account form
@@ -54,13 +56,28 @@ const paypalSchema = z.object({
   isDefault: z.boolean().default(false)
 });
 
+// Schema for card form
+const cardSchema = z.object({
+  cardHolderName: z.string().min(2, { message: "Card holder name is required" }),
+  cardNumber: z.string().min(16, { message: "Valid card number is required" }),
+  expiryMonth: z.string().min(2, { message: "Valid expiry month is required" }),
+  expiryYear: z.string().min(2, { message: "Valid expiry year is required" }),
+  cvv: z.string().min(3, { message: "Valid CVV is required" }),
+  isDefault: z.boolean().default(false)
+});
+
 export default function PaymentsPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
-  const [paymentType, setPaymentType] = useState<"bank_account" | "paypal">("bank_account");
+  const [paymentType, setPaymentType] = useState<"bank_account" | "paypal" | "card">("bank_account");
+  const [paytabsConfig, setPaytabsConfig] = useState({
+    profileID: import.meta.env.VITE_PAYTABS_PROFILE_ID || '',
+    serverKey: import.meta.env.VITE_PAYTABS_SERVER_KEY || '',
+    clientKey: import.meta.env.VITE_PAYTABS_CLIENT_KEY || '',
+  });
   const [deleteAccountId, setDeleteAccountId] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
@@ -116,6 +133,56 @@ export default function PaymentsPage() {
         throw new Error('Failed to fetch transactions');
       }
       return response.json();
+    }
+  });
+
+  // Card form
+  const cardForm = useForm<z.infer<typeof cardSchema>>({    
+    resolver: zodResolver(cardSchema),
+    defaultValues: {
+      cardHolderName: "",
+      cardNumber: "",
+      expiryMonth: "",
+      expiryYear: "",
+      cvv: "",
+      isDefault: false
+    }
+  });
+
+  // PayTabs card tokenization mutation
+  const tokenizeCardMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/paytabs/tokenize', {
+        cardHolderName: data.cardHolderName,
+        cardNumber: data.cardNumber,
+        expiryMonth: data.expiryMonth,
+        expiryYear: data.expiryYear,
+        cvv: data.cvv,
+        isDefault: data.isDefault
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to tokenize card');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: t("payments.cardSaved"),
+        description: t("payments.cardSavedDesc"),
+        variant: "default",
+      });
+      setIsAddPaymentOpen(false);
+      cardForm.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/payout-accounts'] });
+    },
+    onError: (error) => {
+      toast({
+        title: t("common.error"),
+        description: error.message,
+        variant: "destructive",
+      });
     }
   });
 
@@ -233,6 +300,15 @@ export default function PaymentsPage() {
     addAccountMutation.mutate(data);
   };
 
+  // Handle card form submission
+  const onSubmitCard = async (data: z.infer<typeof cardSchema>) => {
+    try {
+      await tokenizeCardMutation.mutateAsync(data);
+    } catch (error) {
+      console.error('Error saving card:', error);
+    }
+  };
+
   // Format date to display in a user-friendly way
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -287,27 +363,202 @@ export default function PaymentsPage() {
                   </DialogDescription>
                 </DialogHeader>
                 
-                <Tabs defaultValue="bank_account" className="w-full mt-4" onValueChange={(value) => setPaymentType(value as "bank_account" | "paypal")} dir={isRTL ? "rtl" : "ltr"}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="bank_account">
-                      <BanknoteIcon size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
-                      {t("payments.bankAccount")}
-                    </TabsTrigger>
-                    <TabsTrigger value="paypal">
-                      <CreditCard size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
-                      PayPal
-                    </TabsTrigger>
+                <Tabs defaultValue={user?.role === "client" ? "card" : "bank_account"} className="w-full mt-4" onValueChange={(value) => setPaymentType(value as "bank_account" | "paypal" | "card")} dir={isRTL ? "rtl" : "ltr"}>
+                  <TabsList className={cn("grid w-full", user?.role === "client" ? "grid-cols-1" : "grid-cols-2")}>
+                    {user?.role !== "client" && (
+                      <>
+                        <TabsTrigger value="bank_account">
+                          <BanknoteIcon size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
+                          {t("payments.bankAccount")}
+                        </TabsTrigger>
+                        <TabsTrigger value="paypal">
+                          <BanknoteIcon size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
+                          PayPal
+                        </TabsTrigger>
+                      </>
+                    )}
+                    {user?.role === "client" && (
+                      <TabsTrigger value="card">
+                        <CreditCard size={16} className={cn("", isRTL ? "ml-2" : "mr-2")} />
+                        {t("payments.creditCard")}
+                      </TabsTrigger>
+                    )}
                   </TabsList>
                   
-                  <TabsContent value="bank_account" className="space-y-4 mt-4">
-                    <Form {...bankForm}>
-                      <form onSubmit={bankForm.handleSubmit(onSubmitBankAccount)} className="space-y-4">
+                  {user?.role !== "client" && (
+                    <>
+                      <TabsContent value="bank_account" className="space-y-4 mt-4">
+                        <Form {...bankForm}>
+                          <form onSubmit={bankForm.handleSubmit(onSubmitBankAccount)} className="space-y-4">
+                            <FormField
+                              control={bankForm.control}
+                              name="bankName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("payments.bankName")}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={bankForm.control}
+                              name="accountName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("payments.accountName")}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={bankForm.control}
+                              name="accountNumber"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("payments.accountNumber")}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <FormField
+                                control={bankForm.control}
+                                name="swiftCode"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>{t("payments.swiftCode")}</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={bankForm.control}
+                                name="routingNumber"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>{t("payments.routingNumber")}</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            
+                            <FormField
+                              control={bankForm.control}
+                              name="isDefault"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
+                                  <FormControl>
+                                    <input
+                                      type="checkbox"
+                                      checked={field.value}
+                                      onChange={field.onChange}
+                                      className="h-4 w-4 rounded border-gray-300"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                    {t("payments.makeDefault")}
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <DialogFooter>
+                              <Button type="submit" disabled={addAccountMutation.isPending}>
+                                {addAccountMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    {t("common.saving")}
+                                  </>
+                                ) : t("common.save")}
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </Form>
+                      </TabsContent>
+                      
+                      <TabsContent value="paypal" className="space-y-4 mt-4">
+                        <Form {...paypalForm}>
+                          <form onSubmit={paypalForm.handleSubmit(onSubmitPaypal)} className="space-y-4">
+                            <FormField
+                              control={paypalForm.control}
+                              name="email"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("payments.paypalEmail")}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="email" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={paypalForm.control}
+                              name="isDefault"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
+                                  <FormControl>
+                                    <input
+                                      type="checkbox"
+                                      checked={field.value}
+                                      onChange={field.onChange}
+                                      className="h-4 w-4 rounded border-gray-300"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                    {t("payments.makeDefault")}
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <DialogFooter>
+                              <Button type="submit" disabled={addAccountMutation.isPending}>
+                                {addAccountMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    {t("common.saving")}
+                                  </>
+                                ) : t("common.save")}
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </Form>
+                      </TabsContent>
+                    </>
+                  )}
+
+                  <TabsContent value="card" className="space-y-4 mt-4">
+                    {user?.role === "client" && (
+                    <Form {...cardForm}>
+                      <form onSubmit={cardForm.handleSubmit(onSubmitCard)} className="space-y-4">
                         <FormField
-                          control={bankForm.control}
-                          name="bankName"
+                          control={cardForm.control}
+                          name="cardHolderName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{t("payments.bankName")}</FormLabel>
+                              <FormLabel>{t("payments.cardHolderName")}</FormLabel>
                               <FormControl>
                                 <Input {...field} />
                               </FormControl>
@@ -315,58 +566,56 @@ export default function PaymentsPage() {
                             </FormItem>
                           )}
                         />
-                        
                         <FormField
-                          control={bankForm.control}
-                          name="accountName"
+                          control={cardForm.control}
+                          name="cardNumber"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{t("payments.accountName")}</FormLabel>
+                              <FormLabel>{t("payments.cardNumber")}</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} maxLength={16} placeholder="1234 5678 9012 3456" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
-                        <FormField
-                          control={bankForm.control}
-                          name="accountNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("payments.accountNumber")}</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
                         <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-4">
+                            <FormField
+                              control={cardForm.control}
+                              name="expiryMonth"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("payments.expiryMonth")}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} maxLength={2} placeholder="MM" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={cardForm.control}
+                              name="expiryYear"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("payments.expiryYear")}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} maxLength={2} placeholder="YY" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
                           <FormField
-                            control={bankForm.control}
-                            name="swiftCode"
+                            control={cardForm.control}
+                            name="cvv"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>{t("payments.swiftCode")}</FormLabel>
+                                <FormLabel>{t("payments.cvv")}</FormLabel>
                                 <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={bankForm.control}
-                            name="routingNumber"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("payments.routingNumber")}</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
+                                  <Input {...field} type="password" maxLength={4} placeholder="***" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -375,7 +624,7 @@ export default function PaymentsPage() {
                         </div>
                         
                         <FormField
-                          control={bankForm.control}
+                          control={cardForm.control}
                           name="isDefault"
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
@@ -395,8 +644,8 @@ export default function PaymentsPage() {
                         />
                         
                         <DialogFooter>
-                          <Button type="submit" disabled={addAccountMutation.isPending}>
-                            {addAccountMutation.isPending ? (
+                          <Button type="submit" disabled={tokenizeCardMutation.isPending}>
+                            {tokenizeCardMutation.isPending ? (
                               <>
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                 {t("common.saving")}
@@ -406,57 +655,7 @@ export default function PaymentsPage() {
                         </DialogFooter>
                       </form>
                     </Form>
-                  </TabsContent>
-                  
-                  <TabsContent value="paypal" className="space-y-4 mt-4">
-                    <Form {...paypalForm}>
-                      <form onSubmit={paypalForm.handleSubmit(onSubmitPaypal)} className="space-y-4">
-                        <FormField
-                          control={paypalForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("payments.paypalEmail")}</FormLabel>
-                              <FormControl>
-                                <Input {...field} type="email" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={paypalForm.control}
-                          name="isDefault"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
-                              <FormControl>
-                                <input
-                                  type="checkbox"
-                                  checked={field.value}
-                                  onChange={field.onChange}
-                                  className="h-4 w-4 rounded border-gray-300"
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {t("payments.makeDefault")}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <DialogFooter>
-                          <Button type="submit" disabled={addAccountMutation.isPending}>
-                            {addAccountMutation.isPending ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                {t("common.saving")}
-                              </>
-                            ) : t("common.save")}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
+                    )}
                   </TabsContent>
                 </Tabs>
               </DialogContent>
@@ -530,7 +729,7 @@ export default function PaymentsPage() {
                 <div className="text-center py-10">{t("common.loading")}</div>
               ) : transactions.length === 0 ? (
                 <div className="text-center py-10 border rounded-md">
-                  <DollarSign className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
+                  <SaudiRiyal className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
                   <p className="text-neutral-500">{t("payments.noTransactions")}</p>
                 </div>
               ) : (

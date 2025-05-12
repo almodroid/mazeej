@@ -34,6 +34,7 @@ export interface ProposalCardProps {
   onNavigateToChat: (freelancerId: number) => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onCheckout?: (proposal: SafeProposal) => void;
   showActions: boolean;
 }
 
@@ -61,6 +62,7 @@ export default function ProposalCard({
   onNavigateToChat,
   onEdit,
   onDelete,
+  onCheckout,
   showActions
 }: ProposalCardProps) {
   const { user } = useAuth();
@@ -151,14 +153,22 @@ export default function ProposalCard({
           </>
         )}
         
-        {/* Show contact button for accepted proposals */}
+        {/* Show checkout and contact buttons for accepted proposals */}
         {proposal.status === 'accepted' && (
-          <Button onClick={() => onNavigateToChat(proposal.freelancerId)}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {t("proposals.contactFreelancer")}
-          </Button>
+          <>
+            {onCheckout && (isClient || isAdmin) && (
+              <Button variant="default" onClick={() => onCheckout(proposal)}>
+                <SaudiRiyal className="h-4 w-4 mr-2" />
+                {t("proposals.proceedToPayment")}
+              </Button>
+            )}
+            <Button onClick={() => onNavigateToChat(proposal.freelancerId)}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              {t("proposals.contactFreelancer")}
+            </Button>
+          </>
         )}
       </CardFooter>
     </Card>
   );
-} 
+}

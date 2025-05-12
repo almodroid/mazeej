@@ -177,6 +177,7 @@ export interface IStorage {
   getAllPayments(): Promise<PaymentData[]>;
   getUserPayments(userId: number): Promise<PaymentData[]>;
   deletePayment(id: number): Promise<boolean>;
+  updatePaymentStatus(id: number, status: 'completed' | 'pending' | 'failed'): Promise<PaymentData | undefined>;
   
   // Transaction operations
   createTransaction(transaction: CreateTransactionParams): Promise<Transaction>;

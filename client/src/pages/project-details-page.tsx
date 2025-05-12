@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, Link } from "wouter";
 import { format } from "date-fns";
 import { ArrowLeft, ArrowRight, User, Clock, DollarSign, Edit, Trash, Loader2, Paperclip, Download, X, Upload, File as FileIcon, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -776,6 +776,7 @@ export default function ProjectDetailsPage() {
               onNavigateToChat={navigateToChat}
               onEditProposal={handleEditProposal}
               onDeleteProposal={handleDeleteProposal}
+              onCheckout={(proposal) => navigate(`/checkout/${proposal.id}`)}
             />
           )}
         </div>

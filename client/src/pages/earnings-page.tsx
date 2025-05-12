@@ -21,13 +21,17 @@ import * as z from "zod";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-interface EarningPeriod {
-  id: string;
+interface Transaction {
+  id: number;
+  paymentId: number;
+  userId: number;
+  username?: string;
   amount: number;
-  date: string;
-  status: "pending" | "paid";
-  projectTitle: string;
-  clientName: string;
+  type: 'fee' | 'payment' | 'refund';
+  status: 'completed' | 'pending' | 'failed';
+  createdAt: string;
+  projectId?: number;
+  projectTitle?: string;
 }
 
 interface PayoutAccount {
@@ -41,7 +45,7 @@ interface PayoutAccount {
 interface WithdrawalRequest {
   id: string;
   amount: number;
-  status: string;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
   paymentMethod: string;
   reference?: string;
   requestedAt: string;
@@ -73,12 +77,25 @@ export default function EarningsPage() {
   const [activeTab, setActiveTab] = useState<'history' | 'withdrawals'>('history');
 
   // Fetch earnings data
-  const { data: earnings = { total: 0, pending: 0, thisMonth: 0, periods: [], available: 0 } } = useQuery({
+  const { data: earnings = { total: 0, pending: 0, thisMonth: 0, available: 0 } } = useQuery({
     queryKey: ["/api/earnings"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/earnings");
       if (!response.ok) {
         throw new Error("Failed to fetch earnings");
+      }
+      return response.json();
+    },
+    enabled: !!user && user.role === "freelancer",
+  });
+
+  // Fetch transactions data
+  const { data: transactions = [], isLoading: isLoadingTransactions } = useQuery({
+    queryKey: ["/api/transactions/my"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/transactions/my");
+      if (!response.ok) {
+        throw new Error("Failed to fetch transactions");
       }
       return response.json();
     },
@@ -303,23 +320,23 @@ export default function EarningsPage() {
                   <div className="rounded-md border">
                     <div className={`grid grid-cols-5 dark:bg-gray-800 bg-neutral-50 p-4 text-sm font-medium text-neutral-500 ${isRTL ? "rtl" : ""}`}>
                       <div>{t("earnings.project")}</div>
-                      <div>{t("earnings.client")}</div>
+                      <div>{t("earnings.type")}</div>
                       <div>{t("earnings.date")}</div>
                       <div>{t("earnings.amount")}</div>
                       <div>{t("earnings.status")}</div>
                     </div>
-                    {earnings.periods && earnings.periods.map((period: EarningPeriod) => (
-                      <div key={period.id} className={`grid grid-cols-5 p-4 text-sm border-t ${isRTL ? "rtl" : ""}`}>
-                        <div className="font-medium">{period.projectTitle}</div>
-                        <div>{period.clientName}</div>
-                        <div>{formatDate(period.date)}</div>
-                        <div>{period.amount} <SaudiRiyal className="h-6 w-6" /></div>
-                        <div>{getStatusBadge(period.status)}</div>
+                    {transactions.map((transaction: Transaction) => (
+                      <div key={transaction.id} className={`grid grid-cols-5 p-4 text-sm border-t ${isRTL ? "rtl" : ""}`}>
+                        <div className="font-medium">{transaction.projectTitle || t("earnings.generalTransaction")}</div>
+                        <div>{t(`earnings.transactionType.${transaction.type}`)}</div>
+                        <div>{formatDate(transaction.createdAt)}</div>
+                        <div>{transaction.amount} <SaudiRiyal className="h-6 w-6" /></div>
+                        <div>{getStatusBadge(transaction.status)}</div>
                       </div>
                     ))}
-                    {(!earnings.periods || earnings.periods.length === 0) && (
+                    {transactions.length === 0 && (
                       <div className="p-4 text-center text-sm text-neutral-500">
-                        {t("earnings.noEarningsRecorded")}
+                        {t("earnings.noTransactionsRecorded")}
                       </div>
                     )}
                   </div>

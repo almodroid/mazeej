@@ -495,16 +495,12 @@ export default function MyProjectsPage() {
                       </div>
                     );
 
-                    return project.status !== 'in_progress' ? (
+                    return (
                       <Link key={project.id} href={`/projects/${project.id}`}>
                         <div className="block hover:bg-neutral-50 dark:hover:bg-gray-800">
                            {projectCardContent}
                         </div>
                       </Link>
-                    ) : (
-                      <div key={project.id} className="block border-b border-neutral-200 last:border-b-0">
-                         {projectCardContent}
-                      </div>
                     );
                   })}
                 </div>

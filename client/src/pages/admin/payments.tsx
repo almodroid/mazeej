@@ -255,9 +255,13 @@ export default function AdminPaymentsPage() {
   const createPaymentMutation = useMutation({
     mutationFn: async (paymentData: PaymentFormValues) => {
       const response = await apiRequest("POST", "/api/payments", paymentData);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || "Failed to create payment");
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: t("admin.paymentAdded", { defaultValue: "Payment added successfully" }),
         description: t("admin.paymentAddedDesc", { 
@@ -266,9 +270,22 @@ export default function AdminPaymentsPage() {
       });
       setIsAddPaymentOpen(false);
       form.reset();
+      
+      // Create transaction record if payment is completed
+      if (data.status === 'completed') {
+        createTransactionMutation.mutate({
+          paymentId: data.id,
+          userId: parseInt(data.userId),
+          amount: data.amount,
+          type: data.type === 'withdrawal' ? 'withdrawal' : 'payment',
+          status: 'completed'
+        });
+      }
+      
       // Refetch payments and transactions list
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/transactions"] });
     },
     onError: (error) => {
       toast({
@@ -281,10 +298,30 @@ export default function AdminPaymentsPage() {
     }
   });
 
+  // Create transaction mutation
+  const createTransactionMutation = useMutation({
+    mutationFn: async (transactionData: any) => {
+      const response = await apiRequest("POST", "/api/transactions", transactionData);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || "Failed to create transaction");
+      }
+      return response.json();
+    },
+    onError: (error) => {
+      console.error('Error creating transaction:', error);
+      // Don't show error to user as this is a background operation
+    }
+  });
+
   // Delete payment mutation
   const deletePaymentMutation = useMutation({
     mutationFn: async (paymentId: string) => {
       const response = await apiRequest("DELETE", `/api/payments/${paymentId}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || "Failed to delete payment");
+      }
       return response;
     },
     onSuccess: () => {
@@ -298,6 +335,7 @@ export default function AdminPaymentsPage() {
       // Refetch payments and transactions list
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/transactions"] });
     },
     onError: (error) => {
       toast({
@@ -1074,4 +1112,4 @@ export default function AdminPaymentsPage() {
       </div>
     </AdminLayout>
   );
-} 
+}

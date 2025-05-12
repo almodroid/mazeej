@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
+import LogoPng from "@/assets/images/logo.png";
 
 export default function Footer() {
   const { t, i18n } = useTranslation();
@@ -34,12 +35,7 @@ export default function Footer() {
           {/* Logo and about section */}
           <div className="lg:col-span-2">
             <div className="flex items-center mb-6">
-              <div className="h-10 w-10 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-lg font-cairo font-bold text-white">F</span>
-              </div>
-              <span className="text-xl font-cairo font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent ml-2">
-                {t("common.appName")}
-              </span>
+            <img src={LogoPng} alt="Mazeej Logo" className="h-10 w-auto" />
             </div>
             <p className="text-muted-foreground dark:text-gray-400 mb-6 max-w-md">
               {t("footer.about")}

@@ -37,6 +37,8 @@ import TracksPage from "@/pages/tracks";
 import PortfolioPage from "./pages/portfolio-page";
 import AdminPlansPage from "./pages/admin/plans";
 import SearchPage from "@/pages/search-page";
+import CheckoutPage from "@/pages/checkout-page";
+import PaymentResultPage from "@/pages/payment-result";
 
 // Lazy load admin components
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
@@ -194,6 +196,11 @@ function Router() {
           </Suspense>
         </ProtectedRoute>
       </Route>
+      <Route path="/checkout/:proposalId">
+        <ProtectedRoute>
+          <CheckoutPage />
+        </ProtectedRoute>
+      </Route>
       <Route path="/verification">
         <ProtectedRoute>
           <VerificationPage />
@@ -239,6 +246,9 @@ function Router() {
       </Route>
       <Route path="/search">
         <SearchPage />
+      </Route>
+      <Route path="/payment-result">
+        <PaymentResultPage />
       </Route>
       <Route>
         <NotFound />

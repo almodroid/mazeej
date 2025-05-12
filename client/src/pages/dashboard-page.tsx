@@ -6,6 +6,7 @@ import StatCard from "@/components/dashboard/stat-card";
 import RecentProjects from "@/components/dashboard/recent-projects";
 import RecentProposals from "@/components/dashboard/recent-proposals";
 import DashboardNotifications from "@/components/dashboard/dashboard-notifications";
+import PlanBanner from "@/components/dashboard/plan-banner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project, Proposal } from "@shared/schema";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
@@ -118,6 +119,9 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-cairo font-bold mb-6">
         {t("dashboard.welcomeBack")} {user.fullName || user.username}
       </h1>
+
+      {/* Show the plan banner only for freelancers */}
+      {user.role === "freelancer" && <PlanBanner />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 

@@ -8,6 +8,7 @@ import { Search, Loader2, Paperclip, Video, Image, File, Send, X, ChevronLeft } 
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { filterSensitiveContent } from "@/lib/filter-sensitive-content";
 import { useToast } from "@/hooks/use-toast";
 import { useMessages } from "@/hooks/use-messages";
 import { format } from "date-fns";
@@ -157,9 +158,12 @@ export default function MessagesPage() {
     try {
       setIsSendingMessage(true);
       
+      // Filter sensitive content before sending
+      const filteredContent = filterSensitiveContent(newMessage.trim());
+      
       await sendMessageMutation.mutateAsync({
         receiverId: selectedPartnerId,
-        content: newMessage.trim()
+        content: filteredContent
       });
       
       // Fetch updated messages

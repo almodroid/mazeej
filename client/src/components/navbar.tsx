@@ -141,7 +141,7 @@ export default function Navbar() {
             {!isHomePage && (
               <div className="relative mr-2">
                 <a href="/search">
-                  <Search className="h-6 w-6" />
+                  <Search className="h-4 w-4" />
                 </a>
               </div>
             )}

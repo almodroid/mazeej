@@ -24,7 +24,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginForm() {
+export default function LoginForm({ onAuthSuccess }: { onAuthSuccess?: () => void }) {
   const { t, i18n } = useTranslation();
   const { loginMutation } = useAuth();
   const isRTL = i18n.language === "ar";
@@ -46,15 +46,17 @@ export default function LoginForm() {
       onSuccess: (user: any) => {
         if (user && user.role === "admin") {
           window.location.href = "/admin";
+        } else if (onAuthSuccess) {
+          // Call the success handler for regular users
+          onAuthSuccess();
         }
-        // Optionally, handle redirect for regular users here if needed
       }
     });
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" dir={isRTL ? "rtl" : "ltr"}>
         <FormField
           control={form.control}
           name="username"

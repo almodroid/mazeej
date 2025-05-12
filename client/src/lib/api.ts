@@ -88,45 +88,15 @@ const saveMockPaymentMethods = (methods: PaymentMethod[], userId?: string): void
   localStorage.setItem(storageKey, JSON.stringify(methods));
 };
 
-// Initialize or get mock transactions from localStorage
-const getMockTransactions = (userId?: string): Transaction[] => {
-  const storageKey = userId ? `${MOCK_TRANSACTIONS_KEY}_${userId}` : MOCK_TRANSACTIONS_KEY;
-  const storedTransactions = localStorage.getItem(storageKey);
+// Get transactions from the API
+const getTransactions = async (): Promise<Transaction[]> => {
+  const response = await apiRequest('GET', '/api/transactions');
   
-  if (storedTransactions) {
-    return JSON.parse(storedTransactions);
+  if (!response.ok) {
+    throw new Error('Failed to fetch transactions');
   }
   
-  // Some sample transactions
-  const defaultTransactions: Transaction[] = [
-    {
-      id: 1,
-      amount: 750,
-      date: "2023-06-15",
-      status: "completed",
-      projectTitle: "E-commerce Website Development",
-      partyName: "Mohammed Ali"
-    },
-    {
-      id: 2,
-      amount: 500,
-      date: "2023-06-01",
-      status: "completed",
-      projectTitle: "Mobile App UI Design",
-      partyName: "Fatima Hassan"
-    },
-    {
-      id: 3,
-      amount: 1200,
-      date: "2023-05-15",
-      status: "completed",
-      projectTitle: "CRM System Integration",
-      partyName: "Khalid Ibrahim"
-    },
-  ];
-  
-  localStorage.setItem(storageKey, JSON.stringify(defaultTransactions));
-  return defaultTransactions;
+  return response.json();
 };
 
 // Mock API handlers
@@ -231,13 +201,13 @@ export const mockApiHandlers = {
     return new Response(null, { status: 204 });
   },
 
-  // GET /api/users/transactions
+  // GET /api/transactions
   getTransactions: async (): Promise<Response> => {
-    const transactions = getMockTransactions();
-    return new Response(JSON.stringify(transactions), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 200
-    });
+    const response = await apiRequest('GET', '/api/transactions');
+    if (!response.ok) {
+      throw new Error('Failed to fetch transactions');
+    }
+    return response;
   }
 };
 
@@ -277,7 +247,7 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
   }
   
   // Handle transactions API
-  if (url === '/api/users/transactions' && (!init || init.method === 'GET')) {
+  if (url === '/api/transactions' && (!init || init.method === 'GET')) {
     return mockApiHandlers.getTransactions();
   }
   
@@ -393,4 +363,61 @@ export const reviewApi = {
     
     return response.json();
   }
-}; 
+};
+
+export const planApi = {
+  getPlans: async () => {
+    const response = await apiRequest('GET', '/api/plans');
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to fetch plans');
+    }
+    
+    return response.json();
+  },
+  
+  subscribeToPlan: async (planId: number) => {
+    const response = await apiRequest('POST', '/api/plans/subscribe', { planId });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to create subscription');
+    }
+    
+    return response.json();
+  },
+  
+  checkPaymentStatus: async (reference: string) => {
+    const response = await apiRequest('GET', `/api/plans/payment-status?reference=${reference}`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to check payment status');
+    }
+    
+    return response.json();
+  },
+  
+  getCurrentPlan: async () => {
+    const response = await apiRequest('GET', '/api/plans/user-current-plan');
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to fetch current plan');
+    }
+    
+    return response.json();
+  },
+  
+  assignFreePlan: async (planId: number) => {
+    const response = await apiRequest('POST', '/api/plans/assign-free', { planId });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to assign free plan');
+    }
+    
+    return response.json();
+  }
+};

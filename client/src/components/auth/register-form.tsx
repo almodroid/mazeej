@@ -32,9 +32,10 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 interface RegisterFormProps {
   initialRole?: "client" | "freelancer";
+  onAuthSuccess?: () => void;
 }
 
-export default function RegisterForm({ initialRole = "client" }: RegisterFormProps) {
+export default function RegisterForm({ initialRole = "client", onAuthSuccess }: RegisterFormProps) {
   const { t, i18n } = useTranslation();
   const { registerMutation } = useAuth();
   const isRTL = i18n.language === "ar";
@@ -59,17 +60,24 @@ export default function RegisterForm({ initialRole = "client" }: RegisterFormPro
   const onSubmit = (data: RegisterFormValues) => {
     registerMutation.mutate({
       username: data.username,
-      email: data.email,
-      fullName: data.fullName,
       password: data.password,
       confirmPassword: data.confirmPassword,
-      role: data.role,
+      email: data.email,
+      fullName: data.fullName,
+      role: data.role
+    }, {
+      onSuccess: () => {
+        // Call the success handler if provided
+        if (onAuthSuccess) {
+          onAuthSuccess();
+        }
+      }
     });
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" dir={isRTL ? "rtl" : "ltr"}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <FormField
             control={form.control}
@@ -178,7 +186,7 @@ export default function RegisterForm({ initialRole = "client" }: RegisterFormPro
                   value={field.value}
                   className="flex flex-col space-y-2"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4" dir={isRTL ? "rtl" : "ltr"}>
                     <FormItem className={`relative flex flex-col items-start space-y-0 rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${field.value === 'client' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}>
                       <FormControl>
                         <RadioGroupItem value="client" className="sr-only" />

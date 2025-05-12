@@ -1127,6 +1127,48 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updatePaymentStatus(id: number, status: 'completed' | 'pending' | 'failed'): Promise<PaymentData | undefined> {
+    try {
+      const [updatedPayment] = await db
+        .update(payments)
+        .set({ status })
+        .where(eq(payments.id, id))
+        .returning();
+
+      if (!updatedPayment) return undefined;
+
+      // Get user information for the payment
+      const user = await this.getUser(updatedPayment.userId);
+      const username = user ? user.username : undefined;
+
+      // Get project information if applicable
+      let projectTitle;
+      let clientName;
+      if (updatedPayment.projectId) {
+        const project = await this.getProjectById(updatedPayment.projectId);
+        if (project) {
+          projectTitle = project.title;
+          const client = await this.getUser(project.clientId);
+          clientName = client ? client.fullName || client.username : undefined;
+        }
+      }
+
+      return {
+        ...updatedPayment,
+        amount: Number(updatedPayment.amount),
+        username,
+        projectTitle,
+        clientName,
+        projectId: updatedPayment.projectId ?? undefined,
+        description: updatedPayment.description ?? undefined,
+        createdAt: updatedPayment.createdAt.toISOString()
+      };
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      return undefined;
+    }
+  }
+
   // Transaction operations
   async createTransaction(transactionData: CreateTransactionParams): Promise<Transaction> {
     // Convert number to string for database

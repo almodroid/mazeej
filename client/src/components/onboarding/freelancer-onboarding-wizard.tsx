@@ -14,26 +14,13 @@ import {
   ChevronLeft,
   Check,
   Phone,
-  ArrowLeft
+  ArrowLeft,
+  CreditCard
 } from "lucide-react";
 import { PhoneVerification } from "@/components/onboarding/phone-verification";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
+import { planApi } from "@/lib/api";
+import { Plan } from "@shared/schema-plans";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +33,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Loader2 } from "lucide-react";
 
 // Define interfaces for the data structure
 interface Skill {
@@ -80,6 +82,74 @@ const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; total
   );
 };
 
+// Map color keys to CSS classes
+const getColorClasses = (key: string = "") => {
+  const colorMap: Record<string, { color: string, badge: string, buttonColor: string }> = {
+    "wameed": {
+      color: "border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/30",
+      badge: "bg-blue-500 text-white",
+      buttonColor: "bg-blue-500 hover:bg-blue-600 text-white"
+    },
+    
+    "nabd": {
+      color: "border-yellow-400 bg-yellow-50 dark:border-yellow-600 dark:bg-yellow-950/30",
+      badge: "bg-yellow-500 text-white",
+      buttonColor: "bg-yellow-500 hover:bg-yellow-600 text-white"
+    },
+    "athar": {
+      color: "border-purple-400 bg-purple-50 dark:border-purple-600 dark:bg-purple-950/30",
+      badge: "bg-purple-500 text-white",
+      buttonColor: "bg-purple-500 hover:bg-purple-600 text-white"
+    },
+    "tamweel": {
+      color: "border-green-400 bg-green-50 dark:border-green-600 dark:bg-green-950/30",
+      badge: "bg-green-500 text-white",
+      buttonColor: "bg-green-500 hover:bg-green-600 text-white"
+    },
+    "orange": {
+      color: "border-orange-400 bg-orange-50 dark:border-orange-600 dark:bg-orange-950/30",
+      badge: "bg-orange-500 text-white",
+      buttonColor: "bg-orange-500 hover:bg-orange-600 text-white"
+    },
+    "yellow": {
+      color: "border-yellow-400 bg-yellow-50 dark:border-yellow-600 dark:bg-yellow-950/30",
+      badge: "bg-yellow-500 text-white",
+      buttonColor: "bg-yellow-500 hover:bg-yellow-600 text-white"
+    },
+    "purple": {
+      color: "border-purple-400 bg-purple-50 dark:border-purple-600 dark:bg-purple-950/30",
+      badge: "bg-purple-500 text-white",
+      buttonColor: "bg-purple-500 hover:bg-purple-600 text-white"
+    },
+    "blue": {
+      color: "border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/30",
+      badge: "bg-blue-500 text-white",
+      buttonColor: "bg-blue-500 hover:bg-blue-600 text-white"
+    },
+    "green": {
+      color: "border-green-400 bg-green-50 dark:border-green-600 dark:bg-green-950/30",
+      badge: "bg-green-500 text-white",
+      buttonColor: "bg-green-500 hover:bg-green-600 text-white"
+    },
+    "red": {
+      color: "border-red-400 bg-red-50 dark:border-red-600 dark:bg-red-950/30",
+      badge: "bg-red-500 text-white",
+      buttonColor: "bg-red-500 hover:bg-red-600 text-white"
+    },
+    "default": {
+      color: "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800",
+      badge: "bg-gray-500 text-white",
+      buttonColor: "bg-gray-500 hover:bg-gray-600 text-white"
+    }
+  };
+
+  // Handle null or undefined input
+  if (!key) return colorMap["default"];
+  
+  const key_lower = key.toLowerCase();
+  return colorMap[key_lower] || colorMap["default"];
+};
+
 export default function FreelancerOnboardingWizard() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
@@ -95,6 +165,7 @@ export default function FreelancerOnboardingWizard() {
     city: "",
     selectedSkills: [] as number[],
     phoneVerified: false,
+    selectedPlanId: null as number | null,
   });
 
   // Check if onboarding is completed
@@ -116,6 +187,7 @@ export default function FreelancerOnboardingWizard() {
       let startStep = 0;
       if (hasCompletedBasicInfo) startStep = 1;
       if (hasCompletedBasicInfo && hasSkills) startStep = 2;
+      if (hasCompletedBasicInfo && hasSkills && hasPhoneVerified) startStep = 3;
       
       setCurrentStep(startStep);
     }
@@ -197,6 +269,20 @@ export default function FreelancerOnboardingWizard() {
     }
   });
 
+  // Fetch available plans
+  const { data: plans = [], isLoading: isPlansLoading } = useQuery<Plan[]>({
+    queryKey: ["/api/plans"],
+    queryFn: async () => {
+      try {
+        const plansData = await planApi.getPlans();
+        return plansData;
+      } catch (error) {
+        console.error("Error fetching plans:", error);
+        return [];
+      }
+    }
+  });
+
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData: any) => {
@@ -247,7 +333,7 @@ export default function FreelancerOnboardingWizard() {
         description: t("profile.profileUpdatedDesc"),
       });
       
-      if (currentStep < 2) {
+      if (currentStep < 3) {
         setCurrentStep(prev => prev + 1);
       }
     },
@@ -484,14 +570,92 @@ export default function FreelancerOnboardingWizard() {
         description: t("verification.phoneVerifiedDesc"),
       });
       
-      // Move to the next step
+      // Move to the next step (plan selection)
       setCurrentStep(3);
-      setIsCompleted(true);
     },
     onError: (error: Error) => {
       toast({
         title: t("verification.verificationFailed"),
         description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Subscribe to plan mutation
+  const subscribePlanMutation = useMutation({
+    mutationFn: async (planId: number) => {
+      try {
+        const response = await planApi.subscribeToPlan(planId);
+        return response;
+      } catch (error) {
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      // If we get a redirect URL, we need to redirect the user to complete payment
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+      
+      // Otherwise, the subscription was successful
+      toast({
+        title: t("onboarding.planSelected"),
+        description: t("onboarding.planSelectedDesc"),
+      });
+      
+      // Move to the completion step
+      setCurrentStep(4);
+      setIsCompleted(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t("common.error"),
+        description: error.message || t("onboarding.planSelectionError"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Skip plan selection and assign free plan
+  const assignFreePlanMutation = useMutation({
+    mutationFn: async () => {
+      try {
+        // Find the free "wamd" plan
+        const wamdPlan = plans.find(plan => plan.key?.toLowerCase() === "wameed");
+        
+        if (!wamdPlan) {
+          throw new Error(t("onboarding.freePlanNotFound"));
+        }
+        
+        // Assign the free plan to the user (use a special endpoint or parameter to indicate it's free)
+        const response = await apiRequest("POST", "/api/plans/assign-free", { planId: wamdPlan.id });
+        
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ message: "Unknown error" }));
+          throw new Error(error.message || "Failed to assign free plan");
+        }
+        
+        return response.json();
+      } catch (error) {
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: t("onboarding.freePlanAssigned"),
+        description: t("onboarding.freePlanAssignedDesc"),
+      });
+      
+      // Move to the completion step
+      setCurrentStep(4);
+      setIsCompleted(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t("common.error"),
+        description: error.message || t("onboarding.freePlanAssignmentError"),
         variant: "destructive",
       });
     },
@@ -607,6 +771,32 @@ export default function FreelancerOnboardingWizard() {
     }
 
     submitVerificationMutation.mutate({ phone: formData.phone });
+  };
+
+  // Handler for selecting a plan
+  const handleSelectPlan = (planId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedPlanId: planId
+    }));
+  };
+
+  // Handler for submitting plan selection
+  const handlePlanSubmit = () => {
+    if (formData.selectedPlanId) {
+      subscribePlanMutation.mutate(formData.selectedPlanId);
+    } else {
+      toast({
+        title: t("onboarding.noPlanSelected"),
+        description: t("onboarding.pleaseSelectPlan"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler for skipping plan selection
+  const handleSkipPlan = () => {
+    assignFreePlanMutation.mutate();
   };
 
   // Handle phone verification complete
@@ -882,6 +1072,105 @@ export default function FreelancerOnboardingWizard() {
             initial="hidden"
             animate="visible"
             exit="exit"
+            className="space-y-4"
+          >
+            <div className="text-center mb-4">
+              <div className="bg-primary/10 p-3 rounded-full w-12 h-12 mx-auto mb-2 flex items-center justify-center">
+                <CreditCard className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-medium">{t("onboarding.choosePlan")}</h3>
+              <p className="text-sm text-muted-foreground">
+                {t("onboarding.choosePlanDescription")}
+              </p>
+            </div>
+
+            {isPlansLoading ? (
+              <div className="flex flex-col items-center justify-center p-8 space-y-4 border rounded-md">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-sm text-muted-foreground">{t("common.loadingPlans")}</p>
+              </div>
+            ) : plans.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                <p className="text-sm text-muted-foreground">{t("onboarding.noPlansFound")}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 max-h-80 overflow-y-auto pr-2">
+                {plans.map((plan: Plan) => {
+                  // Extract color classes using the key
+                  const colorClasses = getColorClasses(plan.key);
+                  
+                  return (
+                    <div
+                      key={plan.id}
+                      className={cn(
+                        "relative border rounded-xl border-2 p-4 hover:shadow-md transition-shadow duration-300 cursor-pointer",
+                        colorClasses.color,
+                        formData.selectedPlanId === plan.id ? "ring-2 ring-primary" : ""
+                      )}
+                      onClick={() => handleSelectPlan(plan.id)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-lg font-bold">{plan.title}</h3>
+                          <div className="flex items-center mt-1">
+                            <span className="font-medium">
+                              {plan.priceValue !== 0 ? `${plan.priceValue} ${plan.priceNote}` : t("common.free")}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
+                        </div>
+                        {formData.selectedPlanId === plan.id && (
+                          <div className="bg-primary text-primary-foreground rounded-full p-1">
+                            <Check className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-3 space-y-1">
+                        {plan.features.slice(0, 3).map((feature, i) => (
+                          <div key={i} className="flex items-start text-sm">
+                            <Check className="h-4 w-4 mt-0.5 text-primary mr-2 flex-shrink-0" />
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                        {plan.features.length > 3 && (
+                          <div className="text-sm text-muted-foreground">
+                            +{plan.features.length - 3} {t("common.moreFeatures")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                onClick={handleSkipPlan}
+                disabled={assignFreePlanMutation.isPending}
+              >
+                {assignFreePlanMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("common.processing")}
+                  </>
+                ) : (
+                  t("onboarding.skipToFreePlan")
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        );
+      case 4:
+        return (
+          <motion.div
+            key="step5"
+            variants={stepVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             className="space-y-4 text-center"
           >
             <div className="py-8">
@@ -920,6 +1209,8 @@ export default function FreelancerOnboardingWizard() {
         return formData.selectedSkills.length > 0;
       case 2:
         return !!formData.phoneVerified;
+      case 3:
+        return !!formData.selectedPlanId;
       default:
         return true;
     }
@@ -932,32 +1223,32 @@ export default function FreelancerOnboardingWizard() {
       <Dialog open={isOpen} onOpenChange={(open) => {
         setIsOpen(open);
         // If closed without completion, show floating button
-        if (!open && currentStep < 3) {
+        if (!open && currentStep < 4) {
           setIsCompleted(false);
         }
       }}>
         <DialogContent className="sm:max-w-md md:max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {currentStep < 3
+              {currentStep < 4
                 ? t("onboarding.completeYourProfile")
                 : t("onboarding.congratulations")}
             </DialogTitle>
             <DialogDescription>
-              {currentStep < 3
-                ? t("onboarding.steps", { current: currentStep + 1, total: 3 })
+              {currentStep < 4
+                ? t("onboarding.steps", { current: currentStep + 1, total: 4 })
                 : t("onboarding.profileCompleted")}
             </DialogDescription>
           </DialogHeader>
 
-          <StepIndicator currentStep={currentStep} totalSteps={3} />
+          <StepIndicator currentStep={currentStep} totalSteps={4} />
 
           <AnimatePresence mode="wait">
             {renderStepContent()}
           </AnimatePresence>
 
           <DialogFooter className="flex justify-between">
-            {currentStep > 0 && currentStep < 3 ? (
+            {currentStep > 0 && currentStep < 4 ? (
               <Button
                 variant="outline"
                 onClick={() => setCurrentStep((prev) => prev - 1)}
@@ -970,7 +1261,7 @@ export default function FreelancerOnboardingWizard() {
               <div />
             )}
             
-            {currentStep < 3 && (
+            {currentStep < 4 && (
               <Button
                 onClick={() => {
                   switch (currentStep) {
@@ -983,6 +1274,9 @@ export default function FreelancerOnboardingWizard() {
                     case 2:
                       handleVerificationSubmit();
                       break;
+                    case 3:
+                      handlePlanSubmit();
+                      break;
                     default:
                       break;
                   }
@@ -991,17 +1285,21 @@ export default function FreelancerOnboardingWizard() {
                   !isStepValid() ||
                   updateProfileMutation.isPending ||
                   addSkillMutation.isPending ||
-                  submitVerificationMutation.isPending
+                  submitVerificationMutation.isPending ||
+                  subscribePlanMutation.isPending
                 }
               >
-                {updateProfileMutation.isPending || addSkillMutation.isPending || submitVerificationMutation.isPending ? (
+                {updateProfileMutation.isPending || 
+                  addSkillMutation.isPending || 
+                  submitVerificationMutation.isPending ||
+                  subscribePlanMutation.isPending ? (
                   <div className="flex items-center">
                     <div className="animate-spin mr-2 h-4 w-4 border-b-2 rounded-full border-white"></div>
                     {t("common.processing")}
                   </div>
                 ) : (
                   <>
-                    {currentStep === 2 ? t("common.submit") : t("common.next")}
+                    {currentStep === 3 ? t("common.subscribe") : t("common.next")}
                     {isRTL ? <ArrowLeft className="h-4 w-4 ml-2" /> : <ArrowRight className="h-4 w-4 ml-2" />}
                   </>
                 )}

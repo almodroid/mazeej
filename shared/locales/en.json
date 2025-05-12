@@ -219,6 +219,10 @@
     "users": "users",
     "projects": "projects",
     "satisfaction": "satisfaction rate",
+    "registerForPlan": "Sign up for the free plan",
+    "registerForPlanDesc": "Create an account or log in to activate your free subscription",
+    "processingPlan": "Processing your subscription",
+    "processingPlanDesc": "You'll be redirected to complete your subscription",
     "benefits": {
       "freelance": {
         "title": "Work on Your Terms",
@@ -1185,5 +1189,45 @@
     "success": "Profile Setup Complete",
     "successMessage": "Your profile has been set up and your verification document has been submitted for review. You can now start exploring projects and submitting proposals.",
     "startExploring": "Start Exploring"
+  },
+  "subscriptions": {
+    "noPlan": "No active subscription plan",
+    "noPlanDesc": "Subscribe to a plan to unlock more features and increase your earning potential",
+    "browsePlans": "Browse Plans",
+    "active": "Active",
+    "expired": "Expired",
+    "expiringSoon": "Expiring Soon",
+    "validUntil": "Valid until",
+    "daysRemaining": "{{count}} day remaining",
+    "daysRemaining_plural": "{{count}} days remaining",
+    "renewNow": "Renew Now",
+    "upgrade": "Upgrade Plan",
+    "renewalError": "Failed to process renewal. Please try again."
+  },
+  "error": {
+    "somethingWrong": "Something went wrong",
+    "tryAgain": "Please try again",
+    "pageNotFound": "Page not found",
+    "backToHome": "Back to home",
+    "serverError": "Server error",
+    "contactSupport": "Please contact support"
+  },
+  "tracks": {
+    "title": "Choose Your Subscription Plan",
+    "subtitle": "Select the plan that best fits your needs and start your journey with us",
+    "featuredPlans": "Featured Plans",
+    "bestValue": "Best Value",
+    "mostPopular": "Most Popular",
+    "free": "Free",
+    "month": "month",
+    "subscribe": "Subscribe",
+    "subscriptionSuccess": "Subscription Successful",
+    "subscriptionSuccessDesc": "You have successfully subscribed to the {{plan}} plan",
+    "freeSubscriptionSuccess": "Free Plan Activated",
+    "freeSubscriptionSuccessDesc": "You now have access to the {{plan}} plan benefits",
+    "subscriptionError": "Subscription Error",
+    "subscriptionErrorDesc": "There was an error processing your subscription. Please try again.",
+    "loginToSubscribe": "You need to login first to subscribe to a plan",
+    "fetchError": "Failed to load subscription plans. Please refresh the page."
   }
 }

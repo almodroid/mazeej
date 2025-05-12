@@ -8,6 +8,8 @@ import { setupAuth, hashPassword } from "./routes/auth";
 import adminSettingsRoutes from "./routes/admin-settings";
 import adminPlansRoutes from "./routes/admin-plans";
 import phoneVerificationRoutes from "./routes/phone-verification";
+import paytabsRoutes from "./routes/paytabs";
+import plansRoutes from "./routes/plans";
 
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
@@ -50,7 +52,16 @@ export function registerRoutes(app: Express): Server {
   app.use('/api/admin', adminPlansRoutes);
   
   // Setup phone verification routes
-  app.use('/api', phoneVerificationRoutes);
+  app.use('/api/phone-verification', phoneVerificationRoutes);
+  
+  // Setup paytabs routes
+  app.use('/api/payments/paytabs', paytabsRoutes);
+  
+  // Setup plans routes
+  app.use('/api/plans', plansRoutes);
+  
+  // Setup PayTabs payment routes
+  paytabsRoutes(app);
 
   // Create HTTP server
   const httpServer = createServer(app);
@@ -1305,7 +1316,7 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/projects/:id/reviews', async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: 'Authentication required' });
+        return res.status(401).json({ message: 'You must be logged in to submit reviews' });
       }
 
       const projectId = parseInt(req.params.id);

@@ -26,6 +26,7 @@ interface ProposalTabsProps {
   onNavigateToChat: (freelancerId: number) => void;
   onEditProposal: (proposal: Proposal) => void;
   onDeleteProposal: (proposal: Proposal) => void;
+  onCheckout?: (proposal: SafeProposal) => void;
 }
 
 export default function ProposalTabs({
@@ -39,7 +40,8 @@ export default function ProposalTabs({
   onRejectProposal,
   onNavigateToChat,
   onEditProposal,
-  onDeleteProposal
+  onDeleteProposal,
+  onCheckout
 }: ProposalTabsProps) {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
@@ -69,6 +71,7 @@ export default function ProposalTabs({
         onNavigateToChat={onNavigateToChat}
         onEdit={isProposalOwner && proposal.status === 'pending' ? () => onEditProposal(proposal) : undefined}
         onDelete={isProposalOwner && proposal.status === 'pending' ? () => onDeleteProposal(proposal) : undefined}
+        onCheckout={onCheckout}
         showActions={(isProjectOwner || isAdmin) && proposal.status === 'pending'}
       />
     );
@@ -175,4 +178,4 @@ export default function ProposalTabs({
       </TabsContent>
     </Tabs>
   );
-} 
+}
