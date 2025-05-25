@@ -1,0 +1,1 @@
+ALTER TYPE "public"."payment_type" ADD VALUE 'plan_payment';

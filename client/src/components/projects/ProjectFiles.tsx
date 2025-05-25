@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Paperclip, Upload, Download, Trash, FileIcon, Loader2, X } from "lucide-react";
+import { Paperclip, Upload, Download, Trash, FileIcon, Loader2, X, Eye } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ interface ProjectFilesProps {
   onDownloadFile: (file: ProjectFile) => void;
   onDeleteFile: (fileId: number) => void;
   isUploadingFile: boolean;
+  onPreviewFile: (file: ProjectFile) => void;
+  isPreviewableFile: (file: ProjectFile) => boolean;
 }
 
 export default function ProjectFiles({
@@ -33,7 +35,9 @@ export default function ProjectFiles({
   onUploadFiles,
   onDownloadFile,
   onDeleteFile,
-  isUploadingFile
+  isUploadingFile,
+  onPreviewFile,
+  isPreviewableFile
 }: ProjectFilesProps) {
   const { t } = useTranslation();
   const [showFileUploadDialog, setShowFileUploadDialog] = useState(false);
@@ -115,7 +119,17 @@ export default function ProjectFiles({
                   </p>
                 </div>
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
+                {isPreviewableFile(file) && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => onPreviewFile(file)}
+                    title={t("common.preview", { defaultValue: "Preview" })}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button 
                   variant="ghost" 
                   size="icon" 

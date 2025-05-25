@@ -60,9 +60,6 @@ export function registerRoutes(app: Express): Server {
   // Setup plans routes
   app.use('/api/plans', plansRoutes);
   
-  // Setup PayTabs payment routes
-  paytabsRoutes(app);
-
   // Create HTTP server
   const httpServer = createServer(app);
   
@@ -1086,8 +1083,16 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: 'Project not found' });
       }
       
-      // Check authorization (only project owner or admin can see proposals)
+      // Check authorization
+      // Allow project owner and admin to see all proposals
+      // Allow freelancers to see their own proposals
       if (project.clientId !== req.user.id && req.user.role !== 'admin') {
+        if (req.user.role === 'freelancer') {
+          // For freelancers, only return their own proposals
+          const proposals = await storage.getProposalsByProject(projectId);
+          const userProposals = proposals.filter(p => p.freelancerId === req.user.id);
+          return res.json(userProposals);
+        }
         return res.status(403).json({ message: 'Not authorized to view these proposals' });
       }
       
@@ -3643,6 +3648,41 @@ export function registerRoutes(app: Express): Server {
       }
       console.error("Error creating project:", error);
       return res.status(500).json({ message: 'Failed to create project' });
+    }
+  });
+
+  // Get a proposal by ID (for client, admin, or proposal owner)
+  app.get('/api/proposals/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const proposalId = parseInt(req.params.id);
+      
+      // Get the proposal
+      const proposal = await storage.getProposalById(proposalId);
+      if (!proposal) {
+        return res.status(404).json({ message: 'Proposal not found' });
+      }
+      
+      // Get the project to check ownership
+      const project = await storage.getProjectById(proposal.projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Check authorization (only project owner, proposal owner, or admin can view)
+      if (project.clientId !== req.user.id && 
+          proposal.freelancerId !== req.user.id && 
+          req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to view this proposal' });
+      }
+      
+      res.json(proposal);
+    } catch (error) {
+      console.error('Error fetching proposal:', error);
+      res.status(500).json({ message: 'Failed to fetch proposal' });
     }
   });
 

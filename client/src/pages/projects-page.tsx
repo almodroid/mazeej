@@ -17,6 +17,7 @@ import { Category, Project } from "@shared/schema";
 import { Search, Filter, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/api";
 
 export default function ProjectsPage() {
   const { t, i18n } = useTranslation();
@@ -35,13 +36,29 @@ export default function ProjectsPage() {
     queryKey: ["/api/categories"],
   });
 
-  // Add more mock projects if needed
-  const mockProjects: Project[] = [
-    // ... existing projects ...
-  ];
-
-  // Mock proposals counts - replace with actual data fetching
-  const proposalsCounts: Record<number, number> = { 1: 8, 2: 12 }; // Mock data
+  // Fetch proposal counts for each project
+  const { data: proposalCounts = {} } = useQuery<Record<number, number>>({
+    queryKey: ["/api/projects/proposal-counts"],
+    queryFn: async () => {
+      const counts: Record<number, number> = {};
+      await Promise.all(projects.map(async (project) => {
+        try {
+          const response = await apiRequest("GET", `/api/projects/${project.id}/proposals`);
+          if (response.ok) {
+            const proposals = await response.json();
+            counts[project.id] = proposals.length;
+          } else {
+            counts[project.id] = 0;
+          }
+        } catch (error) {
+          console.error(`Error fetching proposals for project ${project.id}:`, error);
+          counts[project.id] = 0;
+        }
+      }));
+      return counts;
+    },
+    enabled: projects.length > 0,
+  });
 
   // Ensure the document has the correct RTL direction
   useEffect(() => {
@@ -147,7 +164,7 @@ export default function ProjectsPage() {
                 <ProjectCard 
                   key={project.id} 
                   project={project} 
-                  proposals={proposalsCounts[project.id] || 0} 
+                  proposals={proposalCounts[project.id] || 0} 
                 />
               ))}
             </div>

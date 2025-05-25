@@ -7,8 +7,8 @@ import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-
-
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/api";
 
 type ProjectCardProps = {
   project: Project;
@@ -20,10 +20,34 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
   const { user } = useAuth();
   const isRTL = i18n.language === "ar";
   
+  // Check if the current freelancer has already submitted a proposal
+  const { data: userProposals = [] } = useQuery({
+    queryKey: ["/api/proposals/my"],
+    queryFn: async () => {
+      if (!user || user.role !== "freelancer") return [];
+      const response = await apiRequest("GET", "/api/proposals/my");
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!user && user.role === "freelancer",
+  });
+
+  // Fetch client information
+  const { data: client } = useQuery({
+    queryKey: ["/api/users", project.clientId],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/users/${project.clientId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!project.clientId,
+  });
+
+  const hasSubmittedProposal = userProposals.some((p: any) => p.projectId === project.id);
+  
   // Format the date based on the current language
   const formatDate = (date: Date) => {
     return formatDistanceToNow(new Date(date), {
-      
       locale: i18n.language === 'ar' ? ar : enUS,
     });
   };
@@ -34,7 +58,14 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
   return (
     <div className="bg-neutral-50 dark:bg-gray-800  p-6 shadow-sm hover:shadow-md transition-shadow duration-200" dir={isRTL ? "rtl" : "ltr"}>
       <div className="flex justify-between">
-        <h3 className="text-lg font-cairo font-[300] text-neutral-900 dark:text-white">{project.title}</h3>
+        <div>
+          <h3 className="text-lg font-cairo font-[300] text-neutral-900 dark:text-white">{project.title}</h3>
+          {user?.role === 'freelancer' && client && (
+            <p className="text-sm text-neutral-600 dark:text-gray-400 mt-1">
+              <b>{t('projects.postedBy')}</b> {client.fullName || client.username}
+            </p>
+          )}
+        </div>
         <span className="bg-accent/10 text-accent flex items-center gap-3 dark:bg-accent/20 text-sm px-2 py-2 h-8 rounded-full">
           <span className="font-cairo  text-foreground flex items-center gap-1 dark:text-white">
             <span className="flex items-center gap-1 flex-row-reverse">
@@ -67,9 +98,9 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
             {project.createdAt && formatDate(project.createdAt)}
           </span>
         {user?.role === 'freelancer' ? (
-          <Button className="w-full bg-primary hover:bg-primary-dark" asChild>
-            <Link href={`/projects/${project.id}/proposals/new`}>
-              {t('projects.submitProposal')}
+          <Button className="w-full max-w-96 bg-primary hover:bg-primary-dark" asChild>
+            <Link href={hasSubmittedProposal ? `/projects/${project.id}` : `/projects/${project.id}/proposals/new`}>
+              {hasSubmittedProposal ? t('common.view') : t('projects.submitProposal')}
             </Link>
           </Button>
         ) : (

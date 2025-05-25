@@ -36,6 +36,18 @@ interface Project {
   status: string;
 }
 
+interface Freelancer {
+  id: number;
+  fullName: string;
+  username: string;
+  profileImage?: string;
+  freelancerType: 'expert' | 'content_creator';
+  freelancerLevel: 'beginner' | 'intermediate' | 'advanced';
+  isVerified: boolean;
+  hourlyRate?: number;
+  bio?: string;
+}
+
 interface PaymentStatus {
   status: 'processing' | 'success' | 'failed' | 'pending';
   message?: string;
@@ -60,13 +72,29 @@ export default function CheckoutPage() {
     queryKey: ["proposal", proposalId],
     queryFn: async () => {
       if (!proposalId) return null;
+      // First get the project ID from the proposal
       const response = await apiRequest("GET", `/api/proposals/${proposalId}`);
       if (!response.ok) {
         throw new Error("Failed to fetch proposal");
       }
-      return response.json();
+      const proposal = await response.json();
+      return proposal;
     },
     enabled: !!proposalId && !!user,
+  });
+  
+  // Fetch freelancer details
+  const { data: freelancer, isLoading: isLoadingFreelancer } = useQuery<Freelancer>({
+    queryKey: ["freelancer", proposal?.freelancerId],
+    queryFn: async () => {
+      if (!proposal?.freelancerId) return null;
+      const response = await apiRequest("GET", `/api/users/${proposal.freelancerId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch freelancer");
+      }
+      return response.json();
+    },
+    enabled: !!proposal?.freelancerId && !!user,
   });
   
   // Fetch project details
@@ -153,11 +181,11 @@ export default function CheckoutPage() {
   };
   
   // Calculate fees and total
-  const platformFee = proposal ? proposal.price * 0.05 : 0; // 5% platform fee
-  const totalAmount = proposal ? proposal.price + platformFee : 0;
+  const platformFee = proposal ? proposal.price * 0.15 : 0; // 5% platform fee
+  const totalAmount = proposal ? proposal.price  : 0;
   
   // Loading state
-  if (isLoadingProposal || isLoadingProject) {
+  if (isLoadingProposal || isLoadingProject || isLoadingFreelancer) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -199,7 +227,9 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
       <Navbar />
-      <div className="flex-1 container max-w-4xl py-8">
+      <div className="flex-1 container max-w-4xl py-16 m-auto">
+        
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">{t("checkout.title")}</h1>
           <p className="text-muted-foreground">{t("checkout.subtitle")}</p>
@@ -207,29 +237,29 @@ export default function CheckoutPage() {
         
         <div className="grid gap-8 md:grid-cols-3">
           {/* Order Summary */}
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle>{t("checkout.orderSummary")}</CardTitle>
                 <CardDescription>{t("checkout.projectDetails")}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div>
-                  <h3 className="font-medium">{project.title}</h3>
+                  <h3 className="font-medium text-lg">{project.title}</h3>
                   <p className="text-sm text-muted-foreground">{t("checkout.projectId")}: {project.id}</p>
                 </div>
                 
                 <Separator />
                 
                 <div>
-                  <h3 className="font-medium">{t("checkout.proposalDetails")}</h3>
+                  <h3 className="font-medium text-lg mb-4">{t("checkout.proposalDetails")}</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">{proposal.description}</p>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <div>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="bg-muted/50 p-4 rounded-lg">
                       <p className="text-sm text-muted-foreground">{t("proposals.deliveryTime")}</p>
                       <p className="font-medium">{proposal.deliveryTime} {t("proposals.days")}</p>
                     </div>
-                    <div>
+                    <div className="bg-muted/50 p-4 rounded-lg">
                       <p className="text-sm text-muted-foreground">{t("proposals.proposalId")}</p>
                       <p className="font-medium">#{proposal.id}</p>
                     </div>
@@ -237,27 +267,84 @@ export default function CheckoutPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Freelancer Information */}
+            {freelancer && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("checkout.freelancerInfo")}</CardTitle>
+                  <CardDescription>{t("checkout.freelancerDescription")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-primary">
+                      {freelancer.profileImage ? (
+                        <img 
+                          src={freelancer.profileImage} 
+                          alt={freelancer.fullName || freelancer.username} 
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-primary text-white text-xl font-semibold">
+                          {(freelancer.fullName || freelancer.username).charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-lg">{freelancer.fullName || freelancer.username}</h3>
+                        {freelancer.isVerified && (
+                          <CheckCircle className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {freelancer.freelancerType === 'content_creator' 
+                          ? t('profile.contentCreator') 
+                          : t('profile.expert')} • {t(`profile.${freelancer.freelancerLevel}`)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {freelancer.bio && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="font-medium mb-2">{t("profile.bio")}</h4>
+                        <p className="text-sm text-muted-foreground">{freelancer.bio}</p>
+                      </div>
+                    </>
+                  )}
+
+                  {freelancer.hourlyRate && (
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <p className="text-sm text-muted-foreground">{t("profile.hourlyRate")}</p>
+                      <p className="font-medium">{freelancer.hourlyRate} {t("common.riyal")}/{t("common.hr")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
           
-          {/* Payment Summary */}
-          <div>
+          {/* Payment Summary - Sticky on mobile */}
+          <div className="md:sticky md:top-8">
             <Card>
               <CardHeader>
                 <CardTitle>{t("checkout.paymentSummary")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <span>{t("checkout.proposalAmount")}</span>
-                  <span>{proposal.price} SAR</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">{t("checkout.proposalAmount")}</span>
+                  <span className="font-medium">{proposal.price} {t("common.riyal")}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>{t("checkout.platformFee")}</span>
-                  <span>{platformFee.toFixed(2)} SAR</span>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">{t("checkout.platformFee")}</span>
+                  <span>{platformFee.toFixed(2)} {t("common.riyal")}</span>
                 </div>
                 <Separator />
-                <div className="flex justify-between font-bold">
+                <div className="flex justify-between items-center font-bold text-lg">
                   <span>{t("checkout.total")}</span>
-                  <span>{totalAmount.toFixed(2)} SAR</span>
+                  <span>{totalAmount.toFixed(2)} {t("common.riyal")}</span>
                 </div>
               </CardContent>
               <CardFooter>

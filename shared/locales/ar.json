@@ -460,6 +460,7 @@
   },
   "projects": {
     "title": "أحدث المشاريع",
+    "postedBy" : "نشرت بواسطة ",
     "viewAll": "عرض الكل",
     "details" : "تفاصيل المشروع",
     "budget": "ميزانية",
@@ -849,6 +850,7 @@
     "projectProposal": "العرض",
     "createProposal": "إنشاء عرض",
     "description": "وصف العرض",
+    "proposalId" : "رقم العرض",
     "price": "السعر",
     "deliveryTime": "وقت التسليم",
     "days": "أيام",
@@ -898,6 +900,7 @@
     "noAcceptedProposals": "لا توجد عروض مقبولة",
     "noRejectedProposals": "لا توجد عروض مرفوضة",
     "contactFreelancer": "التواصل مع المستقل",
+    "contactClient": "تواصل مع العميل",
     "freelancer": "مستقل",
     "proposedPrice": "السعر المقترح",
     "processing": "جارٍ المعالجة",
@@ -915,7 +918,9 @@
     "noProposalsYetDescription": "لا توجد عروض بعد. يمكنك الآن تقديم عرضًا جديدًا.",
     "proposalStatusUpdated": "تم تحديث حالة العرض",
     "proposalStatusUpdatedDescription": "تم تحديث حالة العرض بنجاح.",
-    "proposalStatusUpdateError": "فشل في تحديث حالة العرض"
+    "proposalStatusUpdateError": "فشل في تحديث حالة العرض",
+    "onlyViewOwnProposals": "يمكنك فقط رؤية عروضك الخاصة لهذا المشروع",
+    "viewOtherProposalsAfterAcceptance": "يمكنك رؤية العروض الأخرى بمجرد قبول العميل لعرضك"
   },
   "reviews": {
     "title": "التقييمات",
@@ -1454,5 +1459,27 @@
     "subscriptionErrorDesc": "حدث خطأ أثناء معالجة اشتراكك. يرجى المحاولة مرة أخرى.",
     "loginToSubscribe": "تحتاج إلى تسجيل الدخول أولاً للاشتراك في خطة",
     "fetchError": "فشل تحميل خطط الاشتراك. يرجى تحديث الصفحة."
+  },
+  "checkout": {
+    "title": "إتمام الطلب",
+    "subtitle": "مراجعة تفاصيل المشروع والدفع",
+    "orderSummary": "ملخص الطلب",
+    "projectDetails": "تفاصيل المشروع",
+    "projectId": "رقم المشروع",
+    "proposalDetails": "تفاصيل العرض",
+    "freelancerInfo": "معلومات المستقل",
+    "freelancerDescription": "تعرف على المستقل الذي سيعمل على مشروعك",
+    "paymentSummary": "ملخص الدفع",
+    "proposalAmount": "قيمة العرض",
+    "platformFee": "رسوم المنصة",
+    "total": "المجموع",
+    "payNow": "ادفع الآن",
+    "processing": "جاري المعالجة",
+    "paymentSuccessful": "تم الدفع بنجاح",
+    "paymentFailed": "فشل الدفع",
+    "tryAgain": "حاول مرة أخرى",
+    "notFound": "العرض غير موجود",
+    "proposalNotFound": "لم يتم العثور على العرض المطلوب",
+    "unauthorizedDescription": "غير مصرح لك بالوصول إلى هذه الصفحة"
   }
 }

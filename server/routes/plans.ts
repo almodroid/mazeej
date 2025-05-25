@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { db } from "../db";
-import { plans, userPlans } from "@shared/schema-plans";
+import { plans, userPlans, payments, transactions, notifications } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import axios from 'axios';
+import { isAuthenticated } from "./auth";
 
 const router = Router();
 
@@ -52,6 +53,10 @@ router.post("/subscribe", async (req, res) => {
     const PAYTABS_BASE_URL = 'https://secure.paytabs.sa/';
     const PAYTABS_CHECKOUT_URL = `${PAYTABS_BASE_URL}payment/request`;
 
+    // Get server and client URLs from environment variables
+    const SERVER_URL = process.env.SERVER_URL || 'http://192.168.100.17:3000';
+    const CLIENT_URL = process.env.CLIENT_URL || 'http://192.168.100.17:3000';
+
     // Create PayTabs payment request
     const paymentRequest = {
       profile_id: PAYTABS_PROFILE_ID,
@@ -61,15 +66,15 @@ router.post("/subscribe", async (req, res) => {
       cart_description: `Subscription for ${plan.title} plan`,
       cart_currency: 'SAR',
       cart_amount: plan.priceValue.toFixed(2),
-      callback: `${req.protocol}://${req.get('host')}/api/plans/callback`,
-      return: `${req.protocol}://${req.get('host')}/payment-result?reference=${reference}`,
+      callback: `${SERVER_URL}/api/plans/callback`,
+      return: `${CLIENT_URL}/payment-result?reference=${reference}`,
       hide_shipping: true,
       customer_details: {
         name: user.fullName || user.username,
         email: user.email,
         phone: user.phone || '',
         street1: 'Address',
-        city: 'City',
+        city: user.city || 'Riyadh',
         state: 'State',
         country: 'SA',
         zip: '00000'
@@ -79,7 +84,7 @@ router.post("/subscribe", async (req, res) => {
         email: user.email,
         phone: user.phone || '',
         street1: 'Address',
-        city: 'City',
+        city: user.city || 'Riyadh',
         state: 'State',
         country: 'SA',
         zip: '00000'
@@ -117,6 +122,12 @@ router.post("/callback", async (req, res) => {
   try {
     const { tran_ref, cart_id, payment_result } = req.body;
 
+    console.log('[Plans] Received callback:', {
+      tran_ref,
+      cart_id,
+      payment_result
+    });
+
     // PayTabs configuration
     const PAYTABS_PROFILE_ID = process.env.PAYTABS_PROFILE_ID || 'your_profile_id';
     const PAYTABS_SERVER_KEY = process.env.PAYTABS_SERVER_KEY || 'your_server_key';
@@ -137,9 +148,17 @@ router.post("/callback", async (req, res) => {
     const paymentData = verifyResponse.data;
     const isSuccessful = paymentData.payment_result?.response_status === 'A';
 
+    console.log('[Plans] Payment verification result:', {
+      isSuccessful,
+      responseStatus: paymentData.payment_result?.response_status,
+      cartId: cart_id,
+      paymentData: paymentData
+    });
+
     // Extract the plan ID and user ID from the cart_id
     const planIdMatch = cart_id.match(/PLAN-(\d+)-/);
     if (!planIdMatch) {
+      console.log('[Plans] Invalid transaction reference:', cart_id);
       return res.status(400).json({ message: 'Invalid transaction reference' });
     }
 
@@ -147,39 +166,137 @@ router.post("/callback", async (req, res) => {
     const userId = parseInt(paymentData.user_defined?.udf2);
 
     if (!planId || !userId) {
+      console.log('[Plans] Missing plan or user ID:', { planId, userId });
       return res.status(400).json({ message: 'Missing plan or user ID' });
     }
 
     // Get the plan
     const [plan] = await db.select().from(plans).where(eq(plans.id, planId));
     if (!plan) {
+      console.log('[Plans] Plan not found:', planId);
       return res.status(404).json({ message: 'Plan not found' });
     }
 
     if (isSuccessful) {
+      console.log('[Plans] Payment successful, creating subscription:', {
+        userId,
+        planId,
+        planTitle: plan.title
+      });
+
       // Calculate subscription end date (1 month from now)
       const startDate = new Date();
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + 1);
 
-      // Create user plan subscription
-      await db.insert(userPlans).values({
-        userId: userId,
-        planId: planId,
-        startDate,
-        endDate,
-        isActive: true
+      try {
+        // Create user plan subscription
+        const [subscription] = await db.insert(userPlans).values({
+          userId: userId,
+          planId: planId,
+          startDate,
+          endDate,
+          isActive: true
+        }).returning();
+
+        console.log('[Plans] Subscription created successfully:', {
+          subscriptionId: subscription.id,
+          userId,
+          planId,
+          startDate,
+          endDate
+        });
+
+        // Create payment record
+        const [payment] = await db.insert(payments).values({
+          userId: userId,
+          amount: plan.priceValue.toString(),
+          status: 'completed',
+          type: 'plan_payment',
+          description: `Payment for ${plan.title} subscription`
+        }).returning();
+
+        console.log('[Plans] Payment record created:', {
+          paymentId: payment.id,
+          amount: payment.amount,
+          status: payment.status
+        });
+
+        // Create transaction for the platform fee (5% of plan price)
+        const platformFee = plan.priceValue * 0.05;
+        const [platformTransaction] = await db.insert(transactions).values({
+          paymentId: payment.id,
+          userId: 1, // Admin/platform user ID
+          amount: platformFee.toString(),
+          type: 'fee',
+          status: 'completed',
+          description: `Platform fee for ${plan.title} subscription`
+        }).returning();
+
+        console.log('[Plans] Platform fee transaction created:', {
+          transactionId: platformTransaction.id,
+          amount: platformFee
+        });
+
+        // Create transaction for the freelancer (95% of plan price)
+        const freelancerAmount = plan.priceValue - platformFee;
+        const [freelancerTransaction] = await db.insert(transactions).values({
+          paymentId: payment.id,
+          userId: userId,
+          amount: freelancerAmount.toString(),
+          type: 'payment',
+          status: 'completed',
+          description: `Payment for ${plan.title} subscription`
+        }).returning();
+
+        console.log('[Plans] Freelancer transaction created:', {
+          transactionId: freelancerTransaction.id,
+          amount: freelancerAmount
+        });
+
+        // Create notification for the user
+        await db.insert(notifications).values({
+          userId: userId,
+          title: 'Subscription Activated',
+          content: `Your ${plan.title} subscription has been successfully activated. You can now access all plan features.`,
+          type: 'payment',
+          isRead: false
+        });
+
+        console.log('[Plans] Notification created for user:', userId);
+
+      } catch (error) {
+        console.error('[Plans] Failed to process successful payment:', error);
+        return res.status(500).json({
+          message: 'Failed to process successful payment',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    } else {
+      console.log('[Plans] Payment failed:', {
+        userId,
+        planId,
+        responseStatus: paymentData.payment_result?.response_status
       });
 
-      // Create a payment record
-      // Note: This would be integrated with your payments table if you have one
-      console.log(`Payment successful for user ${userId}, plan ${planId}`);
+      // Create failed payment record
+      try {
+        await db.insert(payments).values({
+          userId: userId,
+          amount: plan.priceValue.toString(),
+          status: 'failed',
+          type: 'plan_payment',
+          description: `Failed payment for ${plan.title} subscription`
+        });
+      } catch (error) {
+        console.error('[Plans] Failed to create failed payment record:', error);
+      }
     }
 
     // Return a response to PayTabs
     return res.json({ status: 'success' });
   } catch (error) {
-    console.error('PayTabs callback error:', error);
+    console.error('[Plans] PayTabs callback error:', error);
     return res.status(500).json({
       message: 'Failed to process payment callback',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -192,13 +309,21 @@ router.get("/payment-status", async (req, res) => {
   try {
     const { reference } = req.query;
     
+    console.log('[Plans] Checking payment status:', {
+      reference,
+      userId: req.user?.id,
+      isAuthenticated: req.isAuthenticated()
+    });
+    
     if (!reference) {
+      console.log('[Plans] Missing transaction reference');
       return res.status(400).json({ message: 'Missing transaction reference' });
     }
     
     // Extract the plan ID from the reference
     const planIdMatch = String(reference).match(/PLAN-(\d+)-/);
     if (!planIdMatch) {
+      console.log('[Plans] Invalid transaction reference:', reference);
       return res.status(400).json({ message: 'Invalid transaction reference' });
     }
     
@@ -207,11 +332,13 @@ router.get("/payment-status", async (req, res) => {
     // Get the plan
     const [plan] = await db.select().from(plans).where(eq(plans.id, planId));
     if (!plan) {
+      console.log('[Plans] Plan not found:', planId);
       return res.status(404).json({ message: 'Plan not found' });
     }
     
     // Check if the user has a subscription for this plan
     if (req.isAuthenticated()) {
+      // Check for active subscription
       const [userPlan] = await db
         .select()
         .from(userPlans)
@@ -223,12 +350,26 @@ router.get("/payment-status", async (req, res) => {
           )
         );
       
+      console.log('[Plans] Checking subscription status:', {
+        userId: req.user.id,
+        planId,
+        hasSubscription: !!userPlan,
+        planTitle: plan.title,
+        subscription: userPlan ? {
+          id: userPlan.id,
+          startDate: userPlan.startDate,
+          endDate: userPlan.endDate,
+          isActive: userPlan.isActive
+        } : null
+      });
+
       if (userPlan) {
         return res.json({
           success: true,
           planId,
           subscribed: true,
-          planTitle: plan.title
+          planTitle: plan.title,
+          subscriptionEndDate: userPlan.endDate
         });
       }
     }
@@ -236,10 +377,12 @@ router.get("/payment-status", async (req, res) => {
     return res.json({
       success: false,
       planId,
-      subscribed: false
+      subscribed: false,
+      status: 'not_found',
+      message: 'No active subscription found'
     });
   } catch (error) {
-    console.error('Payment status check error:', error);
+    console.error('[Plans] Payment status check error:', error);
     return res.status(500).json({
       message: 'Failed to check payment status',
       error: error instanceof Error ? error.message : 'Unknown error'

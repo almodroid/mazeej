@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useParams, Link } from "wouter";
 import { format } from "date-fns";
-import { ArrowLeft, ArrowRight, User, Clock, Edit, Trash, Loader2, Paperclip, Download, X, Upload, File as FileIcon, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, Clock, Edit, Trash, Loader2, Paperclip, Download, X, Upload, File as FileIcon, MessageSquare, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -108,6 +108,10 @@ export default function ProjectDetailsPage() {
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Add new state for preview dialog
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewFile, setPreviewFile] = useState<ProjectFile | null>(null);
+
   // Extract projectId from URL params
   useEffect(() => {
     const id = params?.id;
@@ -149,59 +153,29 @@ export default function ProjectDetailsPage() {
       if (!projectId) return [];
       console.log("Fetching proposals for project:", projectId);
       
-      // Use different endpoints based on user role
-      let endpoint = `/api/projects/${projectId}/proposals`;
-      
-      // If the user is a freelancer, they might only be able to see their own proposals
-      // So let's specifically request all proposals if the user is a freelancer
-      if (user?.role === "freelancer") {
-        console.log("User is a freelancer, using specific endpoint");
-        endpoint = `/api/projects/${projectId}/proposals/all`;
-        
-        // As a fallback, also fetch their own proposals directly
-        try {
-          const myProposalsResponse = await apiRequest("GET", "/api/proposals/my");
-          if (myProposalsResponse.ok) {
-            const myProposals = await myProposalsResponse.json();
-            console.log("My proposals:", myProposals);
-            // Filter to only get proposals for this project
-            const projectProposals = myProposals.filter((p: any) => p.projectId === projectId);
-            if (projectProposals.length > 0) {
-              return projectProposals.map((proposal: any) => ({
-                id: proposal.id,
-                createdAt: proposal.createdAt ? new Date(proposal.createdAt) : null,
-                projectId: proposal.projectId,
-                freelancerId: proposal.freelancerId,
-                description: proposal.description || "",
-                price: proposal.price,
-                deliveryTime: proposal.deliveryTime,
-                status: proposal.status as Proposal["status"] || null,
-              }));
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching my proposals:", error);
+      try {
+        const response = await apiRequest("GET", `/api/projects/${projectId}/proposals`);
+        if (!response.ok) {
+          console.error("Failed to fetch proposals:", await response.text());
+          return [];
         }
-      }
-      
-      const response = await apiRequest("GET", endpoint);
-      if (!response.ok) {
-        console.error("Failed to fetch proposals:", await response.text());
+        const data = await response.json() as ApiProposalResponse[];
+        console.log("Proposals data:", data);
+        if (!Array.isArray(data)) return [];
+        return data.map(proposal => ({
+          id: proposal.id,
+          createdAt: proposal.createdAt ? new Date(proposal.createdAt) : null,
+          projectId: proposal.projectId,
+          freelancerId: proposal.freelancerId,
+          description: proposal.description || "",
+          price: proposal.price,
+          deliveryTime: proposal.deliveryTime,
+          status: proposal.status as Proposal["status"] || null,
+        }));
+      } catch (error) {
+        console.error("Error fetching proposals:", error);
         return [];
       }
-      const data = await response.json() as ApiProposalResponse[];
-      console.log("Proposals data:", data);
-      if (!Array.isArray(data)) return [];
-      return data.map(proposal => ({
-        id: proposal.id,
-        createdAt: proposal.createdAt ? new Date(proposal.createdAt) : null,
-        projectId: proposal.projectId,
-        freelancerId: proposal.freelancerId,
-        description: proposal.description || "",
-        price: proposal.price,
-        deliveryTime: proposal.deliveryTime,
-        status: proposal.status as Proposal["status"] || null,
-      })) as Proposal[];
     },
     enabled: !!projectId,
   });
@@ -393,6 +367,11 @@ export default function ProjectDetailsPage() {
   const hasSubmittedProposal = project && proposals.some(
     (p: Proposal) => user && p.freelancerId === user.id
   );
+
+  // Check if any proposal has been accepted
+  const hasAcceptedProposal = (project && proposals.some(
+    (p: Proposal) => p.status === 'accepted'
+  )) ?? false;
 
   // Update user permissions
   const isClient = user?.role === 'client';
@@ -668,6 +647,26 @@ export default function ProjectDetailsPage() {
     navigate(`/projects/${projectId}/proposals/new`);
   };
 
+  // Add function to check if file is previewable
+  const isPreviewableFile = (file: ProjectFile) => {
+    const previewableTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/ogg'
+    ];
+    return previewableTypes.includes(file.mimeType);
+  };
+
+  // Add function to handle preview
+  const handlePreview = (file: ProjectFile) => {
+    setPreviewFile(file);
+    setShowPreviewDialog(true);
+  };
+
   if (isLoadingProject || isLoadingProposals || isLoadingFiles) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -726,7 +725,7 @@ export default function ProjectDetailsPage() {
           {/* Project Header */}
           <ProjectHeader
             project={project}
-            hasSubmittedProposal={hasSubmittedProposal}
+            hasSubmittedProposal={hasSubmittedProposal ?? false}
             canSubmitProposal={canSubmitProposal}
             canEditProject={isProjectOwner && proposals.length === 0}
             isFreelancer={isFreelancer}
@@ -741,6 +740,7 @@ export default function ProjectDetailsPage() {
             }}
             onEditProject={handleEditProject}
             onDeleteProject={handleDeleteProject}
+            hasAcceptedProposal={hasAcceptedProposal}
           />
           
           <Card className="mb-8">
@@ -759,6 +759,8 @@ export default function ProjectDetailsPage() {
               onDownloadFile={downloadFile}
               onDeleteFile={handleFileDelete}
               isUploadingFile={isUploadingFile}
+              onPreviewFile={handlePreview}
+              isPreviewableFile={isPreviewableFile}
             />
           </Card>
           
@@ -777,6 +779,7 @@ export default function ProjectDetailsPage() {
               onEditProposal={handleEditProposal}
               onDeleteProposal={handleDeleteProposal}
               onCheckout={(proposal) => navigate(`/checkout/${proposal.id}`)}
+              showActions={false}
             />
           )}
         </div>
@@ -972,6 +975,41 @@ export default function ProjectDetailsPage() {
               ) : (
                 t("common.delete")
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Preview Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>{previewFile?.originalName}</DialogTitle>
+          </DialogHeader>
+          <div className="relative w-full aspect-video">
+            {previewFile && (
+              previewFile.mimeType.startsWith('image/') ? (
+                <img
+                  src={`/api/files/${previewFile.id}/download`}
+                  alt={previewFile.originalName}
+                  className="w-full h-full object-contain"
+                />
+              ) : previewFile.mimeType.startsWith('video/') ? (
+                <video
+                  src={`/api/files/${previewFile.id}/download`}
+                  controls
+                  className="w-full h-full"
+                />
+              ) : null
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPreviewDialog(false)}>
+              {t("common.close")}
+            </Button>
+            <Button onClick={() => previewFile && downloadFile(previewFile)}>
+              <Download className="mr-2 h-4 w-4" />
+              {t("common.download")}
             </Button>
           </DialogFooter>
         </DialogContent>

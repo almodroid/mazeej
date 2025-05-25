@@ -1,25 +1,27 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams, Link } from "react-router-dom";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import { planApi } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+
+interface PaymentResult {
+  success: boolean;
+  error?: string;
+  type?: 'project' | 'plan';
+  planTitle?: string;
+}
 
 export default function PaymentResultPage() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+  const [location, setLocation] = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
   const reference = searchParams.get("reference");
   const [loading, setLoading] = useState(true);
-  const [result, setResult] = useState<{
-    success: boolean;
-    planId?: number;
-    subscribed?: boolean;
-    planTitle?: string;
-    error?: string;
-  } | null>(null);
+  const [result, setResult] = useState<PaymentResult | null>(null);
 
   useEffect(() => {
     if (!reference) {
@@ -34,8 +36,23 @@ export default function PaymentResultPage() {
     const checkPaymentStatus = async () => {
       try {
         setLoading(true);
-        const status = await planApi.checkPaymentStatus(reference);
-        setResult(status);
+        
+        // Determine payment type from reference
+        const isPlanPayment = reference.startsWith('PLAN-');
+        const endpoint = isPlanPayment ? '/api/plans/payment-status' : '/api/payments/paytabs/status';
+        
+        const response = await apiRequest("GET", `${endpoint}?reference=${reference}`);
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        
+        const data = await response.json();
+        setResult({
+          success: isPlanPayment ? data.subscribed : data.status === 'accepted',
+          error: isPlanPayment ? undefined : (data.status === 'accepted' ? undefined : t("payment.failedMessage")),
+          type: isPlanPayment ? 'plan' : 'project',
+          planTitle: data.planTitle
+        });
       } catch (error) {
         console.error("Error checking payment status:", error);
         setResult({
@@ -49,6 +66,19 @@ export default function PaymentResultPage() {
 
     checkPaymentStatus();
   }, [reference, t]);
+
+  const getSuccessMessage = () => {
+    if (!result) return '';
+    if (result.type === 'plan') {
+      return t("payment.planSuccessMessage", { plan: result.planTitle });
+    }
+    return t("payment.successMessage");
+  };
+
+  const getSuccessRedirect = () => {
+    if (!result) return '/';
+    return result.type === 'plan' ? '/tracks' : '/my-projects';
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -72,14 +102,14 @@ export default function PaymentResultPage() {
                 <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
                 <h3 className="text-xl font-bold mb-2">{t("payment.success")}</h3>
                 <p className="text-center mb-6">
-                  {t("payment.successMessage", { plan: result.planTitle })}
+                  {getSuccessMessage()}
                 </p>
                 <div className="flex gap-4">
-                  <Button asChild>
-                    <Link to="/dashboard">{t("payment.dashboard")}</Link>
+                  <Button onClick={() => setLocation(getSuccessRedirect())}>
+                    {result.type === 'plan' ? t("payment.viewPlans") : t("payment.myProjects")}
                   </Button>
-                  <Button variant="outline" asChild>
-                    <Link to="/">{t("payment.homePage")}</Link>
+                  <Button variant="outline" onClick={() => setLocation("/")}>
+                    {t("payment.homePage")}
                   </Button>
                 </div>
               </div>
@@ -91,11 +121,11 @@ export default function PaymentResultPage() {
                   {result?.error || t("payment.failedMessage")}
                 </p>
                 <div className="flex gap-4">
-                  <Button asChild>
-                    <Link to="/tracks">{t("payment.tryAgain")}</Link>
+                  <Button onClick={() => setLocation(result?.type === 'plan' ? '/tracks' : '/my-projects')}>
+                    {t("payment.tryAgain")}
                   </Button>
-                  <Button variant="outline" asChild>
-                    <Link to="/">{t("payment.homePage")}</Link>
+                  <Button variant="outline" onClick={() => setLocation("/")}>
+                    {t("payment.homePage")}
                   </Button>
                 </div>
               </div>

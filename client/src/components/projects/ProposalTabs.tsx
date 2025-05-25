@@ -27,6 +27,7 @@ interface ProposalTabsProps {
   onEditProposal: (proposal: Proposal) => void;
   onDeleteProposal: (proposal: Proposal) => void;
   onCheckout?: (proposal: SafeProposal) => void;
+  showActions?: boolean;
 }
 
 export default function ProposalTabs({
@@ -41,7 +42,8 @@ export default function ProposalTabs({
   onNavigateToChat,
   onEditProposal,
   onDeleteProposal,
-  onCheckout
+  onCheckout,
+  showActions = true
 }: ProposalTabsProps) {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
@@ -72,7 +74,7 @@ export default function ProposalTabs({
         onEdit={isProposalOwner && proposal.status === 'pending' ? () => onEditProposal(proposal) : undefined}
         onDelete={isProposalOwner && proposal.status === 'pending' ? () => onDeleteProposal(proposal) : undefined}
         onCheckout={onCheckout}
-        showActions={(isProjectOwner || isAdmin) && proposal.status === 'pending'}
+        showActions={showActions && (isProjectOwner || isAdmin) && proposal.status === 'pending'}
       />
     );
   };
@@ -93,8 +95,12 @@ export default function ProposalTabs({
           <p>{t("proposals.noProposals")}</p>
           <p className="mt-4 text-sm text-muted-foreground">
             {isFreelancer ? 
-              t("proposals.freelancerNoProposalsInfo", { defaultValue: "As a freelancer, you can only see your own proposals for this project. Submit a proposal to see it here." }) : 
-              t("proposals.noProposalsDescription", { defaultValue: "No proposals have been submitted for this project yet." })}
+              t("proposals.onlyViewOwnProposals", { 
+                defaultValue: "You can only see your own proposals for this project." 
+              }) : 
+              t("proposals.noProposalsDescription", { 
+                defaultValue: "No proposals have been submitted for this project yet." 
+              })}
           </p>
         </CardContent>
       </Card>
@@ -102,8 +108,8 @@ export default function ProposalTabs({
   }
 
   return (
-    <Tabs defaultValue="all" className="mb-8">
-      <TabsList className="mb-4" dir={isRTL ? "rtl" : "ltr"}>
+    <Tabs defaultValue="all" className="mb-8" dir={isRTL ? "rtl" : "ltr"}>
+      <TabsList className="mb-4" >
         <TabsTrigger value="all">{t("proposals.all")}</TabsTrigger>
         {isProjectOwner && (
           <>
@@ -120,12 +126,12 @@ export default function ProposalTabs({
           {isFreelancer && !isProjectOwner && !isAdmin && proposals.length > 0 && (
             <div className="bg-blue-50 p-4 rounded-md text-blue-700 mb-4">
               <p className="font-medium">
-                {t("proposals.freelancerVisibilityInfo", { 
-                  defaultValue: "As a freelancer, you can only see your own proposals for this project." 
+                {t("proposals.onlyViewOwnProposals", { 
+                  defaultValue: "You can only see your own proposals for this project." 
                 })}
               </p>
               <p className="text-sm mt-1">
-                {t("proposals.freelancerProposalAcceptanceInfo", { 
+                {t("proposals.viewOtherProposalsAfterAcceptance", { 
                   defaultValue: "You can view other proposals once the client accepts your proposal." 
                 })}
               </p>

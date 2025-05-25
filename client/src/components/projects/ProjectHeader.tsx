@@ -22,6 +22,7 @@ export interface ProjectHeaderProps {
   onDeleteProposal: () => void; 
   onEditProject: () => void;
   onDeleteProject: () => void;
+  hasAcceptedProposal: boolean;
 }
 
 // Map status to badge color
@@ -53,7 +54,8 @@ export default function ProjectHeader({
   onEditProposal,
   onDeleteProposal,
   onEditProject,
-  onDeleteProject
+  onDeleteProject,
+  hasAcceptedProposal
 }: ProjectHeaderProps) {
   const { t, i18n } = useTranslation();
   
@@ -83,16 +85,18 @@ export default function ProjectHeader({
                 <div className="mr-2 flex items-center text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-md">
                   <span className="mr-2">{t("proposals.alreadySubmitted")}</span>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={onEditProposal}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    {t("proposals.edit")}
-                  </Button>
-                  <Button variant="outline" className="text-red-500" onClick={onDeleteProposal}>
-                    <Trash className="h-4 w-4 mr-2" />
-                    {t("proposals.delete")}
-                  </Button>
-                </div>
+                {!hasAcceptedProposal && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={onEditProposal}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      {t("proposals.edit")}
+                    </Button>
+                    <Button variant="outline" className="text-red-500" onClick={onDeleteProposal}>
+                      <Trash className="h-4 w-4 mr-2" />
+                      {t("proposals.delete")}
+                    </Button>
+                  </div>
+                )}
               </>
             )}
             

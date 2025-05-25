@@ -6,6 +6,8 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/api";
 
 interface ProjectDetailsProps {
   project: Project;
@@ -16,6 +18,16 @@ export default function ProjectDetails({ project, isProjectOwner }: ProjectDetai
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
+  // Fetch client information
+  const { data: client } = useQuery({
+    queryKey: ["/api/users", project.clientId],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/users/${project.clientId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!project.clientId,
+  });
 
   const deadlineDate = project.deadline ? new Date(project.deadline) : null;
   const formattedDeadline = deadlineDate ? format(deadlineDate, "MMMM d, yyyy") : "";
@@ -46,7 +58,7 @@ export default function ProjectDetails({ project, isProjectOwner }: ProjectDetai
           <div>
             <p className="text-sm text-muted-foreground">{t("projects.client")}</p>
             <p className="font-medium">
-              {isProjectOwner ? t("common.you") : `Client #${project.clientId}`}
+              {isProjectOwner ? t("common.you") : (client?.fullName || client?.username || project.clientId)}
             </p>
           </div>
         </div>

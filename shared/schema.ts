@@ -40,7 +40,7 @@ export const verificationStatusEnum = pgEnum('verification_status', ['pending', 
 export const paymentStatusEnum = pgEnum('payment_status', ['completed', 'pending', 'failed']);
 
 // Payment type enum
-export const paymentTypeEnum = pgEnum('payment_type', ['deposit', 'withdrawal', 'project_payment']);
+export const paymentTypeEnum = pgEnum('payment_type', ['deposit', 'withdrawal', 'project_payment', 'plan_payment']);
 
 // Transaction type enum
 export const transactionTypeEnum = pgEnum('transaction_type', ['fee', 'payment', 'refund']);
