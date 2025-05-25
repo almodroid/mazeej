@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useGlobalSettings } from "@/hooks/use-global-settings";
 import { 
   Card, 
   CardContent, 
@@ -158,6 +159,8 @@ export default function AdminPaymentsPage() {
   // Payment deletion state
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
 
+  const { platformFee } = useGlobalSettings();
+
   // Fetch payments data
   const { data: payments = [], isLoading: isLoadingPayments } = useQuery({
     queryKey: ["/api/payments"],
@@ -233,11 +236,11 @@ export default function AdminPaymentsPage() {
         withdrawal.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
-  // Calculate total platform earnings (5% of all completed payments)
+  // Calculate total platform earnings using the global fee
   const totalEarnings = (payments as Payment[])
     .filter(payment => payment.status === 'completed')
     .reduce((total: number, payment: Payment) => {
-      return total + (payment.amount * 0.05);
+      return total + (payment.amount * (platformFee / 100));
     }, 0);
   
   // Form setup with zod validation
@@ -479,7 +482,7 @@ export default function AdminPaymentsPage() {
                 {totalEarnings.toFixed(2)} {isRTL ? <SaudiRiyal className="h-6 w-6" /> : "SAR"}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                5% {t("payments.platformFee")}
+                {platformFee}% {t("payments.platformFee")}
               </p>
             </CardContent>
           </Card>

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db";
-import { plans, userPlans, payments, transactions, notifications } from "@shared/schema";
+import { plans, userPlans, payments, transactions, notifications, settings } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import axios from 'axios';
 import { isAuthenticated } from "./auth";
@@ -117,6 +117,12 @@ router.post("/subscribe", async (req, res) => {
   }
 });
 
+// Helper function to get platform fee
+async function getPlatformFee() {
+  const feeSetting = await db.select().from(settings).where(eq(settings.key, "platformFee")).limit(1);
+  return feeSetting.length > 0 ? Number(feeSetting[0].value) : 5; // Default to 5% if not set
+}
+
 // PayTabs callback endpoint
 router.post("/callback", async (req, res) => {
   try {
@@ -222,12 +228,13 @@ router.post("/callback", async (req, res) => {
           status: payment.status
         });
 
-        // Create transaction for the platform fee (5% of plan price)
-        const platformFee = plan.priceValue * 0.05;
+        // Create transaction for the platform fee
+        const platformFee = await getPlatformFee();
+        const feeAmount = plan.priceValue * (platformFee / 100);
         const [platformTransaction] = await db.insert(transactions).values({
           paymentId: payment.id,
           userId: 1, // Admin/platform user ID
-          amount: platformFee.toString(),
+          amount: feeAmount.toString(),
           type: 'fee',
           status: 'completed',
           description: `Platform fee for ${plan.title} subscription`
@@ -235,11 +242,11 @@ router.post("/callback", async (req, res) => {
 
         console.log('[Plans] Platform fee transaction created:', {
           transactionId: platformTransaction.id,
-          amount: platformFee
+          amount: feeAmount
         });
 
-        // Create transaction for the freelancer (95% of plan price)
-        const freelancerAmount = plan.priceValue - platformFee;
+        // Create transaction for the freelancer (remaining amount)
+        const freelancerAmount = plan.priceValue - feeAmount;
         const [freelancerTransaction] = await db.insert(transactions).values({
           paymentId: payment.id,
           userId: userId,

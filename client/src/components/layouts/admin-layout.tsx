@@ -20,7 +20,8 @@ import {
   User as UserIcon,
   Home,
   ChevronDown,
-  ListFilter
+  ListFilter,
+  ClipboardCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -81,6 +82,11 @@ const adminNavItems = [
         title: "skills",
         href: "/admin/skills",
         icon: BarChart4
+      },
+      {
+        title: "questions",
+        href: "/admin/questions",
+        icon: ClipboardCheck
       }
     ]
   },

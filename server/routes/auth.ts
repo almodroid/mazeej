@@ -9,6 +9,7 @@ import { User, User as SelectUser } from "@shared/schema";
 import { db } from "../db";
 import { plans, userPlans } from "@shared/schema-plans";
 import { eq } from "drizzle-orm";
+import { Request, Response, NextFunction } from "express";
 
 declare global {
   namespace Express {
@@ -218,4 +219,16 @@ export function isAuthenticated(req: any, res: any, next: any) {
     return next();
   }
   res.status(401).json({ message: "Unauthorized" });
+}
+
+export function isAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  next();
 }

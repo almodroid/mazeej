@@ -2,6 +2,9 @@ import axios from 'axios';
 import type { Request, Response } from 'express';
 import { Router } from 'express';
 import { storage } from '../storage';
+import { db } from "../db";
+import { settings } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 // PayTabs configuration
 const PAYTABS_PROFILE_ID = process.env.PAYTABS_PROFILE_ID;
@@ -25,6 +28,12 @@ console.log('[PayTabs] Configuration loaded:', {
 });
 
 const router = Router();
+
+// Helper function to get platform fee
+async function getPlatformFee() {
+  const feeSetting = await db.select().from(settings).where(eq(settings.key, "platformFee")).limit(1);
+  return feeSetting.length > 0 ? Number(feeSetting[0].value) : 5; // Default to 5% if not set
+}
 
 // Create a checkout session with PayTabs
 router.post('/checkout', async (req: Request, res: Response) => {
@@ -96,8 +105,9 @@ router.post('/checkout', async (req: Request, res: Response) => {
     }
 
     // Calculate total amount including platform fee
-    const platformFee = amount * 0.05; // 5% platform fee
-    const totalAmount = amount + platformFee;
+    const platformFee = await getPlatformFee();
+    const feeAmount = amount * (platformFee / 100);
+    const totalAmount = amount + feeAmount;
 
     // Create a unique reference for this transaction
     const reference = `PROP-${proposalId}-${Date.now()}`;
@@ -332,11 +342,12 @@ router.post('/callback', async (req: Request, res: Response) => {
         });
         
         // Create a transaction for the platform fee
-        const platformFee = proposal.price * 0.05;
+        const platformFee = await getPlatformFee();
+        const feeAmount = proposal.price * (platformFee / 100);
         await storage.createTransaction({
           paymentId: pendingPayment.id,
           userId: 1, // Admin/platform user ID
-          amount: platformFee,
+          amount: feeAmount,
           type: 'fee',
           status: 'completed',
           description: `Platform fee for project: ${project.title}`

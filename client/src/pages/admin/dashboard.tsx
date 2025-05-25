@@ -77,6 +77,33 @@ interface Payment {
   createdAt?: string;
 }
 
+interface ProjectStatus {
+  status: string;
+  count: number;
+  color?: string;
+}
+
+interface DashboardStats {
+  users: {
+    total: number;
+    newThisMonth: number;
+    growth: string;
+  };
+  projects: {
+    total: number;
+    newThisMonth: number;
+    growth: string;
+  };
+  categories: {
+    total: number;
+  };
+  earnings: {
+    currentMonth: number;
+    lastMonth: number;
+    growth: string;
+  };
+}
+
 // Sample data for charts
 const monthlyRevenueData = [
   { name: 'Jan', revenue: 500 },
@@ -117,50 +144,49 @@ export default function AdminDashboardPage() {
   const { toast } = useToast();
   const isRTL = i18n.language === "ar";
   
-  // Fetch users data
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["/api/users"],
+  // Fetch dashboard statistics
+  const { data: stats, isLoading: isLoadingStats } = useQuery<DashboardStats>({
+    queryKey: ["/api/admin/dashboard/stats"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/users");
-      return response.json();
-    },
-    enabled: !!user && user.role === "admin"
-  });
-  
-  // Fetch projects data
-  const { data: projects = [], isLoading: isLoadingProjects } = useQuery({
-    queryKey: ["/api/projects"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/projects");
-      return response.json();
-    },
-    enabled: !!user && user.role === "admin"
-  });
-  
-  // Fetch categories data
-  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
-    queryKey: ["/api/categories"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/categories");
-      return response.json();
-    },
-    enabled: !!user && user.role === "admin"
-  });
-  
-  // Fetch payments data
-  const { data: payments = [], isLoading: isLoadingPayments } = useQuery({
-    queryKey: ["/api/payments"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/payments");
+      const response = await apiRequest("GET", "/api/admin/dashboard/stats");
+      if (!response.ok) throw new Error('Failed to fetch stats');
       return response.json();
     },
     enabled: !!user && user.role === "admin"
   });
 
-  // Calculate total earnings (5% of all payments)
-  const totalEarnings = (payments as Payment[]).reduce((total: number, payment: Payment) => {
-    return total + (payment.amount * 0.05);
-  }, 0);
+  // Fetch monthly revenue data
+  const { data: revenueData = [], isLoading: isLoadingRevenue } = useQuery({
+    queryKey: ["/api/admin/dashboard/revenue"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/dashboard/revenue");
+      if (!response.ok) throw new Error('Failed to fetch revenue data');
+      return response.json();
+    },
+    enabled: !!user && user.role === "admin"
+  });
+
+  // Fetch project status data
+  const { data: projectStatusData = [], isLoading: isLoadingProjectStatus } = useQuery({
+    queryKey: ["/api/admin/dashboard/project-status"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/dashboard/project-status");
+      if (!response.ok) throw new Error('Failed to fetch project status');
+      return response.json();
+    },
+    enabled: !!user && user.role === "admin"
+  });
+
+  // Fetch user registration data
+  const { data: userRegistrationData = [], isLoading: isLoadingUserRegistration } = useQuery({
+    queryKey: ["/api/admin/dashboard/user-registration"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/dashboard/user-registration");
+      if (!response.ok) throw new Error('Failed to fetch user registration data');
+      return response.json();
+    },
+    enabled: !!user && user.role === "admin"
+  });
 
   return (
     <AdminLayout>
@@ -189,20 +215,23 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {isLoadingUsers ? (
+                {isLoadingStats ? (
                   <span className="inline-block w-16 h-8 bg-muted animate-pulse rounded"></span>
                 ) : (
                   <div className="flex items-center">
-                    {users.length}
-                    <span className="text-sm ml-2 text-green-500 flex items-center">
+                    {stats?.users?.total || 0}
+                    <span className={cn(
+                      "text-sm ml-2 flex items-center",
+                      Number(stats?.users?.growth || 0) >= 0 ? "text-green-500" : "text-red-500"
+                    )}>
                       <ArrowUpRight className="h-4 w-4 mr-1" />
-                      12%
+                      {stats?.users?.growth || 0}%
                     </span>
                   </div>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                +24 {t("common.thisMonth")}
+                +{stats?.users?.newThisMonth || 0} {t("common.thisMonth")}
               </p>
             </CardContent>
           </Card>
@@ -216,20 +245,23 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {isLoadingProjects ? (
+                {isLoadingStats ? (
                   <span className="inline-block w-16 h-8 bg-muted animate-pulse rounded"></span>
                 ) : (
                   <div className="flex items-center">
-                    {projects.length}
-                    <span className="text-sm ml-2 text-green-500 flex items-center">
+                    {stats?.projects?.total || 0}
+                    <span className={cn(
+                      "text-sm ml-2 flex items-center",
+                      Number(stats?.projects?.growth || 0) >= 0 ? "text-green-500" : "text-red-500"
+                    )}>
                       <ArrowUpRight className="h-4 w-4 mr-1" />
-                      8%
+                      {stats?.projects?.growth || 0}%
                     </span>
                   </div>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                +12 {t("common.thisMonth")}
+                +{stats?.projects?.newThisMonth || 0} {t("common.thisMonth")}
               </p>
             </CardContent>
           </Card>
@@ -238,25 +270,28 @@ export default function AdminDashboardPage() {
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base font-medium">{t("dashboard.totalEarnings")}</CardTitle>
               <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center">
-              {isRTL ? <SaudiRiyal className="h-10 w-10 text-neutral-300 mx-auto mb-3" /> : "SAR"}
+                {isRTL ? <SaudiRiyal className="h-10 w-10 text-neutral-300 mx-auto mb-3" /> : "SAR"}
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {isLoadingPayments ? (
+                {isLoadingStats ? (
                   <span className="inline-block w-16 h-8 bg-muted animate-pulse rounded"></span>
                 ) : (
                   <div className="flex items-center">
-                    ${totalEarnings.toFixed(2)}
-                    <span className="text-sm ml-2 text-green-500 flex items-center">
+                    ${Number(stats?.earnings?.currentMonth || 0).toFixed(2)}
+                    <span className={cn(
+                      "text-sm ml-2 flex items-center",
+                      Number(stats?.earnings?.growth || 0) >= 0 ? "text-green-500" : "text-red-500"
+                    )}>
                       <ArrowUpRight className="h-4 w-4 mr-1" />
-                      18%
+                      {stats?.earnings?.growth || 0}%
                     </span>
                   </div>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                +$840 {t("common.thisMonth")}
+                +${Number((stats?.earnings?.currentMonth || 0) - (stats?.earnings?.lastMonth || 0)).toFixed(2)} {t("common.thisMonth")}
               </p>
             </CardContent>
           </Card>
@@ -270,21 +305,14 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {isLoadingCategories ? (
+                {isLoadingStats ? (
                   <span className="inline-block w-16 h-8 bg-muted animate-pulse rounded"></span>
                 ) : (
                   <div className="flex items-center">
-                    {categories.length}
-                    <span className="text-sm ml-2 text-green-500 flex items-center">
-                      <ArrowUpRight className="h-4 w-4 mr-1" />
-                      3%
-                    </span>
+                    {stats?.categories?.total || 0}
                   </div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                +2 {t("common.thisMonth")}
-              </p>
             </CardContent>
           </Card>
         </div>
@@ -298,21 +326,27 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyRevenueData}>
-                    <defs>
-                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="revenue" stroke="#8884d8" fillOpacity={1} fill="url(#colorRevenue)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {isLoadingRevenue ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={revenueData}>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="revenue" stroke="#8884d8" fillOpacity={1} fill="url(#colorRevenue)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -324,26 +358,31 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="h-80 flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={projectStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {projectStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                {isLoadingProjectStatus ? (
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={projectStatusData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        paddingAngle={5}
+                        dataKey="count"
+                        nameKey="status"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {projectStatusData.map((entry: ProjectStatus, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.color || '#8884d8'} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -357,15 +396,21 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={userRegistrationData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="users" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
+              {isLoadingUserRegistration ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={userRegistrationData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="week" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="users" fill="#82ca9d" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>

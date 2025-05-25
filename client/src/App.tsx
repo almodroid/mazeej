@@ -32,13 +32,14 @@ import { NotificationsProvider } from "./hooks/use-notifications";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SettingsProvider } from "./contexts/settings-context";
 import { Redirect } from "wouter";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import TracksPage from "@/pages/tracks";
 import PortfolioPage from "./pages/portfolio-page";
 import AdminPlansPage from "./pages/admin/plans";
 import SearchPage from "@/pages/search-page";
 import CheckoutPage from "@/pages/checkout-page";
 import PaymentResultPage from "@/pages/payment-result";
+import { useGlobalSettings } from '@/hooks/use-global-settings';
 
 // Lazy load admin components
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
@@ -50,6 +51,7 @@ const AdminCategories = lazy(() => import('./pages/admin/categories'));
 const AdminSettings = lazy(() => import('./pages/admin/settings'));
 const AdminPayments = lazy(() => import('./pages/admin/payments'));
 const AdminMessages = lazy(() => import('./pages/admin/messages'));
+const AdminQuestionsPage = lazy(() => import('./pages/admin-questions'));
 
 function Router() {
   return (
@@ -196,6 +198,13 @@ function Router() {
           </Suspense>
         </ProtectedRoute>
       </Route>
+      <Route path="/admin/questions">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminQuestionsPage />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
       <Route path="/checkout/:proposalId">
         <ProtectedRoute>
           <CheckoutPage />
@@ -258,6 +267,13 @@ function Router() {
 }
 
 function App() {
+  const { fetchSettings } = useGlobalSettings();
+
+  useEffect(() => {
+    // Fetch global settings when the app starts
+    fetchSettings();
+  }, [fetchSettings]);
+
   return (
     <ThemeProvider defaultTheme="system" storageKey="freelance-platform-theme">
       <QueryClientProvider client={queryClient}>

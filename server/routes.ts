@@ -10,6 +10,8 @@ import adminPlansRoutes from "./routes/admin-plans";
 import phoneVerificationRoutes from "./routes/phone-verification";
 import paytabsRoutes from "./routes/paytabs";
 import plansRoutes from "./routes/plans";
+import { registerEvaluationRoutes } from './routes/evaluations';
+import { registerAdminRoutes } from './routes/admin';
 
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
@@ -46,19 +48,25 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
   
   // Setup admin settings routes
-  app.use('/api/admin', adminSettingsRoutes);
+  app.use('/api/admin/settings', adminSettingsRoutes);
   
   // Setup admin plans routes
-  app.use('/api/admin', adminPlansRoutes);
+  app.use('/api/admin/plans', adminPlansRoutes);
   
   // Setup phone verification routes
   app.use('/api/phone-verification', phoneVerificationRoutes);
   
   // Setup paytabs routes
-  app.use('/api/payments/paytabs', paytabsRoutes);
+  app.use('/api/paytabs', paytabsRoutes);
   
   // Setup plans routes
   app.use('/api/plans', plansRoutes);
+  
+  // Register evaluation routes
+  registerEvaluationRoutes(app);
+  
+  // Register admin routes
+  registerAdminRoutes(app);
   
   // Create HTTP server
   const httpServer = createServer(app);

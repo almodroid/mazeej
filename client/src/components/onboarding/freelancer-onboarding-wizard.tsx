@@ -169,14 +169,33 @@ export default function FreelancerOnboardingWizard() {
     selectedPlanId: null as number | null,
   });
 
+  // Fetch user skills
+  const { data: userSkills = [], isLoading: isSkillsLoading } = useQuery<Skill[]>({
+    queryKey: [`/api/users/${user?.id}/skills`],
+    queryFn: async () => {
+      try {
+        // Use the user-specific endpoint with ID
+        const response = await apiRequest("GET", `/api/users/${user?.id}/skills`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch user skills");
+        }
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        return [];
+      }
+    },
+    enabled: !!user?.id // Only fetch if we have a user ID
+  });
+
   // Check if onboarding is completed
   const checkOnboardingStatus = () => {
     // Check if user has completed the necessary fields for onboarding
     const hasCompletedBasicInfo = user?.fullName && user?.bio && user?.city;
     const hasPhoneVerified = user?.phoneVerified;
     
-    // If user has skills, they've likely completed that step
-    const hasSkills = formData.selectedSkills && formData.selectedSkills.length > 0;
+    // Check if user has skills (either from existing skills or newly selected ones)
+    const hasSkills = (userSkills && userSkills.length > 0) || (formData.selectedSkills && formData.selectedSkills.length > 0);
     
     // Set completed status based on these checks
     const isOnboardingCompleted = Boolean(hasCompletedBasicInfo && hasPhoneVerified && hasSkills);
@@ -187,8 +206,10 @@ export default function FreelancerOnboardingWizard() {
       // Determine which step to start with
       let startStep = 0;
       if (hasCompletedBasicInfo) startStep = 1;
-      if (hasCompletedBasicInfo && hasSkills) startStep = 2;
-      if (hasCompletedBasicInfo && hasSkills && hasPhoneVerified) startStep = 3;
+      if (hasCompletedBasicInfo && hasSkills) {
+        // Skip phone verification step if phone is already verified
+        startStep = hasPhoneVerified ? 3 : 2;
+      }
       
       setCurrentStep(startStep);
     }
@@ -212,14 +233,19 @@ export default function FreelancerOnboardingWizard() {
     
     // If user is a new freelancer and hasn't completed onboarding, show the dialog automatically
     // We can check if they're new by seeing if they have no skills and no bio
-    const isNewFreelancer = !user?.bio && (!formData.selectedSkills || formData.selectedSkills.length === 0);
+    const isNewFreelancer = !user?.bio && (!userSkills || userSkills.length === 0);
     
     if (!onboardingCompleted && isNewFreelancer) {
       // Small delay to ensure the component is fully mounted
       const timer = setTimeout(() => setIsOpen(true), 500);
       return () => clearTimeout(timer);
+    } else if (onboardingCompleted) {
+      // If onboarding is completed, close the dialog
+      setIsOpen(false);
+      // Store completion status in localStorage
+      localStorage.setItem("freelancer_onboarding_completed", "true");
     }
-  }, [user]);
+  }, [user, userSkills]);
 
   // Fetch user profile data to check onboarding status
   const { data: userData, isLoading: isUserDataLoading } = useQuery({
@@ -345,25 +371,6 @@ export default function FreelancerOnboardingWizard() {
         variant: "destructive",
       });
     },
-  });
-
-  // Fetch user skills
-  const { data: userSkills = [], isLoading: isSkillsLoading } = useQuery<Skill[]>({
-    queryKey: [`/api/users/${user?.id}/skills`],
-    queryFn: async () => {
-      try {
-        // Use the user-specific endpoint with ID
-        const response = await apiRequest("GET", `/api/users/${user?.id}/skills`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch user skills");
-        }
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        return [];
-      }
-    },
-    enabled: !!user?.id // Only fetch if we have a user ID
   });
 
   // Update selected skills when user skills are loaded
@@ -859,6 +866,12 @@ export default function FreelancerOnboardingWizard() {
 
   // Render the steps content
   const renderStepContent = () => {
+    // Skip phone verification step if phone is already verified
+    if (currentStep === 2 && user?.phoneVerified) {
+      setCurrentStep(3);
+      return null;
+    }
+
     switch (currentStep) {
       case 0:
         return (
@@ -1209,7 +1222,8 @@ export default function FreelancerOnboardingWizard() {
       case 1:
         return formData.selectedSkills.length > 0;
       case 2:
-        return !!formData.phoneVerified;
+        // Skip validation if phone is already verified
+        return user?.phoneVerified || !!formData.phoneVerified;
       case 3:
         return !!formData.selectedPlanId;
       default:

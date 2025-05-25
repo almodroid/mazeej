@@ -1232,5 +1232,17 @@
     "subscriptionErrorDesc": "There was an error processing your subscription. Please try again.",
     "loginToSubscribe": "You need to login first to subscribe to a plan",
     "fetchError": "Failed to load subscription plans. Please refresh the page."
+  },
+  "evaluation": {
+    "title": "Skill Evaluation",
+    "start": "Start Evaluation",
+    "timeRemaining": "Time Remaining",
+    "progress": "Progress",
+    "completed": "Evaluation Completed",
+    "levelUpdated": "Your level has been updated to {{level}}",
+    "errorStarting": "Failed to start evaluation",
+    "errorUpdating": "Failed to update level",
+    "loadingQuestions": "Loading questions...",
+    "submitting": "Submitting..."
   }
 }

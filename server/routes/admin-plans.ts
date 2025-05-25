@@ -4,6 +4,7 @@ import { plans } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { json } from "express";
 import { insertPlanSchema } from "@shared/schema-plans";
+import { isAuthenticated, isAdmin } from "./auth";
 
 const router = Router();
 
@@ -11,18 +12,20 @@ const router = Router();
 router.use(json());
 
 // Get all plans
-router.get("/plans", async (req, res) => {
+router.get("/", isAuthenticated, isAdmin, async (req, res) => {
   try {
+    console.log('[Admin Plans] Fetching all plans...');
     const plansData = await db.select().from(plans).orderBy(plans.id);
+    console.log('[Admin Plans] Found plans:', plansData);
     res.json(plansData);
   } catch (error) {
-    console.error("Error fetching plans:", error);
+    console.error("[Admin Plans] Error fetching plans:", error);
     res.status(500).json({ error: "Failed to fetch plans" });
   }
 });
 
 // Get a single plan by ID
-router.get("/plans/:id", async (req, res) => {
+router.get("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const planData = await db.select().from(plans).where(eq(plans.id, parseInt(id)));
@@ -39,7 +42,7 @@ router.get("/plans/:id", async (req, res) => {
 });
 
 // Create a new plan
-router.post("/plans", async (req, res) => {
+router.post("/", isAuthenticated, isAdmin, async (req, res) => {
   try {
     // Validate the request body
     const validatedData = insertPlanSchema.parse(req.body);
@@ -72,7 +75,7 @@ router.post("/plans", async (req, res) => {
 });
 
 // Update a plan
-router.put("/plans/:id", async (req, res) => {
+router.put("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -115,7 +118,7 @@ router.put("/plans/:id", async (req, res) => {
 });
 
 // Delete a plan
-router.delete("/plans/:id", async (req, res) => {
+router.delete("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     

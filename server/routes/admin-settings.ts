@@ -3,6 +3,7 @@ import { db } from "../db";
 import { siteSettings, settings } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { json } from "express";
+import { isAuthenticated, isAdmin } from "./auth";
 
 const router = Router();
 
@@ -10,7 +11,7 @@ const router = Router();
 router.use(json());
 
 // Get all site settings
-router.get("/settings", async (req, res) => {
+router.get("/", isAuthenticated, isAdmin, async (req, res) => {
   try {
     // Get the first record (we only have one record for site settings)
     const siteSettingsData = await db.select().from(siteSettings).limit(1);
@@ -112,7 +113,7 @@ router.get("/settings", async (req, res) => {
 });
 
 // Save site settings
-router.post("/settings", async (req, res) => {
+router.post("/", isAuthenticated, isAdmin, async (req, res) => {
   try {
     console.log('Received settings payload:', JSON.stringify(req.body, null, 2));
     

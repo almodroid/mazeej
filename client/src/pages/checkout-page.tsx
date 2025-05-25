@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import { useGlobalSettings } from "@/hooks/use-global-settings";
 
 interface CheckoutParams {
   proposalId: string;
@@ -63,6 +64,7 @@ export default function CheckoutPage() {
   const params = useParams<CheckoutParams>();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({ status: 'pending' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const { platformFee } = useGlobalSettings();
   
   // Get proposal ID from URL params
   const proposalId = params?.proposalId ? parseInt(params.proposalId) : null;
@@ -181,8 +183,8 @@ export default function CheckoutPage() {
   };
   
   // Calculate fees and total
-  const platformFee = proposal ? proposal.price * 0.15 : 0; // 5% platform fee
-  const totalAmount = proposal ? proposal.price  : 0;
+  const feeAmount = proposal ? (proposal.price * platformFee) / 100 : 0;
+  const totalAmount = proposal ? proposal.price + feeAmount : 0;
   
   // Loading state
   if (isLoadingProposal || isLoadingProject || isLoadingFreelancer) {
@@ -339,7 +341,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">{t("checkout.platformFee")}</span>
-                  <span>{platformFee.toFixed(2)} {t("common.riyal")}</span>
+                  <span>{feeAmount.toFixed(2)} {t("common.riyal")}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center font-bold text-lg">

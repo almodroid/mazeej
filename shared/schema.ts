@@ -497,3 +497,64 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 export const userBalancesRelations = relations(userBalances, ({ one }) => ({
   user: one(users, { fields: [userBalances.userId], references: [users.id] }),
 }));
+
+// Add these to the existing enums in shared/schema.ts
+export const difficultyLevelEnum = pgEnum('difficulty_level', ['beginner', 'intermediate', 'advanced']);
+
+// Add these tables to shared/schema.ts
+export const evaluationQuestions = pgTable("evaluation_questions", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id").notNull().references(() => categories.id),
+  skillId: integer("skill_id").notNull().references(() => skills.id),
+  question: text("question").notNull(),
+  questionAr: text("question_ar"), // Arabic translation of the question
+  options: json("options").notNull(), // Array of strings
+  optionsAr: json("options_ar"), // Array of Arabic translations for options
+  correctAnswer: integer("correct_answer").notNull(),
+  difficulty: difficultyLevelEnum("difficulty").notNull(),
+  points: integer("points").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const evaluationResults = pgTable("evaluation_results", {
+  id: serial("id").primaryKey(),
+  freelancerId: integer("freelancer_id").notNull().references(() => users.id),
+  categoryId: integer("category_id").notNull().references(() => categories.id),
+  skillId: integer("skill_id").notNull().references(() => skills.id),
+  score: integer("score").notNull(),
+  level: difficultyLevelEnum("level").notNull(),
+  completedAt: timestamp("completed_at").defaultNow(),
+});
+
+// Add relations
+export const evaluationQuestionsRelations = relations(evaluationQuestions, ({ one }) => ({
+  category: one(categories, {
+    fields: [evaluationQuestions.categoryId],
+    references: [categories.id],
+  }),
+  skill: one(skills, {
+    fields: [evaluationQuestions.skillId],
+    references: [skills.id],
+  }),
+}));
+
+export const evaluationResultsRelations = relations(evaluationResults, ({ one }) => ({
+  freelancer: one(users, {
+    fields: [evaluationResults.freelancerId],
+    references: [users.id],
+  }),
+  category: one(categories, {
+    fields: [evaluationResults.categoryId],
+    references: [categories.id],
+  }),
+  skill: one(skills, {
+    fields: [evaluationResults.skillId],
+    references: [skills.id],
+  }),
+}));
+
+// Add types
+export type EvaluationQuestion = typeof evaluationQuestions.$inferSelect;
+export type InsertEvaluationQuestion = typeof evaluationQuestions.$inferInsert;
+export type EvaluationResult = typeof evaluationResults.$inferSelect;
+export type InsertEvaluationResult = typeof evaluationResults.$inferInsert;
