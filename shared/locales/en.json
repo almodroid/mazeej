@@ -589,7 +589,9 @@
     "userRegistrationDescription": "Track registration processes",
     "availableProjects": "Available Projects",
     "pendingRequests": "Pending Requests",
-    "totalSpending": "Total Spending"
+    "totalSpending": "Total Spending",
+    "noProjectsDescription" : "You have no projects until now",
+    "noProposalsDescription" : "You have no proposals until now"
   },
   "notification": {
     "title": "Notifications",

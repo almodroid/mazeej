@@ -180,7 +180,8 @@
     "sitemapUrl": "رابط خريطة الموقع",
     "mohammed": "محمد",
     "subscribe": "اشترك الان",
-    "riyal": "ريال"
+    "riyal": "ريال",
+    "myConsultations" : "الاستشارات"
   },
   "errors": {
     "phoneExists": "رقم الجوال مستخدم بالفعل"
@@ -536,7 +537,11 @@
     "joiningConsultation": "جارٍ الانضمام للاستشارة",
     "preparingVideoCall": "جارٍ تجهيز المكالمة المرئية، يرجى الانتظار...",
     "videoCallReady": "المكالمة المرئية جاهزة",
-    "clickToJoin": "انقر للانضمام إلى المكالمة المرئية"
+    "clickToJoin": "انقر للانضمام إلى المكالمة المرئية",
+    "upcomingCount" : "الاستشارات القادمة",
+    "pastCount" : "الاستشارات السابقة",
+    "myConsultations" : "الاستشارات",
+    "searchPlaceholder" :"البحث عن استشارة"
   },
   "footer": {
     "about": "منصة عربية رائدة تربط المستقلين بالعملاء وتسهل تنفيذ المشاريع بكفاءة وأمان.",
@@ -738,7 +743,10 @@
     "pendingRequests" : "طلبات المعلقة",
     "totalSpending" : "المصاريف الإجمالية",
     "myProjects" : "مشاريعي",
-    "myProjectsDescription" : "المشاريع التي قمت بإنشائها"
+    "myProjectsDescription" : "المشاريع التي قمت بإنشائها",
+    "noProjectsDescription" : "ليس لديك مشاريع حتى الان",
+    "noProposalsDescription" : "لم تقدم عروض حتى الان"
+
   },
   "notification": {
     "title": "الإشعارات",

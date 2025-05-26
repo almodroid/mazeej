@@ -151,7 +151,7 @@ export default function FreelancerPortfolioPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-grow container p-8">
+      <main className="flex-grow container py-16  m-auto">
       {/* Header Section */}
       <div className="bg-card rounded-xl border border-border overflow-hidden mb-8">
         <div className="h-48 bg-gradient-to-r from-primary/20 to-accent/20 relative" />

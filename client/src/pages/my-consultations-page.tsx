@@ -294,7 +294,7 @@ export default function MyConsultationsPage() {
           )} size={18} />
           <Input 
             className={cn(
-              "bg-white",
+              "bg-white dark:bg-gray-900",
               isRTL ? "pr-10" : "pl-10"
             )}
             placeholder={t("consultation.searchPlaceholder")}
