@@ -1,5 +1,5 @@
 import { users, categories, skills, userSkills, projects, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests } from "@shared/schema";
-import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
+import type { User, Category, Skill, Project, Proposal, Message as SchemaMessage, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -13,7 +13,7 @@ export interface PaymentData {
   username?: string;
   amount: number;
   status: 'completed' | 'pending' | 'failed';
-  type: 'deposit' | 'withdrawal' | 'project_payment';
+  type: 'deposit' | 'withdrawal' | 'project_payment' | 'plan_payment';
   projectId?: number;
   projectTitle?: string;
   clientName?: string;
@@ -87,13 +87,13 @@ export interface Message {
   senderId: number;
   receiverId: number;
   content: string;
-  isRead: boolean;
-  createdAt: string;
-  isFlagged?: boolean;
-  supervisedBy?: number;
-  supervisorNotes?: string;
-  mediaUrl?: string;
-  mediaType?: string;
+  isRead: boolean | null;
+  createdAt: Date | null;
+  isFlagged?: boolean | null;
+  supervisedBy?: number | null;
+  supervisorNotes?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
 }
 
 // Define the storage interface
@@ -155,7 +155,7 @@ export interface IStorage {
   uploadFile(file: InsertFile): Promise<File>;
   getFilesByUser(userId: number): Promise<File[]>;
   getFilesByProject(projectId: number): Promise<File[]>;
-  getFileById(id: number): Promise<File | undefined>;
+  getFileById(id: number): Promise<File | null>;
   deleteFile(id: number): Promise<boolean>;
   
   // Notification operations
@@ -318,6 +318,7 @@ export class MemStorage implements IStorage {
       freelancerLevel,
       freelancerType,
       hourlyRate,
+      phoneVerified: false,
     };
     
     this.users.set(id, user);
@@ -438,7 +439,8 @@ export class MemStorage implements IStorage {
       id, 
       name: category.name,
       icon: category.icon,
-      freelancerCount
+      freelancerCount,
+      translations: {},
     };
     
     this.categories.set(id, newCategory);
@@ -478,7 +480,7 @@ export class MemStorage implements IStorage {
     let foundEntry = false;
     let foundId = -1;
     
-    for (const [id, entry] of this.userSkills.entries()) {
+    for (const [id, entry] of Array.from(this.userSkills.entries())) {
       if (entry.userId === userId && entry.skillId === skillId) {
         foundEntry = true;
         foundId = id;
@@ -527,6 +529,14 @@ export class MemStorage implements IStorage {
       deadline,
       status: 'open',
       createdAt: now,
+      hourlyRate: null,
+      freelancerId: null,
+      projectType: null,
+      estimatedHours: null,
+      timeZone: null,
+      consultationDate: null,
+      consultationStartTime: null,
+      consultationEndTime: null,
     };
     
     this.projects.set(id, newProject);
@@ -616,10 +626,9 @@ export class MemStorage implements IStorage {
         (message.senderId === senderId && message.receiverId === receiverId) ||
         (message.senderId === receiverId && message.receiverId === senderId)
     ).sort((a, b) => {
-      // Handle potential null values
-      const timeA = a.createdAt ? a.createdAt.getTime() : 0;
-      const timeB = b.createdAt ? b.createdAt.getTime() : 0;
-      return timeA - timeB;
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
     });
   }
 
@@ -631,7 +640,7 @@ export class MemStorage implements IStorage {
       id,
       senderId,
       isRead: false,
-      createdAt: now.toISOString(),
+      createdAt: now,
       supervisedBy: null,
       isFlagged: false,
       supervisorNotes: null,
@@ -682,6 +691,12 @@ export class MemStorage implements IStorage {
       rating: review.rating,
       comment,
       createdAt: now,
+      reviewer: {
+        id: reviewerId,
+        fullName: this.users.get(reviewerId)?.fullName || '',
+        username: this.users.get(reviewerId)?.username || '',
+        profileImage: this.users.get(reviewerId)?.profileImage || undefined
+      }
     };
     
     this.reviews.set(id, newReview);
@@ -727,8 +742,8 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async getFileById(id: number): Promise<File | undefined> {
-    return this.files.get(id);
+  async getFileById(id: number): Promise<File | null> {
+    return this.files.get(id) || null;
   }
 
   async deleteFile(id: number): Promise<boolean> {
@@ -740,9 +755,8 @@ export class MemStorage implements IStorage {
     return Array.from(this.notifications.values())
       .filter(notification => notification.userId === userId)
       .sort((a, b) => {
-        // Sort by creation time, newest first
-        const timeA = a.createdAt ? a.createdAt.getTime() : 0;
-        const timeB = b.createdAt ? b.createdAt.getTime() : 0;
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeB - timeA;
       });
   }
@@ -790,8 +804,8 @@ export class MemStorage implements IStorage {
     
     // Sort by submission date, newest first
     return requests.sort((a, b) => {
-      const timeA = a.submittedAt ? a.submittedAt.getTime() : 0;
-      const timeB = b.submittedAt ? b.submittedAt.getTime() : 0;
+      const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
       return timeB - timeA;
     });
   }
@@ -800,8 +814,8 @@ export class MemStorage implements IStorage {
     return Array.from(this.verificationRequests.values())
       .filter(request => request.userId === userId)
       .sort((a, b) => {
-        const timeA = a.submittedAt ? a.submittedAt.getTime() : 0;
-        const timeB = b.submittedAt ? b.submittedAt.getTime() : 0;
+        const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+        const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
         return timeB - timeA;
       });
   }
@@ -920,6 +934,15 @@ export class MemStorage implements IStorage {
     return this.payments.delete(id);
   }
 
+  async updatePaymentStatus(id: number, status: 'completed' | 'pending' | 'failed'): Promise<PaymentData | undefined> {
+    const payment = this.payments.get(id);
+    if (!payment) return undefined;
+    
+    const updatedPayment = { ...payment, status };
+    this.payments.set(id, updatedPayment);
+    return updatedPayment;
+  }
+
   // Transaction operations
   async createTransaction(transaction: CreateTransactionParams): Promise<Transaction> {
     const id = this.transactionId++;
@@ -949,8 +972,8 @@ export class MemStorage implements IStorage {
     return Array.from(this.transactions.values())
       .filter(transaction => transaction.userId === userId)
       .sort((a, b) => {
-        const timeA = a.createdAt.getTime();
-        const timeB = b.createdAt.getTime();
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeB - timeA;
       });
   }
@@ -976,7 +999,7 @@ export class MemStorage implements IStorage {
       accountDetails: {},
       status: 'pending',
       requestedAt: transaction.createdAt,
-      processedAt: null,
+      processedAt: undefined
     }));
   }
 
@@ -991,7 +1014,7 @@ export class MemStorage implements IStorage {
         accountDetails: {},
         status: 'pending',
         requestedAt: transaction.createdAt,
-        processedAt: null,
+        processedAt: undefined
       }));
   }
 
@@ -1007,7 +1030,7 @@ export class MemStorage implements IStorage {
       accountDetails: {},
       status: 'pending',
       requestedAt: transaction.createdAt,
-      processedAt: null,
+      processedAt: undefined
     };
   }
 

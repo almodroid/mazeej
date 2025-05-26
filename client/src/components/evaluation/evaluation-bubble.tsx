@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Clock, ClipboardCheck, Play, AlertTriangle, X, Timer } from "lucide-react";
+import { Clock, ClipboardCheck, Play, AlertTriangle, X, Timer, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EvaluationBubbleProps {
@@ -29,6 +29,7 @@ export default function EvaluationBubble({
   cooldownTime
 }: EvaluationBubbleProps) {
   const { t } = useTranslation();
+  const [isMinimized, setIsMinimized] = useState(false);
   
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -41,8 +42,13 @@ export default function EvaluationBubble({
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  // If user is in cooldown period and not currently evaluating, don't show the bubble
+  if (cooldownTime > 0 && !isEvaluating) {
+    return null;
+  }
+
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-32 start-24 z-50">
       {isEvaluating ? (
         <div className={cn(
           "bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 w-64",
@@ -128,21 +134,37 @@ export default function EvaluationBubble({
         <div className="relative">
           {cooldownTime > 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 w-64 border-2 border-orange-500">
-              <div className="flex flex-col items-center justify-center gap-2">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Timer className="h-5 w-5 text-orange-500 animate-spin" />
+                  <Timer className="h-5 w-5 text-orange-500" />
                   <span className="text-orange-500 font-bold text-lg">
                     {formatTime(cooldownTime)}
                   </span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {t('evaluation.cooldownMessage', { hours: 24 })}
-                </span>
-                <Progress 
-                  value={(cooldownTime / (24 * 60 * 60)) * 100} 
-                  className="h-2 w-full mt-2 bg-orange-100 [&>div]:bg-orange-500" 
-                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="h-8 w-8 p-0"
+                >
+                  {isMinimized ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
+              {!isMinimized && (
+                <>
+                  <span className="text-sm text-muted-foreground block mb-2">
+                    {t('evaluation.cooldownMessage', { hours: 24 })}
+                  </span>
+                  <Progress 
+                    value={(cooldownTime / (24 * 60 * 60)) * 100} 
+                    className="h-2 w-full bg-orange-100 [&>div]:bg-orange-500" 
+                  />
+                </>
+              )}
             </div>
           ) : (
             <Button

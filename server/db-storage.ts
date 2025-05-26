@@ -1,5 +1,5 @@
-import { users, categories, skills, userSkills, projects,portfolios, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions, withdrawalRequests, payoutAccounts, userBalances } from "@shared/schema";
-import type { User, Category, Skill, Project, Proposal, Message, Review, File, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
+import { users, categories, skills, userSkills, projects,portfolios, projectSkills, proposals, messages, reviews, files, payments, notifications, verificationRequests, transactions, withdrawalRequests, payoutAccounts, userBalances, type File } from "@shared/schema";
+import type { User, Category, Skill, Project, Proposal, Message, Review, Payment, Notification, VerificationRequest, InsertUser, InsertCategory, InsertSkill, InsertProject, InsertProposal, InsertReview, InsertFile, InsertMessage, InsertNotification, InsertVerificationRequest } from "@shared/schema";
 import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -675,29 +675,83 @@ export class DatabaseStorage implements IStorage {
 
   // Review operations
   async getReviewsByUser(userId: number): Promise<Review[]> {
-    return await db
+    const userReviews = await db
       .select()
       .from(reviews)
-      .where(eq(reviews.revieweeId, userId))
-      .orderBy(desc(reviews.createdAt));
+      .where(eq(reviews.revieweeId, userId));
+
+    const reviewsWithReviewers = await Promise.all(userReviews.map(async (review) => {
+      const [reviewer] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, review.reviewerId));
+
+      return {
+        ...review,
+        reviewer: {
+          id: reviewer.id,
+          fullName: reviewer.fullName,
+          username: reviewer.username,
+          profileImage: reviewer.profileImage || undefined
+        }
+      };
+    }));
+
+    return reviewsWithReviewers;
   }
 
   // Get reviews given by a user (as reviewer)
   async getReviewsByReviewer(userId: number): Promise<Review[]> {
-    return await db
+    const reviewerReviews = await db
       .select()
       .from(reviews)
-      .where(eq(reviews.reviewerId, userId))
-      .orderBy(desc(reviews.createdAt));
+      .where(eq(reviews.reviewerId, userId));
+
+    const reviewsWithReviewers = await Promise.all(reviewerReviews.map(async (review) => {
+      const [reviewer] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, review.reviewerId));
+
+      return {
+        ...review,
+        reviewer: {
+          id: reviewer.id,
+          fullName: reviewer.fullName,
+          username: reviewer.username,
+          profileImage: reviewer.profileImage || undefined
+        }
+      };
+    }));
+
+    return reviewsWithReviewers;
   }
 
   // Get all reviews for a specific project
   async getProjectReviews(projectId: number): Promise<Review[]> {
-    return await db
+    const projectReviews = await db
       .select()
       .from(reviews)
-      .where(eq(reviews.projectId, projectId))
-      .orderBy(desc(reviews.createdAt));
+      .where(eq(reviews.projectId, projectId));
+
+    const reviewsWithReviewers = await Promise.all(projectReviews.map(async (review) => {
+      const [reviewer] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, review.reviewerId));
+
+      return {
+        ...review,
+        reviewer: {
+          id: reviewer.id,
+          fullName: reviewer.fullName,
+          username: reviewer.username,
+          profileImage: reviewer.profileImage || undefined
+        }
+      };
+    }));
+
+    return reviewsWithReviewers;
   }
 
   async createReview(review: InsertReview, reviewerId: number): Promise<Review> {
@@ -708,7 +762,21 @@ export class DatabaseStorage implements IStorage {
         reviewerId
       })
       .returning();
-    return newReview;
+
+    const [reviewer] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, reviewerId));
+
+    return {
+      ...newReview,
+      reviewer: {
+        id: reviewer.id,
+        fullName: reviewer.fullName,
+        username: reviewer.username,
+        profileImage: reviewer.profileImage || undefined
+      }
+    };
   }
 
   // File operations
@@ -736,12 +804,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(files.uploadedAt));
   }
 
-  async getFileById(id: number): Promise<File | undefined> {
+  async getFileById(id: number): Promise<File | null> {
     const [file] = await db
       .select()
       .from(files)
       .where(eq(files.id, id));
-    return file;
+    return file || null;
   }
 
   async deleteFile(id: number): Promise<boolean> {
@@ -1780,4 +1848,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Create a withdrawal request
+
+  async getProjectImage(projectId: number): Promise<File | null> {
+    const [image] = await db
+      .select()
+      .from(files)
+      .where(eq(files.projectId, projectId))
+      .limit(1);
+
+    return image ? (image as File) : null;
+  }
+
+  async getProjectImages(): Promise<{ id: number; title: string; description: string; link: string | null; date: Date | null; image: File | null; }[]> {
+    const projectList = await db
+      .select()
+      .from(projects);
+
+    const projectsWithImages = await Promise.all(projectList.map(async (project: Project) => {
+      const [image] = await db
+        .select()
+        .from(files)
+        .where(eq(files.projectId, project.id))
+        .limit(1);
+
+      const file = image ? (image as File) : null;
+
+      return {
+        id: project.id,
+        title: project.title,
+        description: project.description,
+        link: null,
+        date: null,
+        image: file
+      };
+    }));
+
+    return projectsWithImages;
+  }
 }

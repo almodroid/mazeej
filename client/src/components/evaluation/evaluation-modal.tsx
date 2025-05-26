@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Clock, Loader2 } from "lucide-react";
+import { Clock, Loader2, Brain, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Question {
   id: number;
@@ -48,13 +49,17 @@ export default function EvaluationModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showFinalScore, setShowFinalScore] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  const [aiThinking, setAiThinking] = useState(false);
 
   const handleAnswer = (answerIndex: number) => {
+    setAiThinking(true);
     setSelectedAnswers(prev => {
       const newAnswers = [...prev];
       newAnswers[currentQuestion] = answerIndex;
       return newAnswers;
     });
+    // Simulate AI processing
+    setTimeout(() => setAiThinking(false), 500);
   };
 
   const handleNext = () => {
@@ -106,13 +111,19 @@ export default function EvaluationModal({
   if (!questions || questions.length === 0) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
           <DialogHeader>
-            <DialogTitle>{t('evaluation.title')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              {t('evaluation.title')}
+            </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin mb-4" />
-            <p className="text-center text-muted-foreground">
+            <div className="relative">
+              <Brain className="h-12 w-12 text-primary animate-pulse" />
+              <Sparkles className="h-4 w-4 text-primary absolute -top-1 -right-1 animate-ping" />
+            </div>
+            <p className="text-center text-muted-foreground mt-4">
               {t('evaluation.loadingQuestions')}
             </p>
           </div>
@@ -124,16 +135,25 @@ export default function EvaluationModal({
   if (showFinalScore) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
           <DialogHeader>
-            <DialogTitle>{t('evaluation.completed')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              {t('evaluation.completed')}
+            </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8">
-            <div className="text-4xl font-bold mb-4">{Math.round(finalScore)}/100</div>
-            <p className="text-center text-muted-foreground mb-6">
-              {t('evaluation.levelUpdated', { level: determineLevel(finalScore) })}
-            </p>
-            <Button onClick={handleClose}>
+            <div className="relative mb-6">
+              <div className="text-4xl font-bold">{Math.round(finalScore)}/100</div>
+              <Sparkles className="h-6 w-6 text-primary absolute -top-2 -right-2 animate-pulse" />
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <p className="text-center text-muted-foreground">
+                {t('evaluation.levelUpdated', { level: determineLevel(finalScore) })}
+              </p>
+            </div>
+            <Button onClick={handleClose} className="mt-4">
               {t('common.close')}
             </Button>
           </div>
@@ -144,23 +164,30 @@ export default function EvaluationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>{t('evaluation.title')}</span>
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span>{Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</span>
+              <Brain className="h-5 w-5 text-primary" />
+              <span>{t('evaluation.title')}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full">
+              <Clock className="h-4 w-4 text-primary" />
+              <span className="font-medium">{Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</span>
             </div>
           </DialogTitle>
         </DialogHeader>
 
         <div className="mt-4">
-          <Progress value={progress} className="h-2 mb-6" />
+          <div className="flex items-center justify-between mb-2">
+            <Progress value={progress} className="h-2 flex-1 mr-4" />
+            <span className="text-sm text-muted-foreground">{currentQuestion + 1}/{questions.length}</span>
+          </div>
           
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-4">
+          <div className="space-y-6 mt-6">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-medium mb-4 flex items-start gap-2">
+                <span className="text-primary">Q{currentQuestion + 1}.</span>
                 {i18n.language === 'ar' && questions[currentQuestion]?.questionAr
                   ? questions[currentQuestion].questionAr
                   : questions[currentQuestion]?.question}
@@ -169,15 +196,30 @@ export default function EvaluationModal({
               <RadioGroup
                 value={selectedAnswers[currentQuestion]?.toString()}
                 onValueChange={(value) => handleAnswer(parseInt(value))}
+                className="space-y-3"
               >
                 {questions[currentQuestion].options.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2">
+                  <div 
+                    key={index} 
+                    className={cn(
+                      "flex items-center space-x-3 p-3 rounded-lg border transition-colors",
+                      selectedAnswers[currentQuestion] === index 
+                        ? "border-primary bg-primary/5" 
+                        : "border-gray-200 dark:border-gray-700 hover:border-primary/50"
+                    )}
+                  >
                     <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`}>
+                    <Label 
+                      htmlFor={`option-${index}`}
+                      className="flex-1 cursor-pointer"
+                    >
                       {i18n.language === 'ar' && questions[currentQuestion].optionsAr
                         ? questions[currentQuestion].optionsAr[index]
                         : option}
                     </Label>
+                    {aiThinking && selectedAnswers[currentQuestion] === index && (
+                      <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                    )}
                   </div>
                 ))}
               </RadioGroup>
@@ -188,23 +230,32 @@ export default function EvaluationModal({
                 variant="outline"
                 onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
                 disabled={currentQuestion === 0 || isSubmitting}
+                className="gap-2"
               >
+                <AlertCircle className="h-4 w-4" />
                 {t('evaluation.previous')}
               </Button>
               
               <Button
                 onClick={handleNext}
                 disabled={selectedAnswers[currentQuestion] === undefined || isSubmitting}
+                className="gap-2"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     {t('evaluation.submitting')}
                   </>
                 ) : currentQuestion === questions.length - 1 ? (
-                  t('evaluation.submit')
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    {t('evaluation.submit')}
+                  </>
                 ) : (
-                  t('evaluation.next')
+                  <>
+                    <Brain className="h-4 w-4" />
+                    {t('evaluation.next')}
+                  </>
                 )}
               </Button>
             </div>

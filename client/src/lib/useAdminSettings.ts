@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 export interface GeneralSettings {
   platformName: string;
   platformFee: number;
+  evaluationCooldownDays: number;
 }
 export interface SeoMetaSettings {
   title: string;

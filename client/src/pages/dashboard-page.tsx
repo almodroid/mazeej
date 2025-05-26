@@ -8,119 +8,14 @@ import RecentProposals from "@/components/dashboard/recent-proposals";
 import DashboardNotifications from "@/components/dashboard/dashboard-notifications";
 import PlanBanner from "@/components/dashboard/plan-banner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Project, Proposal, Skill } from "@shared/schema";
+import { Project, Proposal } from "@shared/schema";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import {SaudiRiyal } from "lucide-react";
-import EvaluationBubble from "@/components/evaluation/evaluation-bubble";
-import EvaluationModal from "@/components/evaluation/evaluation-modal";
-import { evaluationService } from "@/lib/evaluation-service";
-import { EvaluationQuestion } from "@/lib/evaluation-service";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const { toast } = useToast();
   const [debug, setDebug] = useState<Record<string, any>>({});
-  const [isEvaluating, setIsEvaluating] = useState(false);
-  const [evaluationProgress, setEvaluationProgress] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(() => {
-    const saved = localStorage.getItem('evaluationTimeRemaining');
-    return saved ? parseInt(saved) : 0;
-  });
-  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
-  const [evaluationQuestions, setEvaluationQuestions] = useState<EvaluationQuestion[]>([]);
-  const [evaluationAnswers, setEvaluationAnswers] = useState<number[]>([]);
-  const [isPaused, setIsPaused] = useState(false);
-  const [lastPauseTime, setLastPauseTime] = useState<number | null>(null);
-  const [cooldownTime, setCooldownTime] = useState(() => {
-    const savedCooldown = localStorage.getItem('evaluationCooldown');
-    if (savedCooldown) {
-      const cooldownEnd = parseInt(savedCooldown);
-      const now = Math.floor(Date.now() / 1000);
-      return Math.max(0, cooldownEnd - now);
-    }
-    return 0;
-  });
-  const COOLDOWN_DURATION = 24 * 60 * 60; // 24 hours in seconds
-
-  // Central timer management with faster time when modal is closed
-  useEffect(() => {
-    if (!isEvaluating) return;
-
-    const timer = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleEvaluationComplete({ score: 0, level: 'beginner' });
-          return 0;
-        }
-        // Run 2x faster when modal is closed
-        const timeToDeduct = showEvaluationModal ? 1 : 2;
-        const newTime = Math.max(0, prev - timeToDeduct);
-        // Save to localStorage to ensure sync
-        if (isEvaluating) {
-          localStorage.setItem('evaluationTimeRemaining', newTime.toString());
-        }
-        return newTime;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isEvaluating, showEvaluationModal]);
-
-  // Load saved time when component mounts
-  useEffect(() => {
-    if (isEvaluating) {
-      const savedTime = localStorage.getItem('evaluationTimeRemaining');
-      if (savedTime) {
-        setTimeRemaining(parseInt(savedTime));
-      }
-    }
-  }, [isEvaluating]);
-
-  // Handle page visibility changes
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && isEvaluating && !isPaused) {
-        setLastPauseTime(Date.now());
-        setIsPaused(true);
-      } else if (!document.hidden && isEvaluating && isPaused) {
-        const timeAway = Date.now() - (lastPauseTime || Date.now());
-        // Reduce time by 5x the time spent away (more aggressive)
-        const timeToDeduct = Math.floor(timeAway / 200); // 200ms = 5x faster
-        setTimeRemaining(prev => Math.max(0, prev - timeToDeduct));
-        setLastPauseTime(null);
-        setIsPaused(false);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isEvaluating, isPaused, lastPauseTime]);
-
-  // Handle cooldown timer
-  useEffect(() => {
-    if (cooldownTime <= 0) return;
-
-    const timer = setInterval(() => {
-      setCooldownTime(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          localStorage.removeItem('evaluationCooldown');
-          return 0;
-        }
-        const newTime = prev - 1;
-        // Save the end time to localStorage
-        const cooldownEnd = Math.floor(Date.now() / 1000) + newTime;
-        localStorage.setItem('evaluationCooldown', cooldownEnd.toString());
-        return newTime;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [cooldownTime]);
 
   // Fetch all projects
   const { data: allProjects = [] } = useQuery<Project[]>({
@@ -213,128 +108,6 @@ export default function DashboardPage() {
     ? earnings.total
     : payments.total;
 
-  const handleStartEvaluation = async () => {
-    if (!user) return;
-
-    try {
-      const userSkillsResponse = await apiRequest('GET', `/api/users/${user.id}/skills`);
-      if (!userSkillsResponse.ok) {
-        throw new Error('Failed to fetch user skills');
-      }
-      const skills: Skill[] = await userSkillsResponse.json();
-
-      if (!skills.length) {
-        toast({
-          title: t("common.error"),
-          description: t("You must add at least one skill to start the evaluation."),
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const categories = Array.from(new Set(skills.map(skill => skill.categoryId)));
-      const skillIds = skills.map(skill => skill.id);
-      
-      const questions = await evaluationService.getQuestions(categories, skillIds);
-
-      if (!questions || questions.length === 0) {
-        throw new Error('No questions available for the selected skills');
-      }
-
-      setEvaluationQuestions(questions);
-      setShowEvaluationModal(true);
-      setIsEvaluating(true);
-      setTimeRemaining(30 * 60); // 30 minutes
-      setIsPaused(false);
-      setLastPauseTime(null);
-      localStorage.setItem('evaluationInProgress', 'true');
-    } catch (error) {
-      console.error('Error starting evaluation:', error);
-      toast({
-        title: t("common.error"),
-        description: error instanceof Error ? error.message : t("evaluation.errorStarting"),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEvaluationComplete = async (results: { score: number; level: string }) => {
-    if (!user) return;
-    
-    try {
-      const response = await evaluationService.submitEvaluation(user.id, {
-        categoryId: evaluationQuestions[0].categoryId,
-        skillId: evaluationQuestions[0].skillId,
-        answers: evaluationQuestions.map((q, index) => ({
-          questionId: q.id,
-          selectedAnswer: evaluationAnswers[index] || 0
-        }))
-      });
-      
-      setIsEvaluating(false);
-      setShowEvaluationModal(false);
-      setEvaluationProgress(0);
-      setTimeRemaining(0);
-      setIsPaused(false);
-      setLastPauseTime(null);
-      localStorage.removeItem('evaluationTimeRemaining');
-      localStorage.removeItem('evaluationInProgress');
-      
-      toast({
-        title: t("evaluation.completed"),
-        description: t("evaluation.levelUpdated", { level: response.level }),
-      });
-    } catch (error) {
-      console.error('Error completing evaluation:', error);
-      toast({
-        title: t("common.error"),
-        description: t("evaluation.errorUpdating"),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handlePauseEvaluation = () => {
-    setIsPaused(true);
-    setLastPauseTime(Date.now());
-    setShowEvaluationModal(false);
-  };
-
-  const handleContinueEvaluation = () => {
-    if (lastPauseTime) {
-      const timeAway = Date.now() - lastPauseTime;
-      // Reduce time by 5x the time spent away (more aggressive)
-      const timeToDeduct = Math.floor(timeAway / 200); // 200ms = 5x faster
-      setTimeRemaining(prev => Math.max(0, prev - timeToDeduct));
-    }
-    setLastPauseTime(null);
-    setIsPaused(false);
-    // Ensure modal opens with the exact same time
-    setShowEvaluationModal(true);
-  };
-
-  const handleExitEvaluation = () => {
-    if (cooldownTime > 0) return;
-
-    const cooldownEnd = Math.floor(Date.now() / 1000) + COOLDOWN_DURATION;
-    localStorage.setItem('evaluationCooldown', cooldownEnd.toString());
-    setCooldownTime(COOLDOWN_DURATION);
-    
-    setIsEvaluating(false);
-    setShowEvaluationModal(false);
-    setEvaluationProgress(0);
-    setTimeRemaining(0);
-    setIsPaused(false);
-    setLastPauseTime(null);
-    localStorage.removeItem('evaluationTimeRemaining');
-    localStorage.removeItem('evaluationInProgress');
-    
-    toast({
-      title: t("evaluation.exited"),
-      description: t("evaluation.cooldownMessage", { hours: 24 }),
-    });
-  };
-
   if (!user) {
     return null;
   }
@@ -400,30 +173,6 @@ export default function DashboardPage() {
           <DashboardNotifications />
         </div>
       </div>
-      
-      <EvaluationBubble
-        isEvaluating={isEvaluating}
-        progress={evaluationProgress}
-        timeRemaining={timeRemaining}
-        onStartEvaluation={handleStartEvaluation}
-        onContinueEvaluation={handleContinueEvaluation}
-        onExitEvaluation={handleExitEvaluation}
-        isPaused={isPaused}
-        isModalOpen={showEvaluationModal}
-        cooldownTime={cooldownTime}
-      />
-      
-      <EvaluationModal
-        isOpen={showEvaluationModal}
-        onClose={() => setShowEvaluationModal(false)}
-        questions={evaluationQuestions}
-        timeLimit={30 * 60}
-        onComplete={handleEvaluationComplete}
-        onPause={handlePauseEvaluation}
-        isPaused={isPaused}
-        timeRemaining={timeRemaining}
-        isEvaluating={isEvaluating}
-      />
     </DashboardLayout>
   );
 }

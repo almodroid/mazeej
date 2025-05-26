@@ -1525,7 +1525,15 @@
     "correctAnswer": "الإجابة الصحيحة",
     "yourAnswer": "إجابتك",
     "explanation": "شرح",
-    "noExplanation": "لا يوجد شرح متاح"
+    "noExplanation": "لا يوجد شرح متاح",
+    "exited": "تم الخروج من التقييم",
+    "exitedMessage": "يمكنك بدء التقييم مرة أخرى عندما تكون جاهزاً",
+    "continue": "متابعة",
+    "return": "العودة إلى التقييم",
+    "exit": "خروج",
+    "cooldown": "فترة الانتظار: {{time}}",
+    "cooldownMessage": "يمكنك إجراء التقييم مرة أخرى بعد {{days}} يوم",
+    "addSkillsError": "يجب إضافة مهارة واحدة على الأقل لبدء التقييم"
   },
   "questions": {
     "title": "إدارة الأسئلة",

@@ -851,7 +851,7 @@ export default function FreelancerOnboardingWizard() {
         <TooltipTrigger asChild>
           <Button 
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl"
+            className="fixed bottom-32 right-6 h-14 w-14 rounded-full shadow-xl"
             size="icon"
           >
             <UserCheck className="h-6 w-6" />
