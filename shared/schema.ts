@@ -303,6 +303,7 @@ export const pages = pgTable("pages", {
   isPublished: boolean("is_published").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  thumbnail: text("thumbnail"),
 });
 
 // Insert schemas
@@ -354,7 +355,9 @@ export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalReques
   paymentId: true,
   processedAt: true
 });
-export const insertPageSchema = createInsertSchema(pages).omit({ id: true });
+export const insertPageSchema = createInsertSchema(pages, {
+  thumbnail: z.string().optional(),
+});
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -400,7 +403,9 @@ export type InsertVerificationRequest = z.infer<typeof insertVerificationRequest
 export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
 export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
 
-export type Page = typeof pages.$inferSelect;
+export type Page = typeof pages.$inferSelect & {
+  thumbnail?: string;
+};
 export type InsertPage = z.infer<typeof insertPageSchema>;
 
 // Relations

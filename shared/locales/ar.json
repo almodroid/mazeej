@@ -32,6 +32,8 @@
     "previous": "السابق",
     "confirm": "تأكيد",
     "close": "إغلاق",
+    "create" : "انشاء",
+    "update" : "تحديث",
     "yes": "نعم",
     "no": "لا",
     "editProfile": "تعديل الملف الشخصي",
@@ -447,6 +449,22 @@
       "title" : "فرص دخل",
       "description": "مستدامة لصناع المحتوى"
     }
+  },
+
+  "pages": {
+    "title": "الصفحات",
+    "pageTitle" : "عنوان الصفحة",
+    "slug": "الرابط الدائم",
+    "published": "منشور",
+    "create": "إنشاء صفحة",
+    "edit": "تعديل صفحة",
+    "createSuccess": "تم إنشاء الصفحة بنجاح",
+    "updateSuccess": "تم تحديث الصفحة بنجاح",
+    "deleteSuccess": "تم حذف الصفحة بنجاح",
+    "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذه الصفحة؟",
+    "contentPlaceholder": "أدخل محتوى الصفحة هنا...",
+    "content": "المحتوى",
+    "metaDescription": "وصف الميتا"
   },
 
   "freelancers": {

@@ -4,6 +4,7 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+uploads/
 
 # Sensitive files
 .env.local

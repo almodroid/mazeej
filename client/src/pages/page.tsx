@@ -8,6 +8,7 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
+import NotFound from "@/pages/not-found";
 
 export default function PublicPage() {
   const { t, i18n } = useTranslation();
@@ -41,16 +42,7 @@ export default function PublicPage() {
   }
 
   if (!page) {
-    return (
-      <div className="min-h-screen flex flex-col dark:bg-background">
-        <Navbar />
-        <main className="flex-grow container mx-auto py-8">
-          <h1 className="text-3xl font-bold mb-4">{t("common.pageNotFound")}</h1>
-          <p>{t("common.pageNotFoundDescription")}</p>
-        </main>
-        <Footer />
-      </div>
-    );
+    return <NotFound />;
   }
 
   const title = i18n.language === "ar" && page.titleAr ? page.titleAr : page.title;
@@ -75,6 +67,16 @@ export default function PublicPage() {
                 <p className="text-lg text-muted-foreground">{metaDescription}</p>
               )}
             </div>
+            {/* Display Thumbnail */}
+            {page.thumbnail && (
+              <div className="mb-12 flex justify-center">
+                <img
+                  src={page.thumbnail}
+                  alt={title || 'Page thumbnail'}
+                  className="rounded-lg shadow-md max-w-full h-auto"
+                />
+              </div>
+            )}
             <Separator className="mb-12" />
             <article className="prose dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-base prose-p:leading-7 prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-lg prose-img:shadow-md prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic">
               <div dangerouslySetInnerHTML={{ __html: content }} />

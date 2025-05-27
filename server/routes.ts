@@ -13,6 +13,7 @@ import plansRoutes from "./routes/plans";
 import { registerEvaluationRoutes } from './routes/evaluations';
 import { registerAdminRoutes } from './routes/admin';
 import { registerPublicRoutes } from "./routes/public";
+import { registerUploadRoutes } from "./routes/uploads";
 
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
@@ -50,6 +51,9 @@ export function registerRoutes(app: Express): Server {
   
   // Register public routes
   registerPublicRoutes(app);
+  
+  // Register upload routes
+  registerUploadRoutes(app);
   
   // Setup admin settings routes
   app.use('/api/admin/settings', adminSettingsRoutes);
