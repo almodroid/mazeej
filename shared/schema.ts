@@ -290,6 +290,21 @@ export const withdrawalRequests = pgTable("withdrawal_requests", {
   processedAt: timestamp("processed_at"),
 });
 
+// Pages table
+export const pages = pgTable("pages", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  titleAr: text("title_ar"),
+  content: text("content").notNull(),
+  contentAr: text("content_ar"),
+  metaDescription: text("meta_description"),
+  metaDescriptionAr: text("meta_description_ar"),
+  isPublished: boolean("is_published").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true, isVerified: true })
@@ -339,6 +354,7 @@ export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalReques
   paymentId: true,
   processedAt: true
 });
+export const insertPageSchema = createInsertSchema(pages).omit({ id: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -383,6 +399,9 @@ export type InsertVerificationRequest = z.infer<typeof insertVerificationRequest
 
 export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
 export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
+
+export type Page = typeof pages.$inferSelect;
+export type InsertPage = z.infer<typeof insertPageSchema>;
 
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -558,3 +577,6 @@ export type EvaluationQuestion = typeof evaluationQuestions.$inferSelect;
 export type InsertEvaluationQuestion = typeof evaluationQuestions.$inferInsert;
 export type EvaluationResult = typeof evaluationResults.$inferSelect;
 export type InsertEvaluationResult = typeof evaluationResults.$inferInsert;
+
+// Add relations
+export const pagesRelations = relations(pages, ({}) => ({}));

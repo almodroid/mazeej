@@ -12,6 +12,7 @@ import paytabsRoutes from "./routes/paytabs";
 import plansRoutes from "./routes/plans";
 import { registerEvaluationRoutes } from './routes/evaluations';
 import { registerAdminRoutes } from './routes/admin';
+import { registerPublicRoutes } from "./routes/public";
 
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
@@ -46,6 +47,9 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes (/api/register, /api/login, /api/logout, /api/user)
   setupAuth(app);
+  
+  // Register public routes
+  registerPublicRoutes(app);
   
   // Setup admin settings routes
   app.use('/api/admin/settings', adminSettingsRoutes);

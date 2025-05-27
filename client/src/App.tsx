@@ -2,6 +2,7 @@ import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { HelmetProvider } from "react-helmet-async";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
@@ -52,6 +53,8 @@ const AdminSettings = lazy(() => import('./pages/admin/settings'));
 const AdminPayments = lazy(() => import('./pages/admin/payments'));
 const AdminMessages = lazy(() => import('./pages/admin/messages'));
 const AdminQuestionsPage = lazy(() => import('./pages/admin-questions'));
+const AdminPages = lazy(() => import('./pages/admin/pages'));
+const PublicPage = lazy(() => import('./pages/page'));
 
 function Router() {
   return (
@@ -205,6 +208,13 @@ function Router() {
           </Suspense>
         </ProtectedRoute>
       </Route>
+      <Route path="/admin/pages">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminPages />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
       <Route path="/checkout/:proposalId">
         <ProtectedRoute>
           <CheckoutPage />
@@ -259,6 +269,11 @@ function Router() {
       <Route path="/payment-result">
         <PaymentResultPage />
       </Route>
+      <Route path="/:slug">
+        <Suspense fallback={<div>Loading...</div>}>
+          <PublicPage />
+        </Suspense>
+      </Route>
       <Route>
         <NotFound />
       </Route>
@@ -275,18 +290,20 @@ function App() {
   }, [fetchSettings]);
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="freelance-platform-theme">
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <SettingsProvider>
-            <NotificationsProvider>
-              <Router />
-              <Toaster />
-            </NotificationsProvider>
-          </SettingsProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <HelmetProvider>
+      <ThemeProvider defaultTheme="system" storageKey="freelance-platform-theme">
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <SettingsProvider>
+              <NotificationsProvider>
+                <Router />
+                <Toaster />
+              </NotificationsProvider>
+            </SettingsProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </HelmetProvider>
   );
 }
 

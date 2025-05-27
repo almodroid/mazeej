@@ -1,9 +1,10 @@
 import { Express } from 'express';
 import { db } from '../db';
-import { evaluationQuestions, users, projects, categories, payments } from '@shared/schema';
+import { evaluationQuestions, users, projects, categories, payments, pages, insertPageSchema } from '@shared/schema';
 import { and, eq, sql, count, sum, desc, gte, lte } from 'drizzle-orm';
 import { isAuthenticated, isAdmin } from './auth';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { z } from 'zod';
 
 export function registerAdminRoutes(app: Express) {
   // Get all questions with optional category and skill filters
@@ -284,6 +285,79 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error('Error fetching user registration data:', error);
       res.status(500).json({ message: 'Failed to fetch user registration data' });
+    }
+  });
+
+  // Get all pages
+  app.get('/api/admin/pages', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const allPages = await db.select().from(pages);
+      res.json(allPages);
+    } catch (error) {
+      console.error('Error fetching pages:', error);
+      res.status(500).json({ error: 'Failed to fetch pages' });
+    }
+  });
+
+  // Create a new page
+  app.post('/api/admin/pages', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const validatedData = insertPageSchema.parse(req.body);
+      const [newPage] = await db.insert(pages).values(validatedData).returning();
+      res.status(201).json(newPage);
+    } catch (error) {
+      console.error('Error creating page:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: 'Failed to create page' });
+      }
+    }
+  });
+
+  // Update a page
+  app.put('/api/admin/pages/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertPageSchema.parse(req.body);
+      const [updatedPage] = await db
+        .update(pages)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(pages.id, parseInt(id)))
+        .returning();
+      
+      if (!updatedPage) {
+        return res.status(404).json({ error: 'Page not found' });
+      }
+      
+      res.json(updatedPage);
+    } catch (error) {
+      console.error('Error updating page:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: 'Failed to update page' });
+      }
+    }
+  });
+
+  // Delete a page
+  app.delete('/api/admin/pages/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [deletedPage] = await db
+        .delete(pages)
+        .where(eq(pages.id, parseInt(id)))
+        .returning();
+      
+      if (!deletedPage) {
+        return res.status(404).json({ error: 'Page not found' });
+      }
+      
+      res.json(deletedPage);
+    } catch (error) {
+      console.error('Error deleting page:', error);
+      res.status(500).json({ error: 'Failed to delete page' });
     }
   });
 } 

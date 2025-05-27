@@ -21,7 +21,8 @@ import {
   Home,
   ChevronDown,
   ListFilter,
-  ClipboardCheck
+  ClipboardCheck,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -104,6 +105,11 @@ const adminNavItems = [
     title: "plans",
     href: "/admin/plans",
     icon: Layers
+  },
+  {
+    title: "pages",
+    href: "/admin/pages",
+    icon: FileText
   },
   {
     title: "settings",
