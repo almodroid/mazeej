@@ -45,26 +45,26 @@ export default function AboutSection() {
       <div className="container mx-auto flex flex-col lg:flex-row items-center gap-8 md:gap-12 mb-12 md:mb-16">
         {/* About Content */}
         <div className="flex-1 w-full">
-          <p className="text-xl md:text-2xl mb-4 md:mb-2 dark:text-gray-100 max-w-xl pb-4 md:pb-8 text-center md:text-left px-4 md:px-0 animate-fade-in-up" style={{ lineHeight: "2.5" }}>
+          <p className="text-xl md:text-2xl mb-4 md:mb-2 dark:text-gray-100 max-w-xl pb-4 md:pb-8 text-center md:text-left md:rtl:text-right px-4 md:px-0 animate-fade-in-up" style={{ lineHeight: "2.5" }}>
             <span className="text-primary dark:text-primary font-bold animate-fade-in-up-delayed">{t('common.appName')} </span>
             <span className="animate-fade-in-up-delayed-2">{t('about.subtitle')}</span>
           </p>
           {/* Stats */}
-          <div className="grid grid-cols-2 md:flex md:flex-wrap gap-4 md:gap-6 mt-4 px-4 md:px-0">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap gap-16 md:gap-16 mt-4 px-4 md:px-0">
             <div className="flex flex-col items-center animate-fade-in-up-delayed">
-              <span className="text-primary dark:text-primary text-lg md:text-xl font-bold animate-count-up">+500</span>
+              <span className="text-primary dark:text-primary text-2xl md:text-2xl font-bold animate-count-up">+500</span>
               <span className="text-gray-600 text-xs md:text-sm dark:text-gray-300 animate-fade-in-up-delayed-2">{t('hero.freelancers')}</span>
             </div>
             <div className="flex flex-col items-center animate-fade-in-up-delayed-2">
-              <span className="text-primary dark:text-primary text-lg md:text-xl font-bold animate-count-up">+150</span>
+              <span className="text-primary dark:text-primary text-2xl md:text-2xl font-bold animate-count-up">+150</span>
               <span className="text-gray-600 text-xs md:text-sm dark:text-gray-300 animate-fade-in-up-delayed-3">{t('hero.clients')}</span>
             </div>
             <div className="flex flex-col items-center animate-fade-in-up-delayed-3">
-              <span className="text-primary dark:text-primary text-lg md:text-xl font-bold animate-count-up">+20</span>
+              <span className="text-primary dark:text-primary text-2xl md:text-2xl font-bold animate-count-up">+20</span>
               <span className="text-gray-600 text-xs md:text-sm dark:text-gray-300 animate-fade-in-up-delayed-4">{t('hero.categories')}</span>
             </div>
             <div className="flex flex-col items-center animate-fade-in-up-delayed-4">
-              <span className="text-primary dark:text-primary text-lg md:text-xl font-bold animate-count-up">90%</span>
+              <span className="text-primary dark:text-primary text-2xl md:text-2xl font-bold animate-count-up">90%</span>
               <span className="text-gray-600 text-xs md:text-sm dark:text-gray-300 animate-fade-in-up-delayed-5">{t('hero.satisfaction')}</span>
             </div>
           </div>

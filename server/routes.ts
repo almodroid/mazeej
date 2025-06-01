@@ -2539,6 +2539,109 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: 'Failed to upload files', error: error.message });
     }
   });
+  
+  // Add skill to project
+  app.post('/api/projects/:id/skills', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const projectId = parseInt(req.params.id);
+      const { skillId } = req.body;
+      
+      if (!skillId) {
+        return res.status(400).json({ message: 'Skill ID is required' });
+      }
+      
+      // Check if project exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      // Check if user is project owner or admin
+      if (project.clientId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'You do not have permission to modify this project' });
+      }
+      
+      // Check if skill exists
+      const allSkills = await storage.getSkills();
+      const skillExists = allSkills.some(skill => skill.id === parseInt(skillId));
+      
+      if (!skillExists) {
+        return res.status(404).json({ message: 'Skill not found' });
+      }
+      
+      // Add skill to project
+      const success = await storage.addProjectSkill(projectId, parseInt(skillId));
+      
+      if (success) {
+        res.status(201).json({ message: 'Skill added to project successfully' });
+      } else {
+        res.status(500).json({ message: 'Failed to add skill to project' });
+      }
+    } catch (error: any) {
+      console.error('Error adding skill to project:', error);
+      res.status(500).json({ message: 'Failed to add skill to project', error: error.message });
+    }
+  });
+  
+  // Get project skills
+  app.get('/api/projects/:id/skills', async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      
+      // Check if project exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Get skills for project
+      const skills = await storage.getProjectSkills(projectId);
+      
+      res.json(skills);
+    } catch (error: any) {
+      console.error('Error fetching project skills:', error);
+      res.status(500).json({ message: 'Failed to fetch project skills' });
+    }
+  });
+  
+  // Remove skill from project
+  app.delete('/api/projects/:projectId/skills/:skillId', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const projectId = parseInt(req.params.projectId);
+      const skillId = parseInt(req.params.skillId);
+      
+      // Check if project exists
+      const project = await storage.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      // Check if user is project owner or admin
+      if (project.clientId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'You do not have permission to modify this project' });
+      }
+      
+      // Remove skill from project
+      const success = await storage.removeProjectSkill(projectId, skillId);
+      
+      if (success) {
+        res.json({ message: 'Skill removed from project successfully' });
+      } else {
+        res.status(404).json({ message: 'Skill not found in project' });
+      }
+    } catch (error: any) {
+      console.error('Error removing skill from project:', error);
+      res.status(500).json({ message: 'Failed to remove skill from project', error: error.message });
+    }
+  });
 
   // Get file for download
   app.get('/api/files/:id/download', async (req, res) => {
@@ -3699,6 +3802,67 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching proposal:', error);
       res.status(500).json({ message: 'Failed to fetch proposal' });
+    }
+  });
+
+  // Project-skill notifications endpoint
+  app.post('/api/notifications/project-skill', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to create notifications' });
+    }
+    
+    try {
+      const { projectId, title, content } = req.body;
+      
+      if (!projectId || !title || !content) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+      
+      // Get the project to verify it exists
+      const project = await storage.getProjectById(Number(projectId));
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      
+      // Get all skills for this project
+      const projectSkills = await storage.getProjectSkills(Number(projectId));
+      
+      if (projectSkills.length === 0) {
+        return res.status(200).json({ message: 'No skills associated with this project' });
+      }
+      
+      // Get all users with any of these skills
+      const notifiedUserIds = new Set<number>();
+      const notifications = [];
+      
+      // For each project skill, find users with that skill and notify them
+      for (const skill of projectSkills) {
+        const usersWithSkill = await storage.getUsersBySkillId(skill.id);
+        
+        for (const user of usersWithSkill) {
+          // Skip if user is the project creator or already notified
+          if (user.id === req.user.id || notifiedUserIds.has(user.id)) continue;
+          
+          // Add to notified set to avoid duplicate notifications
+          notifiedUserIds.add(user.id);
+          
+          // Create notification
+          const notification = await storage.createNotification({
+            userId: user.id,
+            title,
+            content,
+            type: 'project_update',
+            relatedId: projectId
+          });
+          
+          notifications.push(notification);
+        }
+      }
+      
+      res.status(201).json({ message: 'Notifications created successfully', count: notifications.length });
+    } catch (error) {
+      console.error('Error creating project-skill notifications:', error);
+      res.status(500).json({ message: 'Failed to create notifications' });
     }
   });
 

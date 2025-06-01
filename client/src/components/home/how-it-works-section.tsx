@@ -1,3 +1,4 @@
+import { CircleCheck, ListTodo, Mail, NotebookPen, Speech } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,45 +9,44 @@ const HowItWorksSection: React.FC = () => {
   const steps = [
     {
       icon: (
-        <svg className="w-16 h-16 text-gray-400 dark:text-gray-500 transform hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="12" fill="currentColor" className="fill-gray-200 dark:fill-gray-700" />
-          <rect x="7" y="9" width="10" height="7" rx="2" fill="#a3a3a3" className="dark:fill-gray-500" />
-          <rect x="7" y="6" width="10" height="2" rx="1" fill="#a3a3a3" className="dark:fill-gray-500" />
-          <rect x="9" y="12" width="2" height="2" rx="1" fill="#fff" />
-          <rect x="13" y="12" width="2" height="2" rx="1" fill="#fff" />
-        </svg>
+        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <ListTodo className="text-primary"/>
+          </svg>
+        </div>
       ),
       title: t('howItWorks.step1Title'),
       subtitle: "",
     },
     {
       icon: (
-        <svg className="w-16 h-16 text-gray-400 dark:text-gray-500 transform hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="12" fill="currentColor" className="fill-gray-200 dark:fill-gray-700" />
-          <rect x="6" y="8" width="12" height="8" rx="2" fill="#a3a3a3" className="dark:fill-gray-500" />
-          <path d="M6 8l6 5 6-5" stroke="#fff" strokeWidth="1.5" />
-        </svg>
+        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <Mail className="text-primary"/>
+          </svg>
+        </div>
       ),
       title: t('howItWorks.step2Title'),
       subtitle: "",
     },
     {
       icon: (
-        <svg className="w-16 h-16 text-gray-400 dark:text-gray-500 transform hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="12" fill="currentColor" className="fill-gray-200 dark:fill-gray-700" />
-          <circle cx="12" cy="11" r="3" fill="#a3a3a3" className="dark:fill-gray-500" />
-          <ellipse cx="12" cy="17" rx="5" ry="2" fill="#a3a3a3" className="dark:fill-gray-500" />
-        </svg>
+        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <Speech className="text-primary"/>
+          </svg>
+        </div>
       ),
       title: t('howItWorks.step3Title'),
       subtitle: "",
     },
     {
       icon: (
-        <svg className="w-16 h-16 text-gray-400 dark:text-gray-500 transform hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="12" fill="currentColor" className="fill-gray-200 dark:fill-gray-700" />
-          <path d="M8 12l3 3 5-5" stroke="#a3a3a3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="dark:stroke-gray-500" />
-        </svg>
+        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <CircleCheck className="text-primary" /> 
+          </svg>
+        </div>
       ),
       title: t('howItWorks.step4Title'),
       subtitle: "",

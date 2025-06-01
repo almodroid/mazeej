@@ -73,17 +73,12 @@ export default function Navbar() {
     },
     {
       href: "/projects",
-      label: t("common.projects"),
+      label: t(isRTL ? "ساحة الفرص" : "Projects Hall" ),
       icon: <BriefcaseBusiness className="h-4 w-4" />,
     },
     {
-      href: "/categories",
-      label: t("common.categories"),
-      icon: <List className="h-4 w-4" />,
-    },
-    {
       href: "/tracks",
-      label: t("common.tracks", { defaultValue: isRTL ? "المسارات" : "Tracks" }),
+      label: t("common.tracks", { defaultValue: isRTL ? "باقات مزيج" : "Tracks" }),
       icon: <Sparkles className="h-4 w-4" />,
     },
   ];

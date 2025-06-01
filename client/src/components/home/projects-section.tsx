@@ -38,7 +38,7 @@ export default function ProjectsSection() {
             <span className="hidden md:inline">{t("projects.viewAll")}</span>
             <span className="md:hidden">{isRTL ? "المزيد" : "More"}</span>
           </Link>
-          <h2 className="text-3xl font-cairo font-bold text-neutral-900 dark:text-white text-center flex-1 animate-fade-in-up">
+          <h2 className="text-3xl font-cairo font-bold text-neutral-900 dark:text-white text-center mb-16 flex-1 animate-fade-in-up">
             {t("projects.title") || "احدث المشاريع"}
           </h2>
         </div>
@@ -52,7 +52,7 @@ export default function ProjectsSection() {
             {projects.map((project, index) => (
               <div 
                 key={project.id} 
-                className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm flex flex-col overflow-hidden transform hover:scale-105 transition-transform duration-300 animate-fade-in-up"
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm flex flex-col overflow-hidden transform hover:scale-105 transition-transform duration-300 animate-fade-in-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 {/* Placeholder image */}

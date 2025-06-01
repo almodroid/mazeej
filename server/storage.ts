@@ -120,6 +120,7 @@ export interface IStorage {
   getUserSkills(userId: number): Promise<Skill[]>;
   addUserSkill(userId: number, skillId: number): Promise<void>;
   removeUserSkill(userId: number, skillId: number): Promise<boolean>;
+  getUsersBySkillId(skillId: number): Promise<User[]>;
   
   // Project operations
   getProjects(limit?: number): Promise<Project[]>;
@@ -128,6 +129,11 @@ export interface IStorage {
   createProject(project: InsertProject, clientId: number): Promise<Project>;
   updateProjectStatus(id: number, status: string): Promise<Project | undefined>;
   updateProject(id: number, data: Partial<Project>): Promise<Project | undefined>;
+  
+  // Project Skills operations
+  getProjectSkills(projectId: number): Promise<Skill[]>;
+  addProjectSkill(projectId: number, skillId: number): Promise<boolean>;
+  removeProjectSkill(projectId: number, skillId: number): Promise<boolean>;
   
   // Proposal operations
   getProposalById(id: number): Promise<Proposal | undefined>;
@@ -1045,6 +1051,28 @@ export class MemStorage implements IStorage {
   }
 
   async updateWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean> {
+    // Implementation needed
+    return false;
+  }
+
+  // ...
+  async getUsersBySkillId(skillId: number): Promise<User[]> {
+    // Find all user skills with this skill id
+    const userSkillEntries = Array.from(this.userSkills.values()).filter(
+      (entry) => entry.skillId === skillId
+    );
+    
+    const userIds = userSkillEntries.map(entry => entry.userId);
+    
+    // Get users with this skill
+    const usersWithSkill = Array.from(this.users.values()).filter(
+      (user) => userIds.includes(user.id)
+    );
+    
+    return usersWithSkill;
+  }
+
+  async deleteWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean> {
     // Implementation needed
     return false;
   }

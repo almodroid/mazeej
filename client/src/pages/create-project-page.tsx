@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { CalendarIcon, Upload, X, Paperclip, Loader2 } from "lucide-react";
+import { CalendarIcon, Upload, X, Paperclip, Loader2, Check } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -37,9 +37,11 @@ import { cn } from "@/lib/utils";
 import { insertProjectSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
+import { Badge } from "@/components/ui/badge";
 
 const projectFormSchema = insertProjectSchema.extend({
   deadlineDate: z.date().optional(),
+  selectedSkills: z.array(z.number()).default([]),
 }).omit({ deadline: true });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -48,6 +50,14 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>;
 interface Category {
   id: number;
   name: string;
+  skills?: Skill[];
+}
+
+// Define Skill type
+interface Skill {
+  id: number;
+  name: string;
+  categoryId: number;
 }
 
 export default function CreateProjectPage() {
@@ -58,11 +68,13 @@ export default function CreateProjectPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<number[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isRTL = i18n.language === 'ar';
 
-  // Fetch categories for the project
+  // Fetch categories with skills for the project
   const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["/api/categories-with-skills"],
   });
 
   // Form handling
@@ -74,6 +86,7 @@ export default function CreateProjectPage() {
       budget: 0,
       category: 0,
       deadlineDate: undefined,
+      selectedSkills: [],
     },
     mode: "onSubmit",
   });
@@ -84,6 +97,27 @@ export default function CreateProjectPage() {
       form.setValue('category', categories[0].id);
     }
   }, [categories, form]);
+
+  // Watch for category changes to filter skills
+  const selectedCategoryId = form.watch('category');
+  
+  // Get skills for the selected category
+  const categorySkills = categories.find(cat => cat.id === selectedCategoryId)?.skills || [];
+
+  // Handle skill selection
+  const handleSkillSelect = (skillId: number) => {
+    const isSelected = selectedSkills.includes(skillId);
+    
+    if (isSelected) {
+      // Remove skill if already selected
+      setSelectedSkills(prev => prev.filter(id => id !== skillId));
+      form.setValue('selectedSkills', selectedSkills.filter(id => id !== skillId));
+    } else {
+      // Add skill if not selected
+      setSelectedSkills(prev => [...prev, skillId]);
+      form.setValue('selectedSkills', [...selectedSkills, skillId]);
+    }
+  };
 
   // Create project mutation
   const createProjectMutation = useMutation({
@@ -107,6 +141,13 @@ export default function CreateProjectPage() {
       const response = await apiRequest("POST", "/api/projects", projectData);
       const projectResult = await response.json();
       
+      // Add skills to the project if any are selected
+      if (formData.selectedSkills.length > 0 && projectResult.id) {
+        await Promise.all(formData.selectedSkills.map((skillId: number) => {
+          return apiRequest("POST", `/api/projects/${projectResult.id}/skills`, { skillId });
+        }));
+      }
+      
       // Upload files if there are any
       if (filesToUpload.length > 0 && projectResult.id) {
         await uploadProjectFiles(projectResult.id);
@@ -114,8 +155,26 @@ export default function CreateProjectPage() {
       
       return projectResult;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log("Project created successfully:", data);
+      
+      // Notify users with matching skills about the new project
+      if (selectedSkills.length > 0) {
+        try {
+          // Send a single notification request for the project
+          await apiRequest("POST", "/api/notifications/project-skill", {
+            projectId: data.id,
+            title: t("notifications.newProjectTitle", { defaultValue: "مشروع جديد يتطابق مع مهاراتك" }),
+            content: t("notifications.newProjectContent", { 
+              defaultValue: `هناك مشروع جديد  "${data.title}" يتطابق مع مهاراتك.`,
+              title: data.title
+            }),
+          });
+        } catch (error) {
+          console.error("Error sending skill notifications:", error);
+        }
+      }
+      
       toast({
         title: t("projects.createdSuccess"),
         description: t("projects.createdSuccessDescription", { defaultValue: "Your project has been created and is pending admin approval." }),
@@ -320,6 +379,9 @@ export default function CreateProjectPage() {
                       onValueChange={(value) => {
                         console.log("Category selected:", value);
                         field.onChange(Number(value));
+                        // Reset selected skills when category changes
+                        setSelectedSkills([]);
+                        form.setValue('selectedSkills', []);
                       }}
                       value={field.value ? field.value.toString() : undefined}
                       defaultValue={categories.length > 0 ? categories[0].id.toString() : undefined}
@@ -343,6 +405,66 @@ export default function CreateProjectPage() {
               />
             </div>
             
+            {/* Skills selection */}
+            <FormField
+              control={form.control}
+              name="selectedSkills"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>{t("projects.skills", { defaultValue: "Skills" })}</FormLabel>
+                    <Badge 
+                      variant={selectedSkills.length > 0 ? "default" : "outline"}
+                      className="px-2 py-0.5"
+                    >
+                      {selectedSkills.length} {t("projects.skillsSelected", { defaultValue: "selected" })}
+                    </Badge>
+                  </div>
+                  <FormControl>
+                    <div className="border rounded-md p-3 space-y-3">
+                      {selectedCategoryId ? (
+                        categorySkills.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {categorySkills.map((skill) => {
+                              const isSelected = selectedSkills.includes(skill.id);
+                              return (
+                                <Badge 
+                                  key={skill.id}
+                                  variant={isSelected ? "default" : "outline"}
+                                  className={`px-3 py-1.5 cursor-pointer transition-all duration-200
+                                    ${isSelected 
+                                      ? 'bg-primary text-primary-foreground hover:bg-primary/80' 
+                                      : 'hover:bg-muted hover:text-foreground'
+                                    }`}
+                                  onClick={() => handleSkillSelect(skill.id)}
+                                >
+                                  {skill.name}
+                                  {isSelected && <Check className="h-3 w-3 ml-1" />}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-3">
+                            <p className="text-sm text-muted-foreground">
+                              {t("projects.noSkillsInCategory", { defaultValue: "No skills available for this category" })}
+                            </p>
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-center py-3">
+                          <p className="text-sm text-muted-foreground">
+                            {t("projects.selectCategoryFirst", { defaultValue: "Please select a category first" })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="deadlineDate"
@@ -355,14 +477,14 @@ export default function CreateProjectPage() {
                         <Button
                           variant={"outline"}
                           className={cn(
-                            "pl-3 text-left font-normal",
+                            "w-full pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
                           )}
                         >
                           {field.value ? (
                             format(field.value, "PPP")
                           ) : (
-                            <span>{t("projects.pickDate")}</span>
+                            <span>{t("projects.selectDate", { defaultValue: "Select a date" })}</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>

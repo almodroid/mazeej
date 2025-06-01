@@ -15,6 +15,12 @@ type ProjectCardProps = {
   proposals?: number;
 };
 
+// Define the skill interface
+interface Skill {
+  id: number;
+  name: string;
+}
+
 export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
@@ -52,11 +58,22 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
     });
   };
   
-  // Mock skills (would come from project_skills table in a real implementation)
-  const skills = ["تصميم مواقع", "UI/UX", "واجهة أمامية"];
+  // Get project type and category
+  const projectCategory = project.category ? t(`projects.categories.${project.category}`) : null;
+
+  // Fetch project skills
+  const { data: projectSkills = [] } = useQuery<Skill[]>({
+    queryKey: ["/api/projects", project.id, "skills"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/projects/${project.id}/skills`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!project.id,
+  });
 
   return (
-    <div className="bg-neutral-50 dark:bg-gray-800  p-6 shadow-sm hover:shadow-md transition-shadow duration-200" dir={isRTL ? "rtl" : "ltr"}>
+    <div className="bg-neutral-50 dark:bg-gray-800 p-6 shadow-sm hover:shadow-md transition-shadow duration-200 h-full flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
       <div className="flex justify-between">
         <div>
           <h3 className="text-lg font-cairo font-[300] text-neutral-900 dark:text-white">{project.title}</h3>
@@ -81,24 +98,31 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
       </div>
       <p className="mt-2 text-neutral-600 font-[300] dark:text-gray-300 line-clamp-3">{project.description}</p>
       <div className="mt-4 flex flex-wrap gap-2">
-        {skills.map((skill, index) => (
-          <span key={index} className="bg-primary/10 dark:bg-primary/20 text-primary text-xs px-2 py-1 rounded-full">
-            {skill}
+        {projectCategory && (
+          <span className="bg-primary/10 dark:bg-primary/20 text-primary text-xs px-2 py-1 rounded-full">
+            {projectCategory}
+          </span>
+        )}
+        
+        {/* Display project skills */}
+        {projectSkills.map((skill) => (
+          <span key={skill.id} className="bg-accent/10 dark:bg-accent/20 text-accent text-xs px-2 py-1 rounded-full">
+            {skill.name}
           </span>
         ))}
       </div>
       <div className="mt-4 flex justify-between items-center">
-        <span className="text-sm text-neutral-500 dark:text-gray-400 flex items-center">
+        <span className="text-sm text-neutral-500 dark:text-gray-400 flex items-center mb-3">
           <MessageSquare className="h-4 w-4 mr-1" />
           {proposals} {t('projects.proposals')}
         </span>
       </div>
-      <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-gray-700 flex justify-between align-end items-center">
+      <div className="mt-auto pt-3 border-t border-neutral-200 dark:border-gray-700 flex justify-between align-end items-center">
       <span className="mr-2 text-sm text-neutral-500 dark:text-gray-400">
             {project.createdAt && formatDate(project.createdAt)}
           </span>
         {user?.role === 'freelancer' ? (
-          <Button className="w-full max-w-96 bg-primary hover:bg-primary-dark" asChild>
+          <Button className="w-full max-w-32 bg-primary hover:bg-primary-dark" asChild>
             <Link href={hasSubmittedProposal ? `/projects/${project.id}` : `/projects/${project.id}/proposals/new`}>
               {hasSubmittedProposal ? t('common.view') : t('projects.submitProposal')}
             </Link>

@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import {  Calendar, User, SaudiRiyal, Wallet  } from "lucide-react";
+import {  Calendar, User, SaudiRiyal, Wallet, Tag  } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Project } from "@shared/schema";
 import {
@@ -8,10 +8,17 @@ import {
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectDetailsProps {
   project: Project;
   isProjectOwner: boolean;
+}
+
+// Define the skill interface
+interface Skill {
+  id: number;
+  name: string;
 }
 
 export default function ProjectDetails({ project, isProjectOwner }: ProjectDetailsProps) {
@@ -27,6 +34,17 @@ export default function ProjectDetails({ project, isProjectOwner }: ProjectDetai
       return response.json();
     },
     enabled: !!project.clientId,
+  });
+
+  // Fetch project skills
+  const { data: projectSkills = [] } = useQuery<Skill[]>({
+    queryKey: ["/api/projects", project.id, "skills"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/projects/${project.id}/skills`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!project.id,
   });
 
   const deadlineDate = project.deadline ? new Date(project.deadline) : null;
@@ -68,6 +86,23 @@ export default function ProjectDetails({ project, isProjectOwner }: ProjectDetai
         <h3 className="text-lg font-semibold mb-2">{t("projects.description")}</h3>
         <p className="whitespace-pre-wrap">{project.description}</p>
       </div>
+
+      {/* Project Skills */}
+      {projectSkills.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-start mb-2">
+            <Tag className="h-5 w-5 text-muted-foreground mr-2 mt-0.5" />
+            <h3 className="text-lg font-semibold">{t("projects.skills", { defaultValue: "المهارات" })}</h3>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {projectSkills.map((skill) => (
+              <Badge key={skill.id} variant="secondary" className="px-3 py-1.5">
+                {skill.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
     </CardContent>
   );
-} 
+}

@@ -427,6 +427,73 @@ export class DatabaseStorage implements IStorage {
     
     return result;
   }
+  
+  // Project Skills operations
+  async getProjectSkills(projectId: number): Promise<Skill[]> {
+    const result = await db
+      .select({
+        id: skills.id,
+        name: skills.name,
+        categoryId: skills.categoryId,
+        translations: skills.translations
+      })
+      .from(projectSkills)
+      .innerJoin(skills, eq(projectSkills.skillId, skills.id))
+      .where(eq(projectSkills.projectId, projectId));
+    
+    return result;
+  }
+  
+  async addProjectSkill(projectId: number, skillId: number): Promise<boolean> {
+    try {
+      // Check if the skill already exists for this project
+      const existingSkill = await db
+        .select()
+        .from(projectSkills)
+        .where(
+          and(
+            eq(projectSkills.projectId, projectId),
+            eq(projectSkills.skillId, skillId)
+          )
+        );
+      
+      if (existingSkill.length > 0) {
+        // Skill already exists for this project
+        return true;
+      }
+      
+      // Add the skill to the project
+      await db
+        .insert(projectSkills)
+        .values({
+          projectId,
+          skillId
+        });
+      
+      return true;
+    } catch (error) {
+      console.error("Error adding project skill:", error);
+      return false;
+    }
+  }
+  
+  async removeProjectSkill(projectId: number, skillId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(projectSkills)
+        .where(
+          and(
+            eq(projectSkills.projectId, projectId),
+            eq(projectSkills.skillId, skillId)
+          )
+        ).returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error removing project skill:", error);
+      return false;
+    }
+  }
 
   async getProjectById(id: number): Promise<Project | undefined> {
     const [project] = await db
@@ -1884,5 +1951,31 @@ export class DatabaseStorage implements IStorage {
     }));
 
     return projectsWithImages;
+  }
+
+  // Get users by skill ID
+  async getUsersBySkillId(skillId: number): Promise<User[]> {
+    try {
+      // Find all user skills with this skill id
+      const userWithSkills = await db
+        .select()
+        .from(userSkills)
+        .where(eq(userSkills.skillId, skillId));
+      
+      const userIds = userWithSkills.map(us => us.userId);
+      
+      if (userIds.length === 0) return [];
+      
+      // Get users with this skill
+      const usersWithSkill = await db
+        .select()
+        .from(users)
+        .where(inArray(users.id, userIds));
+      
+      return usersWithSkill;
+    } catch (error) {
+      console.error("Error getting users by skill ID:", error);
+      return [];
+    }
   }
 }
