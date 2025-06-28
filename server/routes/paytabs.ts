@@ -328,8 +328,11 @@ router.post('/callback', async (req: Request, res: Response) => {
         console.log('[PayTabs] Payment successful, updating related records');
         await storage.updateProposalStatus(proposalId, 'accepted');
         
-        // Update project status to in_progress
-        await storage.updateProjectStatus(proposal.projectId, 'in_progress');
+        // Update project with freelancer ID and status
+        await storage.updateProject(proposal.projectId, {
+          freelancerId: proposal.freelancerId,
+          status: 'in_progress'
+        });
         
         // Create a transaction for the freelancer
         await storage.createTransaction({

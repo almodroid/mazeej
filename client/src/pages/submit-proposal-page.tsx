@@ -24,6 +24,7 @@ import { insertProposalSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Project } from "@shared/schema";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
+import { SaudiRiyal } from "lucide-react";
 
 const proposalFormSchema = insertProposalSchema.extend({}).omit({ projectId: true });
 
@@ -36,6 +37,7 @@ export default function SubmitProposalPage() {
   const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [projectId, setProjectId] = useState<number | null>(null);
+  const isRTL = i18n.language === 'ar';
 
   // Extract projectId from URL
   useEffect(() => {
@@ -202,8 +204,13 @@ export default function SubmitProposalPage() {
           <p className="text-muted-foreground mt-2">{project.description}</p>
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
-              <span className="text-sm text-muted-foreground">{t("projects.budget")}</span>
-              <p className="font-semibold">${project.budget}</p>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">{t("proposal.budget")}</span>
+                <p className="font-semibold flex items-center gap-1">
+                  {project.budget}
+                  {isRTL ? <SaudiRiyal className="h-4 w-4" /> : " SAR"}
+                </p>
+              </div>
             </div>
             {project.deadline && (
               <div>

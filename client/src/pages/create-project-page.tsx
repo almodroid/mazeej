@@ -71,6 +71,9 @@ export default function CreateProjectPage() {
   const [selectedSkills, setSelectedSkills] = useState<number[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isRTL = i18n.language === 'ar';
+  const [featuredImageFile, setFeaturedImageFile] = useState<File | null>(null);
+  const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
+  const featuredImageInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch categories with skills for the project
   const { data: categories = [] } = useQuery<Category[]>({
@@ -119,6 +122,14 @@ export default function CreateProjectPage() {
     }
   };
 
+  // Handle featured image selection
+  const handleFeaturedImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFeaturedImageFile(e.target.files[0]);
+      setFeaturedImagePreview(URL.createObjectURL(e.target.files[0]));
+    }
+  };
+
   // Create project mutation
   const createProjectMutation = useMutation({
     mutationFn: async (formData: ProjectFormValues) => {
@@ -134,6 +145,7 @@ export default function CreateProjectPage() {
         consultationDate: formData.deadlineDate ? new Date(formData.deadlineDate).toISOString() : null,
         projectType: 'standard',
         status: 'pending', // Set initial status to pending for admin approval
+        city: formData.city || user?.city || null,
       };
       
       console.log("Submitting project data:", projectData);
@@ -151,6 +163,21 @@ export default function CreateProjectPage() {
       // Upload files if there are any
       if (filesToUpload.length > 0 && projectResult.id) {
         await uploadProjectFiles(projectResult.id);
+      }
+      
+      // Upload featured image if present
+      if (featuredImageFile && projectResult.id) {
+        const formData = new FormData();
+        formData.append("file", featuredImageFile);
+        const uploadRes = await fetch(`/api/projects/${projectResult.id}/featured-image`, {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.url) {
+          // Save the featured image URL to the project
+          await apiRequest("PATCH", `/api/projects/${projectResult.id}`, { featuredImage: uploadData.url });
+        }
       }
       
       return projectResult;
@@ -405,6 +432,66 @@ export default function CreateProjectPage() {
               />
             </div>
             
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("projects.projectCity")}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder={t("projects.cityPlaceholder")}
+                        defaultValue={user?.city || ""}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="deadlineDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>{t("projects.deadline")}</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>{t("projects.selectDate", { defaultValue: "Select a date" })}</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          disabled={(date) => date < new Date()}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             {/* Skills selection */}
             <FormField
               control={form.control}
@@ -460,46 +547,6 @@ export default function CreateProjectPage() {
                       )}
                     </div>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="deadlineDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>{t("projects.deadline")}</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>{t("projects.selectDate", { defaultValue: "Select a date" })}</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        disabled={(date) => date < new Date()}
-                      />
-                    </PopoverContent>
-                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -577,6 +624,41 @@ export default function CreateProjectPage() {
                 )}
               </div>
             </div>
+            
+            {/* Featured Image Upload */}
+            <FormField
+              control={form.control}
+              name="featuredImage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("projects.featuredImageOptional")}</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      <Input
+                        ref={featuredImageInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFeaturedImageChange}
+                        className="cursor-pointer"
+                        placeholder={t("projects.featuredImagePlaceholder")}
+                      />
+                      {featuredImagePreview && (
+                        <div className="mt-2">
+                          <img
+                            src={featuredImagePreview}
+                            alt="Preview"
+                            className="w-full h-32 object-cover rounded-lg border"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <p className="text-sm text-muted-foreground">
+                    {t("projects.featuredImageHelp")}
+                  </p>
+                </FormItem>
+              )}
+            />
             
             <div className="flex justify-end space-x-2 rtl:space-x-reverse">
               <Button 

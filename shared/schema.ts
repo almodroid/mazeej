@@ -51,6 +51,15 @@ export const payoutAccountTypeEnum = pgEnum('payout_account_type', ['bank_accoun
 // Withdrawal request status enum
 export const withdrawalRequestStatusEnum = pgEnum('withdrawal_request_status', ['pending', 'approved', 'rejected', 'completed']);
 
+// Badge type enum
+export const badgeTypeEnum = pgEnum('badge_type', ['plan', 'custom']);
+
+// Difficulty level enum
+export const difficultyLevelEnum = pgEnum('difficulty_level', ['beginner', 'intermediate', 'advanced']);
+
+// Exercise status enum
+export const exerciseStatusEnum = pgEnum('exercise_status', ['in_progress', 'submitted', 'approved', 'rejected']);
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -71,6 +80,8 @@ export const users = pgTable("users", {
   freelancerLevel: freelancerLevelEnum("freelancer_level"),
   freelancerType: freelancerTypeEnum("freelancer_type"),
   hourlyRate: integer("hourly_rate"),
+  isOnline: boolean("is_online").default(false),
+  lastSeen: timestamp("last_seen").defaultNow(),
 });
 
 // Categories table
@@ -86,7 +97,8 @@ export const categories = pgTable("categories", {
 export const skills = pgTable("skills", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  categoryId: integer("category_id").notNull(),
+  categoryId: integer("category_id").notNull().references(() => categories.id),
+  locationBased: boolean("location_based").default(false),
   translations: jsonb("translations")
 });
 
@@ -116,6 +128,8 @@ export const projects = pgTable("projects", {
   consultationStartTime: text("consultation_start_time"),
   consultationEndTime: text("consultation_end_time"),
   timeZone: text("time_zone"),
+  featuredImage: text("featured_image"),
+  city: text("city"),
 });
 
 // Project Skills table (Many to Many)
@@ -306,6 +320,129 @@ export const pages = pgTable("pages", {
   thumbnail: text("thumbnail"),
 });
 
+// Badges table
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  icon: text("icon"),
+  color: text("color").notNull(),
+  type: badgeTypeEnum("type").notNull().default('custom'),
+  planKey: text("plan_key"), // For plan-based badges
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  translations: jsonb("translations")
+});
+
+// User Badges table (Many to Many)
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  badgeId: integer("badge_id").notNull().references(() => badges.id, { onDelete: 'cascade' }),
+  assignedBy: integer("assigned_by").references(() => users.id), // Admin who assigned the badge
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // Optional expiration date
+  isActive: boolean("is_active").default(true),
+});
+
+// Testimonials table
+export const testimonials = pgTable("testimonials", {
+  id: serial("id").primaryKey(),
+  content: text("content").notNull(),
+  contentAr: text("content_ar"), // Arabic translation
+  authorName: text("author_name").notNull(),
+  authorNameAr: text("author_name_ar"), // Arabic translation
+  authorTitle: text("author_title").notNull(),
+  authorTitleAr: text("author_title_ar"), // Arabic translation
+  authorAvatar: text("author_avatar"),
+  rating: integer("rating").notNull().default(5),
+  isActive: boolean("is_active").default(true),
+  order: integer("order").default(0), // For ordering testimonials
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Exercise Portal Tables
+export const exerciseCategories = pgTable("exercise_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameAr: text("name_ar"), // Arabic translation
+  description: text("description"),
+  descriptionAr: text("description_ar"), // Arabic translation
+  icon: text("icon"),
+  color: text("color").default("#3B82F6"),
+  isActive: boolean("is_active").default(true),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const exercises = pgTable("exercises", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  titleAr: text("title_ar"), // Arabic translation
+  description: text("description").notNull(),
+  descriptionAr: text("description_ar"), // Arabic translation
+  categoryId: integer("category_id").notNull().references(() => exerciseCategories.id),
+  skillId: integer("skill_id").notNull().references(() => skills.id),
+  difficulty: difficultyLevelEnum("difficulty").notNull().default('beginner'),
+  estimatedHours: integer("estimated_hours").notNull().default(2),
+  budget: integer("budget").notNull().default(50), // Fake budget for realism
+  requirements: json("requirements").notNull(), // Array of requirements
+  requirementsAr: json("requirements_ar"), // Arabic requirements
+  deliverables: json("deliverables").notNull(), // Array of deliverables
+  deliverablesAr: json("deliverables_ar"), // Arabic deliverables
+  aiGenerated: boolean("ai_generated").default(false),
+  aiPrompt: text("ai_prompt"), // The prompt used to generate this exercise
+  isActive: boolean("is_active").default(true),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const exerciseSubmissions = pgTable("exercise_submissions", {
+  id: serial("id").primaryKey(),
+  exerciseId: integer("exercise_id").notNull().references(() => exercises.id),
+  freelancerId: integer("freelancer_id").notNull().references(() => users.id),
+  status: exerciseStatusEnum("status").default('in_progress'),
+  submissionText: text("submission_text"),
+  submissionFiles: json("submission_files"), // Array of file URLs
+  aiFeedback: text("ai_feedback"), // AI-generated feedback
+  aiScore: integer("ai_score"), // AI score out of 100
+  adminFeedback: text("admin_feedback"),
+  adminScore: integer("admin_score"), // Admin score out of 100
+  startedAt: timestamp("started_at").defaultNow(),
+  submittedAt: timestamp("submitted_at"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const exerciseProgress = pgTable("exercise_progress", {
+  id: serial("id").primaryKey(),
+  freelancerId: integer("freelancer_id").notNull().references(() => users.id),
+  skillId: integer("skill_id").notNull().references(() => skills.id),
+  exercisesCompleted: integer("exercises_completed").notNull().default(0),
+  totalScore: integer("total_score").notNull().default(0),
+  averageScore: integer("average_score").notNull().default(0),
+  currentLevel: difficultyLevelEnum("current_level").notNull().default('beginner'),
+  lastExerciseAt: timestamp("last_exercise_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const aiExerciseSettings = pgTable("ai_exercise_settings", {
+  id: serial("id").primaryKey(),
+  apiKey: text("api_key"), // AI API key (encrypted)
+  apiProvider: text("api_provider").notNull().default('openai'), // openai, anthropic, etc.
+  modelName: text("model_name").notNull().default('gpt-4'),
+  maxTokens: integer("max_tokens").notNull().default(2000),
+  temperature: numeric("temperature").notNull().default('0.7'),
+  systemPrompt: text("system_prompt").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true, isVerified: true })
@@ -333,6 +470,7 @@ export const insertProjectSchema = createInsertSchema(projects)
     consultationStartTime: z.string().optional(),
     consultationEndTime: z.string().optional(),
     timeZone: z.string().optional(),
+    city: z.string().optional(),
   });
 export const insertProposalSchema = createInsertSchema(proposals).omit({ id: true, createdAt: true, status: true, freelancerId: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true, reviewerId: true });
@@ -355,9 +493,75 @@ export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalReques
   paymentId: true,
   processedAt: true
 });
-export const insertPageSchema = createInsertSchema(pages, {
-  thumbnail: z.string().optional(),
-});
+export const insertPageSchema = createInsertSchema(pages)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    thumbnail: z.string().optional(),
+  });
+
+export const insertBadgeSchema = createInsertSchema(badges)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    translations: z.record(z.string(), z.record(z.string(), z.string())).optional(),
+  });
+
+export const insertUserBadgeSchema = createInsertSchema(userBadges)
+  .omit({ id: true, assignedAt: true })
+  .extend({
+    expiresAt: z.string().nullable().transform(val => val ? new Date(val) : null),
+  });
+
+export const insertTestimonialSchema = createInsertSchema(testimonials)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    contentAr: z.string().optional(),
+    authorNameAr: z.string().optional(),
+    authorTitleAr: z.string().optional(),
+    authorAvatar: z.string().optional(),
+    rating: z.number().min(1).max(5).default(5),
+    order: z.number().default(0),
+  });
+
+export const insertExerciseCategorySchema = createInsertSchema(exerciseCategories)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    nameAr: z.string().optional(),
+    descriptionAr: z.string().optional(),
+    icon: z.string().optional(),
+    color: z.string().default("#3B82F6"),
+    order: z.number().default(0),
+  });
+
+export const insertExerciseSchema = createInsertSchema(exercises)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    titleAr: z.string().optional(),
+    descriptionAr: z.string().optional(),
+    requirementsAr: z.array(z.string()).optional(),
+    deliverablesAr: z.array(z.string()).optional(),
+    aiPrompt: z.string().optional(),
+    order: z.number().default(0),
+  });
+
+export const insertExerciseSubmissionSchema = createInsertSchema(exerciseSubmissions)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    submissionFiles: z.array(z.string()).optional(),
+    aiFeedback: z.string().optional(),
+    aiScore: z.number().min(0).max(100).optional(),
+    adminFeedback: z.string().optional(),
+    adminScore: z.number().min(0).max(100).optional(),
+  });
+
+export const insertExerciseProgressSchema = createInsertSchema(exerciseProgress)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertAiExerciseSettingsSchema = createInsertSchema(aiExerciseSettings)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    apiKey: z.string().optional(),
+    temperature: z.number().min(0).max(2).default(0.7),
+  });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -423,6 +627,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   withdrawalRequests: many(withdrawalRequests, { relationName: "user_withdrawal_requests" }),
   payoutAccounts: many(payoutAccounts, { relationName: "user_payout_accounts" }),
   balance: one(userBalances, { fields: [users.id], references: [userBalances.userId] }),
+  exerciseSubmissions: many(exerciseSubmissions, { relationName: "freelancer_submissions" }),
+  exerciseProgress: many(exerciseProgress, { relationName: "freelancer_progress" }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -433,6 +639,8 @@ export const skillsRelations = relations(skills, ({ one, many }) => ({
   category: one(categories, { relationName: "category_skills", fields: [skills.categoryId], references: [categories.id] }),
   users: many(userSkills, { relationName: "skill_users" }),
   projects: many(projectSkills, { relationName: "skill_projects" }),
+  exercises: many(exercises, { relationName: "skill_exercises" }),
+  progress: many(exerciseProgress, { relationName: "skill_progress" }),
 }));
 
 export const userSkillsRelations = relations(userSkills, ({ one }) => ({
@@ -522,9 +730,6 @@ export const userBalancesRelations = relations(userBalances, ({ one }) => ({
   user: one(users, { fields: [userBalances.userId], references: [users.id] }),
 }));
 
-// Add these to the existing enums in shared/schema.ts
-export const difficultyLevelEnum = pgEnum('difficulty_level', ['beginner', 'intermediate', 'advanced']);
-
 // Add these tables to shared/schema.ts
 export const evaluationQuestions = pgTable("evaluation_questions", {
   id: serial("id").primaryKey(),
@@ -577,11 +782,88 @@ export const evaluationResultsRelations = relations(evaluationResults, ({ one })
   }),
 }));
 
-// Add types
-export type EvaluationQuestion = typeof evaluationQuestions.$inferSelect;
-export type InsertEvaluationQuestion = typeof evaluationQuestions.$inferInsert;
-export type EvaluationResult = typeof evaluationResults.$inferSelect;
-export type InsertEvaluationResult = typeof evaluationResults.$inferInsert;
-
 // Add relations
 export const pagesRelations = relations(pages, ({}) => ({}));
+
+// Testimonials relations
+export const testimonialsRelations = relations(testimonials, ({}) => ({}));
+
+// Exercise relations
+export const exerciseCategoriesRelations = relations(exerciseCategories, ({ many }) => ({
+  exercises: many(exercises, { relationName: "category_exercises" }),
+}));
+
+export const exercisesRelations = relations(exercises, ({ one, many }) => ({
+  category: one(exerciseCategories, { 
+    relationName: "category_exercises", 
+    fields: [exercises.categoryId], 
+    references: [exerciseCategories.id] 
+  }),
+  skill: one(skills, { 
+    relationName: "skill_exercises", 
+    fields: [exercises.skillId], 
+    references: [skills.id] 
+  }),
+  submissions: many(exerciseSubmissions, { relationName: "exercise_submissions" }),
+}));
+
+export const exerciseSubmissionsRelations = relations(exerciseSubmissions, ({ one }) => ({
+  exercise: one(exercises, { 
+    relationName: "exercise_submissions", 
+    fields: [exerciseSubmissions.exerciseId], 
+    references: [exercises.id] 
+  }),
+  freelancer: one(users, { 
+    relationName: "freelancer_submissions", 
+    fields: [exerciseSubmissions.freelancerId], 
+    references: [users.id] 
+  }),
+}));
+
+export const exerciseProgressRelations = relations(exerciseProgress, ({ one }) => ({
+  freelancer: one(users, { 
+    relationName: "freelancer_progress", 
+    fields: [exerciseProgress.freelancerId], 
+    references: [users.id] 
+  }),
+  skill: one(skills, { 
+    relationName: "skill_progress", 
+    fields: [exerciseProgress.skillId], 
+    references: [skills.id] 
+  }),
+}));
+
+// Badge types
+export type Badge = typeof badges.$inferSelect;
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+
+// User Badge types
+export type UserBadge = typeof userBadges.$inferSelect & {
+  badge: Badge;
+  assignedByUser?: {
+    id: number;
+    fullName: string;
+    username: string;
+  };
+};
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+
+// Testimonial types
+export type Testimonial = typeof testimonials.$inferSelect;
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+
+// Exercise types
+export type ExerciseCategory = typeof exerciseCategories.$inferSelect;
+export type InsertExerciseCategory = z.infer<typeof insertExerciseCategorySchema>;
+
+export type Exercise = typeof exercises.$inferSelect;
+export type InsertExercise = z.infer<typeof insertExerciseSchema>;
+
+export type ExerciseSubmission = typeof exerciseSubmissions.$inferSelect;
+export type InsertExerciseSubmission = z.infer<typeof insertExerciseSubmissionSchema>;
+
+export type ExerciseProgress = typeof exerciseProgress.$inferSelect;
+export type InsertExerciseProgress = z.infer<typeof insertExerciseProgressSchema>;
+
+export type AiExerciseSettings = typeof aiExerciseSettings.$inferSelect;
+export type InsertAiExerciseSettings = z.infer<typeof insertAiExerciseSettingsSchema>;

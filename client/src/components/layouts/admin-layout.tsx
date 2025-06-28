@@ -22,7 +22,8 @@ import {
   ChevronDown,
   ListFilter,
   ClipboardCheck,
-  FileText
+  FileText,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -92,6 +93,22 @@ const adminNavItems = [
     ]
   },
   {
+    title: "subscriptions",
+    icon: CreditCard,
+    children: [
+      {
+        title: "plans",
+        href: "/admin/plans",
+        icon: Layers
+      },
+      {
+        title: "badges",
+        href: "/admin/badges",
+        icon: Shield
+      }
+    ]
+  },
+  {
     title: "messages",
     href: "/admin/messages",
     icon: BellRing
@@ -102,19 +119,30 @@ const adminNavItems = [
     icon: CreditCard
   },
   {
-    title: "plans",
-    href: "/admin/plans",
-    icon: Layers
-  },
-  {
     title: "pages",
     href: "/admin/pages",
     icon: FileText
   },
   {
     title: "settings",
-    href: "/admin/settings",
-    icon: Settings
+    icon: Settings,
+    children: [
+      {
+        title: "settings",
+        href: "/admin/settings",
+        icon: Settings
+      },
+      {
+        title: "testimonials",
+        href: "/admin/testimonials",
+        icon: MessageSquare
+      },
+      {
+        title: "exercises",
+        href: "/admin/exercises",
+        icon: FileText
+      }
+    ]
   }
 ];
 

@@ -325,3 +325,163 @@
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out;
 }
+
+
+/* Custom styles for phone input */
+.react-tel-input {
+  font-family: inherit;
+}
+
+.react-tel-input .form-control {
+  width: 100% !important;
+  height: 44px !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid hsl(var(--input)) !important;
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  font-size: 0.875rem !important;
+  padding-left: 60px !important;
+  padding-right: 12px !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.react-tel-input .form-control:focus {
+  outline: none !important;
+  border-color: hsl(var(--ring)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+}
+
+.react-tel-input .flag-dropdown {
+  border-radius: 0.5rem 0 0 0.5rem !important;
+  border: 1px solid hsl(var(--input)) !important;
+  background-color: hsl(var(--background)) !important;
+}
+
+.react-tel-input .flag-dropdown.open {
+  border-color: hsl(var(--ring)) !important;
+}
+
+.react-tel-input .selected-flag {
+  border-radius: 0.5rem 0 0 0.5rem !important;
+  background-color: hsl(var(--background)) !important;
+}
+
+.react-tel-input .selected-flag:hover,
+.react-tel-input .selected-flag:focus {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.react-tel-input .country-list {
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 0.5rem !important;
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+}
+
+.react-tel-input .country-list .country {
+  color: hsl(var(--foreground)) !important;
+}
+
+.react-tel-input .country-list .country:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.react-tel-input .country-list .country.highlight {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* Dark mode adjustments */
+.dark .react-tel-input .form-control {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--input)) !important;
+}
+
+.dark .react-tel-input .flag-dropdown {
+  background-color: hsl(var(--background)) !important;
+  border-color: hsl(var(--input)) !important;
+}
+
+.dark .react-tel-input .selected-flag {
+  background-color: hsl(var(--background)) !important;
+}
+
+.dark .react-tel-input .country-list {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .react-tel-input .country-list .country {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .react-tel-input .country-list .country:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+/* RTL support */
+[dir="rtl"] .react-tel-input .form-control {
+  padding-left: 60px !important;
+  padding-right: 0px !important;
+}
+
+
+/* Error state */
+.react-tel-input.error .form-control {
+  border-color: hsl(var(--destructive)) !important;
+}
+
+.react-tel-input.error .form-control:focus {
+  border-color: hsl(var(--destructive)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--destructive) / 0.2) !important;
+}
+
+.react-tel-input.error .flag-dropdown {
+  border-color: hsl(var(--destructive)) !important;
+}
+
+/* Fix: Ensure first country is visible in phone input dropdown */
+.react-phone-input-2 .country-list {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.react-tel-input .country-list .search{
+   background-color: var(--foreground);
+}
+
+.react-tel-input .country-list .search input{
+  background-color: var(--foreground);
+  border: var(--accent-foreground);
+  text-align: right;
+}
+
+/* Fix: Dark mode support for input and dropdown */
+.react-phone-input-2,
+.react-phone-input-2 input,
+.react-phone-input-2 .country-list,
+.react-phone-input-2 .country {
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #27272a !important;
+}
+
+.react-phone-input-2 .country-list {
+  box-shadow: 0 4px 24px 0 #00000080 !important;
+}
+
+.react-phone-input-2 .country:hover,
+.react-phone-input-2 .country.highlight {
+  background: #27272a !important;
+  color: #fff !important;
+}
+
+.react-phone-input-2 .flag-dropdown {
+  background: transparent !important;
+  border: none !important;
+}

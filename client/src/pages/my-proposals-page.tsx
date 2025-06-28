@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { AlertCircle, Search, Edit, Trash, MoreVertical } from "lucide-react";
+import { AlertCircle, Search, Edit, Trash, MoreVertical, SaudiRiyal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
@@ -386,7 +386,13 @@ export default function MyProposalsPage() {
                           "flex justify-between items-center text-sm text-neutral-500 dark:text-gray-200",
                           isRTL && "flex-row"
                         )}>
-                          <span>${proposal.price} • {proposal.deliveryTime} {t("common.days")}</span>
+                          <span className="text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              {proposal.price}
+                              {isRTL ? <SaudiRiyal className="h-3 w-3" /> : " SAR"}
+                            </span>
+                            • {proposal.deliveryTime} {t("common.days")}
+                            </span>
                           <span>{proposal.createdAtDisplay}</span>
                         </div>
                       </div>

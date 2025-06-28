@@ -74,6 +74,18 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
 
   return (
     <div className="bg-neutral-50 dark:bg-gray-800 p-6 shadow-sm hover:shadow-md transition-shadow duration-200 h-full flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
+      {/* Featured Image */}
+      {project.featuredImage && (
+        <div className="mb-4 rounded-lg overflow-hidden aspect-[16/9] bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+          <img
+            src={project.featuredImage}
+            alt={project.title}
+            className="object-cover w-full h-full"
+            loading="lazy"
+            style={{ minHeight: 120 }}
+          />
+        </div>
+      )}
       <div className="flex justify-between">
         <div>
           <h3 className="text-lg font-cairo font-[300] text-neutral-900 dark:text-white">{project.title}</h3>
@@ -86,12 +98,12 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
         <span className="bg-accent/10 text-accent flex items-center gap-3 dark:bg-accent/20 text-sm px-2 py-2 h-8 rounded-full">
           <span className="font-cairo  text-foreground flex items-center gap-1 dark:text-white">
             <span className="flex items-center gap-1 flex-row-reverse">
+              {project.budget}
               {isRTL? 
               <SaudiRiyal className="h-4 w-4" />
               :
-              <span>SAR</span>
+              " SAR"
               }
-              {project.budget}
             </span>
           </span>
         </span>

@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { AlertCircle, Edit, Loader2, Plus, Search, Star, Trash } from "lucide-react";
+import { AlertCircle, Edit, Loader2, Plus, Search, Star, Trash, SaudiRiyal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
@@ -428,7 +428,13 @@ export default function MyProjectsPage() {
                           "flex justify-between items-center text-sm text-neutral-500 dark:text-gray-400 mb-3 group-hover:text-gray-200",
                           isRTL && "flex-row"
                         )}>
-                          <span>${project.budget}</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">{t("projects.budget")}</span>
+                            <span className="flex items-center gap-1">
+                              {project.budget}
+                              {isRTL ? <SaudiRiyal className="h-4 w-4" /> : " SAR"}
+                            </span>
+                          </div>
                           <span>{project.createdAtDisplay}</span>
                         </div>
                         <div className="flex justify-between items-center gap-2">

@@ -1,0 +1,2 @@
+ALTER TABLE "skills" ADD COLUMN "location_based" boolean DEFAULT false;--> statement-breakpoint
+ALTER TABLE "skills" ADD CONSTRAINT "skills_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;

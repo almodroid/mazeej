@@ -746,7 +746,10 @@ export default function PaymentsPage() {
                       <div className="font-medium">{transaction.projectTitle}</div>
                       <div>{transaction.partyName}</div>
                       <div dir="auto">{formatDate(transaction.date)}</div>
-                      <div className={isRTL ? "text-right" : "text-left"}>${transaction.amount}</div>
+                      <div className={`${isRTL ? "text-right" : "text-left"} flex items-center gap-1`}>
+                        {transaction.amount}
+                        {isRTL ? <SaudiRiyal className="h-4 w-4" /> : " SAR"}
+                      </div>
                       <div className={isRTL ? "text-right" : "text-left"}>{getStatusBadge(transaction.status)}</div>
                     </div>
                   ))}

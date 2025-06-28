@@ -27,6 +27,15 @@ import { count, avg, sum, getTableColumns, SQLWrapper } from 'drizzle-orm';
 import path from 'path'; // Add this line
 import * as mime from 'mime-types'; // Add this line
 import fs from 'fs'; // Add this line
+import { 
+  pages,
+  badges,
+  userBadges,
+  type Badge,
+  type InsertBadge,
+  type UserBadge,
+  type InsertUserBadge
+} from "@shared/schema";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -313,7 +322,8 @@ export class DatabaseStorage implements IStorage {
       .values({
         name,
         categoryId: skillData.categoryId!,
-        translations: skillData.translations
+        translations: skillData.translations,
+        locationBased: skillData.locationBased ?? false
       })
       .returning();
     
@@ -333,6 +343,9 @@ export class DatabaseStorage implements IStorage {
 
     if (name) {
       updateData.name = name;
+    }
+    if (typeof skillData.locationBased !== 'undefined') {
+      updateData.locationBased = skillData.locationBased;
     }
 
     const result = await db
@@ -435,7 +448,8 @@ export class DatabaseStorage implements IStorage {
         id: skills.id,
         name: skills.name,
         categoryId: skills.categoryId,
-        translations: skills.translations
+        translations: skills.translations,
+        locationBased: skills.locationBased
       })
       .from(projectSkills)
       .innerJoin(skills, eq(projectSkills.skillId, skills.id))
@@ -511,6 +525,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(projects.createdAt));
   }
 
+  async getProjectsByFreelancer(freelancerId: number): Promise<Project[]> {
+    return await db
+      .select()
+      .from(projects)
+      .where(eq(projects.freelancerId, freelancerId))
+      .orderBy(desc(projects.createdAt));
+  }
+
   async getPendingConsultationsForExpert(expertId: number): Promise<Project[]> {
     return db
       .select()
@@ -543,6 +565,7 @@ export class DatabaseStorage implements IStorage {
         status: initialStatus, // Use the determined initial status
         // Ensure freelancerId is included if provided
         freelancerId: project.freelancerId,
+        city: project.city || null,
       })
       .returning();
     return newProject;
@@ -562,7 +585,9 @@ export class DatabaseStorage implements IStorage {
       title: data.title,
       description: data.description,
       budget: data.budget,
-      category: data.category
+      category: data.category,
+      freelancerId: data.freelancerId,
+      status: data.status
     };
     
     const [updatedProject] = await db
@@ -1662,6 +1687,18 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean> {
+    try {
+      await db.update(withdrawalRequests)
+        .set({ paymentId: null })
+        .where(eq(withdrawalRequests.id, id));
+      return true;
+    } catch (error) {
+      console.error('Error in deleteWithdrawalRequestPayment:', error);
+      return false;
+    }
+  }
+
   // Payout account operations
   async getPayoutAccounts(userId: number): Promise<any[]> {
     const payoutAccountsResult = await db
@@ -1955,27 +1992,162 @@ export class DatabaseStorage implements IStorage {
 
   // Get users by skill ID
   async getUsersBySkillId(skillId: number): Promise<User[]> {
-    try {
-      // Find all user skills with this skill id
-      const userWithSkills = await db
+    const userSkillsResult = await db
         .select()
         .from(userSkills)
         .where(eq(userSkills.skillId, skillId));
       
-      const userIds = userWithSkills.map(us => us.userId);
+    const userIds = userSkillsResult.map(us => us.userId);
       
-      if (userIds.length === 0) return [];
+    if (userIds.length === 0) {
+      return [];
+    }
       
-      // Get users with this skill
       const usersWithSkill = await db
         .select()
         .from(users)
         .where(inArray(users.id, userIds));
       
       return usersWithSkill;
-    } catch (error) {
-      console.error("Error getting users by skill ID:", error);
-      return [];
+  }
+
+  // Online status operations
+  async updateUserOnlineStatus(userId: number, isOnline: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        isOnline,
+        lastSeen: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserById(userId: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user;
+  }
+
+  // Badge methods
+  async getBadges(): Promise<Badge[]> {
+    return await db.select().from(badges).where(eq(badges.isActive, true));
+  }
+
+  async getBadgeById(id: number): Promise<Badge | undefined> {
+    const result = await db.select().from(badges).where(eq(badges.id, id));
+    return result[0];
+  }
+
+  async getBadgeByPlanKey(planKey: string): Promise<Badge | undefined> {
+    const result = await db.select().from(badges).where(eq(badges.planKey, planKey));
+    return result[0];
+  }
+
+  async createBadge(badgeData: InsertBadge): Promise<Badge> {
+    const [newBadge] = await db.insert(badges).values(badgeData).returning();
+    return newBadge;
+  }
+
+  async updateBadge(id: number, badgeData: Partial<Badge>): Promise<Badge | undefined> {
+    const result = await db.update(badges).set(badgeData).where(eq(badges.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteBadge(id: number): Promise<boolean> {
+    const result = await db.delete(badges).where(eq(badges.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // User Badge methods
+  async getUserBadges(userId: number): Promise<UserBadge[]> {
+    const result = await db
+      .select({
+        id: userBadges.id,
+        userId: userBadges.userId,
+        badgeId: userBadges.badgeId,
+        assignedBy: userBadges.assignedBy,
+        assignedAt: userBadges.assignedAt,
+        expiresAt: userBadges.expiresAt,
+        isActive: userBadges.isActive,
+        badge: {
+          id: badges.id,
+          name: badges.name,
+          description: badges.description,
+          icon: badges.icon,
+          color: badges.color,
+          type: badges.type,
+          planKey: badges.planKey,
+          isActive: badges.isActive,
+          createdAt: badges.createdAt,
+          translations: badges.translations
+        },
+        assignedByUser: {
+          id: users.id,
+          fullName: users.fullName,
+          username: users.username
+        }
+      })
+      .from(userBadges)
+      .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+      .leftJoin(users, eq(userBadges.assignedBy, users.id))
+      .where(and(eq(userBadges.userId, userId), eq(userBadges.isActive, true)));
+
+    return result.map(row => ({
+      id: row.id,
+      userId: row.userId,
+      badgeId: row.badgeId,
+      assignedBy: row.assignedBy,
+      assignedAt: row.assignedAt,
+      expiresAt: row.expiresAt,
+      isActive: row.isActive,
+      badge: row.badge,
+      assignedByUser: row.assignedByUser || undefined
+    }));
+  }
+
+  async assignBadgeToUser(userId: number, badgeId: number, assignedBy?: number, expiresAt?: Date): Promise<UserBadge> {
+    const [newUserBadge] = await db
+      .insert(userBadges)
+      .values({
+        userId,
+        badgeId,
+        assignedBy,
+        expiresAt
+      })
+      .returning();
+
+    // Get the full badge details
+    const badge = await this.getBadgeById(badgeId);
+    if (!badge) {
+      throw new Error('Badge not found');
     }
+
+    return {
+      ...newUserBadge,
+      badge,
+      assignedByUser: assignedBy ? await this.getUserById(assignedBy) : undefined
+    };
+  }
+
+  async removeBadgeFromUser(userId: number, badgeId: number): Promise<boolean> {
+    const result = await db
+      .update(userBadges)
+      .set({ isActive: false })
+      .where(and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)));
+    
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getActiveUserBadges(userId: number): Promise<UserBadge[]> {
+    const now = new Date();
+    const userBadges = await this.getUserBadges(userId);
+    
+    // Filter out expired badges
+    return userBadges.filter(userBadge => {
+      if (!userBadge.expiresAt) return true;
+      return userBadge.expiresAt > now;
+    });
   }
 }
+
+// Export storage instance
+export const storage = new DatabaseStorage();

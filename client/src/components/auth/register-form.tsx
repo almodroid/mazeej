@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PhoneInputField } from "@/components/ui/phone-input";
+import { CountrySelect } from "@/components/ui/country-select";
+import { cn } from "@/lib/utils";
+import countries from "i18n-iso-countries";
 
 const registerSchema = z.object({
   username: z.string().min(3, "auth.usernameTooShort"),
@@ -23,9 +27,29 @@ const registerSchema = z.object({
   password: z.string().min(6, "auth.passwordLength"),
   confirmPassword: z.string(),
   role: z.enum(["client", "freelancer"]),
+  country: z.string().min(1, "auth.countryRequired"),
+  phone: z.string().min(1, "auth.phoneRequired"),
 }).refine(data => data.password === data.confirmPassword, {
   message: "auth.passwordMismatch",
   path: ["confirmPassword"],
+}).refine(data => {
+  // For freelancers, country must be Saudi Arabia
+  if (data.role === "freelancer" && data.country !== "SA") {
+    return false;
+  }
+  return true;
+}, {
+  message: "auth.freelancerSaudiOnly",
+  path: ["country"],
+}).refine(data => {
+  // For freelancers, phone must start with +966
+  if (data.role === "freelancer" && !data.phone.startsWith("966")) {
+    return false;
+  }
+  return true;
+}, {
+  message: "auth.freelancerSaudiPhoneOnly",
+  path: ["phone"],
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -39,6 +63,7 @@ export default function RegisterForm({ initialRole = "client", onAuthSuccess }: 
   const { t, i18n } = useTranslation();
   const { registerMutation } = useAuth();
   const isRTL = i18n.language === "ar";
+  const currentLocale = isRTL ? "ar" : "en";
   
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -49,13 +74,54 @@ export default function RegisterForm({ initialRole = "client", onAuthSuccess }: 
       password: "",
       confirmPassword: "",
       role: initialRole,
+      country: initialRole === "freelancer" ? "SA" : "",
+      phone: "",
     },
   });
   
+  const selectedRole = form.watch("role");
+  
+  // Add state for selected country
+  const [selectedCountry, setSelectedCountry] = useState(initialRole === "freelancer" ? "SA" : "");
+
+  // Prepare localization for phone input
+  const localization = Object.fromEntries(
+    Object.entries(countries.getAlpha2Codes()).map(([code]) => [
+      code.toLowerCase(),
+      countries.getName(code, currentLocale) || code,
+    ])
+  );
+
   // Update the role field when initialRole prop changes
   useEffect(() => {
     form.setValue("role", initialRole);
+    // Set default country for freelancers
+    if (initialRole === "freelancer") {
+      form.setValue("country", "SA");
+    }
   }, [initialRole, form]);
+
+  // Update country when role changes
+  useEffect(() => {
+    if (selectedRole === "freelancer") {
+      form.setValue("country", "SA");
+    }
+  }, [selectedRole, form]);
+
+  useEffect(() => {
+    // Only auto-select for clients (not freelancers, who are always SA)
+    if (selectedRole === "client" && !selectedCountry) {
+      fetch("https://ipapi.co/json/")
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.country) {
+            setSelectedCountry(data.country);
+            form.setValue("country", data.country);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [selectedRole, selectedCountry, form]);
 
   const onSubmit = (data: RegisterFormValues) => {
     registerMutation.mutate({
@@ -64,7 +130,9 @@ export default function RegisterForm({ initialRole = "client", onAuthSuccess }: 
       confirmPassword: data.confirmPassword,
       email: data.email,
       fullName: data.fullName,
-      role: data.role
+      role: data.role,
+      country: data.country,
+      phone: data.phone,
     }, {
       onSuccess: () => {
         // Call the success handler if provided
@@ -133,6 +201,54 @@ export default function RegisterForm({ initialRole = "client", onAuthSuccess }: 
             </FormItem>
           )}
         />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <FormField
+            control={form.control}
+            name="country"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("auth.country")}</FormLabel>
+                <FormControl>
+                  <CountrySelect
+                    value={field.value}
+                    onValueChange={(val) => {
+                      field.onChange(val);
+                      setSelectedCountry(val);
+                    }}
+                    restrictToSaudi={selectedRole === "freelancer"}
+                    disabled={selectedRole === "freelancer"}
+                    error={!!form.formState.errors.country}
+                    
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem dir="ltr" className="text-right">
+                <FormLabel>{t("auth.phone")}</FormLabel>
+                <FormControl>
+                  <PhoneInputField
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    restrictToSaudi={selectedRole === "freelancer"}
+                    error={!!form.formState.errors.phone}
+                    placeholder={t("auth.phonePlaceholder")}                    
+                    country={selectedCountry.toLowerCase()}
+                    localization={localization}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <FormField

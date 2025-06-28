@@ -7,7 +7,6 @@ import {
   Award, 
   CheckCircle, 
   Briefcase,
-  Heart,
   ExternalLink,
   SaudiRiyal
 } from "lucide-react";
@@ -23,6 +22,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
+import { useUserOnlineStatus } from "@/hooks/use-online-status";
+import { FreelancerBadges } from "./freelancer/freelancer-badges";
 
 type FreelancerCardProps = {
   freelancer: Omit<User, 'password'>;
@@ -33,9 +34,11 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
   const { user } = useAuth();
   const { theme } = useTheme();
   const isRTL = i18n.language === "ar";
-  const [isFavorite, setIsFavorite] = useState(false);
   const [isHireMeOpen, setIsHireMeOpen] = useState(false);
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
+  
+  // Use real online status
+  const { isOnline } = useUserOnlineStatus(freelancer.id);
   
   // Check if this freelancer is an expert
   const isExpert = freelancer.freelancerType === 'expert';
@@ -81,7 +84,12 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
   };
   
   // Fetch completed projects count
-  const { data: projectsCompleted = 0 } = useQuery<number>({
+  const { data: projectStats = { completed: 0, inProgress: 0, total: 0, completionRate: 0 } } = useQuery<{
+    completed: number;
+    inProgress: number;
+    total: number;
+    completionRate: number;
+  }>({
     queryKey: [`/api/users/${freelancer.id}/projects/completed`],
   });
 
@@ -102,10 +110,6 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
     return stars;
   };
 
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
-  };
-
   // Handle consultation button click
   const handleConsultationClick = () => {
     setIsConsultationOpen(true);
@@ -121,19 +125,8 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
       <div className="bg-card dark:bg-gray-800 rounded-xl border border-border dark:border-gray-700 overflow-hidden hover-lift transition-all duration-300 hover:border-primary/20 group">
         {/* Card header with background cover */}
         <div className="h-24 bg-gradient-to-r from-primary/20 to-accent/20 dark:from-primary/30 dark:to-accent/30 relative">
-          {/* Favorite button */}
-          <button 
-            onClick={toggleFavorite}
-            className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center transition-colors hover:bg-background dark:hover:bg-gray-900 z-10"
-            aria-label={isFavorite ? t('common.removeFromFavorites') : t('common.addToFavorites')}
-          >
-            <Heart 
-              className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} 
-            />
-          </button>
-          
           {/* Online status indicator */}
-          {Math.random() > 0.5 && (
+          {isOnline && (
             <div className="absolute top-2 left-2 flex items-center bg-background/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs z-10">
               <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
               {t('common.online')}
@@ -165,6 +158,7 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
               {freelancer.fullName || freelancer.username}
               <ExternalLink className="h-4 w-4 opacity-0 group-hover/link:opacity-100 transition-opacity" />
             </Link>
+            <FreelancerBadges userId={freelancer.id} className="justify-center mt-1" />
             <p className="text-sm text-muted-foreground dark:text-gray-400">
               {freelancer.freelancerType === 'content_creator' 
                 ? t('profile.contentCreator') 
@@ -194,23 +188,23 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
           <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="bg-muted/50 dark:bg-gray-700/50 p-2 rounded-lg">
               <div className="text-primary font-cairo font-semibold">
-                {projectsCompleted}+
+                {projectStats.completed}+
               </div>
               <div className="text-xs text-muted-foreground dark:text-gray-400">
-                {t('profile.projects')}
+                {t('profile.completed')}
               </div>
             </div>
             <div className="bg-muted/50 dark:bg-gray-700/50 p-2 rounded-lg">
               <div className="text-accent font-cairo font-semibold">
-                {getLevelLabel()}
+                {projectStats.inProgress}
               </div>
               <div className="text-xs text-muted-foreground dark:text-gray-400">
-                {t('profile.level')}
+                {t('profile.inProgress')}
               </div>
             </div>
             <div className="bg-muted/50 dark:bg-gray-700/50 p-2 rounded-lg">
               <div className="text-primary font-cairo font-semibold">
-                100%
+                {projectStats.completionRate}%
               </div>
               <div className="text-xs text-muted-foreground dark:text-gray-400">
                 {t('profile.completion')}
@@ -227,11 +221,16 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
           
           {/* Skills */}
           <div className="flex flex-wrap justify-center gap-2 mb-4">
-            {skills.map((skill) => (
+            {skills.slice(0, 5).map((skill) => (
               <Badge key={skill.id} variant="outline" className="bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/20">
                 {skill.name}
               </Badge>
             ))}
+            {skills.length > 5 && (
+              <Badge variant="outline" className="bg-primary/5 dark:bg-primary/10">
+                +{skills.length - 5} {t('common.more')}
+              </Badge>
+            )}
           </div>
           
           {/* Price and actions */}
@@ -243,9 +242,8 @@ export default function FreelancerCard({ freelancer }: FreelancerCardProps) {
               </span>
               <span className="font-cairo font-bold text-foreground flex items-center gap-1 dark:text-white">
                 <span className="flex items-center gap-1 flex-row-reverse">
-                {isRTL ? <SaudiRiyal className="h-4 w-4" /> : "SAR"}
-                
                 {hourlyRate}
+                {isRTL ? <SaudiRiyal className="h-4 w-4" /> : " SAR"}
                 </span>
                 <span className="text-xs font-normal text-muted-foreground dark:text-gray-400">/ {t('common.hr')}</span>
               </span>

@@ -41,6 +41,11 @@ import SearchPage from "@/pages/search-page";
 import CheckoutPage from "@/pages/checkout-page";
 import PaymentResultPage from "@/pages/payment-result";
 import { useGlobalSettings } from '@/hooks/use-global-settings';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+import AdminBadgesPage from "./pages/admin/badges";
+import AdminTestimonialsPage from "./pages/admin/testimonials";
+import AdminExercisesPage from "./pages/admin/exercises";
+import ExercisesPage from "./pages/exercises-page";
 
 // Lazy load admin components
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
@@ -55,6 +60,12 @@ const AdminMessages = lazy(() => import('./pages/admin/messages'));
 const AdminQuestionsPage = lazy(() => import('./pages/admin-questions'));
 const AdminPages = lazy(() => import('./pages/admin/pages'));
 const PublicPage = lazy(() => import('./pages/page'));
+
+// Component to initialize online status (must be inside AuthProvider)
+function OnlineStatusInitializer() {
+  useOnlineStatus();
+  return null;
+}
 
 function Router() {
   return (
@@ -180,6 +191,13 @@ function Router() {
           </Suspense>
         </ProtectedRoute>
       </Route>
+      <Route path="/admin/badges">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminBadgesPage />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
       <Route path="/admin/settings">
         <ProtectedRoute>
           <Suspense fallback={<div>Loading...</div>}>
@@ -212,6 +230,20 @@ function Router() {
         <ProtectedRoute>
           <Suspense fallback={<div>Loading...</div>}>
             <AdminPages />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/testimonials">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminTestimonialsPage />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/exercises">
+        <ProtectedRoute>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminExercisesPage />
           </Suspense>
         </ProtectedRoute>
       </Route>
@@ -260,8 +292,15 @@ function Router() {
           <HelpPage />
         </ProtectedRoute>
       </Route>
+      <Route path="/exercises">
+        <ProtectedRoute>
+          <ExercisesPage />
+        </ProtectedRoute>
+      </Route>
       <Route path="/tracks">
-        <TracksPage />
+        <ProtectedRoute>
+          <TracksPage />
+        </ProtectedRoute>
       </Route>
       <Route path="/search">
         <SearchPage />
@@ -294,6 +333,7 @@ function App() {
       <ThemeProvider defaultTheme="system" storageKey="freelance-platform-theme">
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
+            <OnlineStatusInitializer />
             <SettingsProvider>
               <NotificationsProvider>
                 <Router />

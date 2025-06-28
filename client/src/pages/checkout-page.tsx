@@ -12,6 +12,7 @@ import { Loader2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { useGlobalSettings } from "@/hooks/use-global-settings";
+import { FreelancerBadges } from "@/components/freelancer/freelancer-badges";
 
 interface CheckoutParams {
   proposalId: string;
@@ -298,6 +299,7 @@ export default function CheckoutPage() {
                         {freelancer.isVerified && (
                           <CheckCircle className="h-5 w-5 text-primary" />
                         )}
+                        <FreelancerBadges userId={freelancer.id} className="ml-2" />
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {freelancer.freelancerType === 'content_creator' 

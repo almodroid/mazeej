@@ -10,6 +10,7 @@ import adminPlansRoutes from "./routes/admin-plans";
 import phoneVerificationRoutes from "./routes/phone-verification";
 import paytabsRoutes from "./routes/paytabs";
 import plansRoutes from "./routes/plans";
+import exercisesRoutes from "./routes/exercises";
 import { registerEvaluationRoutes } from './routes/evaluations';
 import { registerAdminRoutes } from './routes/admin';
 import { registerPublicRoutes } from "./routes/public";
@@ -70,11 +71,60 @@ export function registerRoutes(app: Express): Server {
   // Setup plans routes
   app.use('/api/plans', plansRoutes);
   
+  // Setup exercises routes
+  app.use('/api/exercises', exercisesRoutes);
+  
   // Register evaluation routes
   registerEvaluationRoutes(app);
   
   // Register admin routes
   registerAdminRoutes(app);
+  
+  // Online Status API Routes
+  app.post('/api/users/online-status', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'You must be logged in to update online status' });
+    }
+    
+    try {
+      const { isOnline } = req.body;
+      const userId = req.user.id;
+      
+      await storage.updateUserOnlineStatus(userId, isOnline);
+      
+      res.json({ success: true, isOnline });
+    } catch (error) {
+      console.error('Error updating online status:', error);
+      res.status(500).json({ message: 'Failed to update online status' });
+    }
+  });
+  
+  app.get('/api/users/:id/online-status', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Consider user online if they were active in the last 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const isCurrentlyOnline = user.isOnline && user.lastSeen > fiveMinutesAgo;
+      
+      res.json({ 
+        isOnline: isCurrentlyOnline, 
+        lastSeen: user.lastSeen 
+      });
+    } catch (error) {
+      console.error('Error fetching online status:', error);
+      res.status(500).json({ message: 'Failed to fetch online status' });
+    }
+  });
   
   // Create HTTP server
   const httpServer = createServer(app);
@@ -715,7 +765,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ message: 'Not authorized' });
       }
 
-      const { name, categoryId, translations } = req.body;
+      const { name, categoryId, translations, locationBased } = req.body;
       
       if (!categoryId) {
         return res.status(400).json({ message: 'Category ID is required' });
@@ -738,7 +788,8 @@ export function registerRoutes(app: Express): Server {
       const newSkill = await storage.createSkill({
         name: skillName, 
         categoryId: parseInt(categoryId),
-        translations
+        translations,
+        locationBased: !!locationBased
       });
 
       res.status(201).json(newSkill);
@@ -760,7 +811,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: 'Invalid skill ID' });
       }
 
-      const { name, categoryId, translations } = req.body;
+      const { name, categoryId, translations, locationBased } = req.body;
       
       // Ensure at least one translation is provided
       if (translations && !Object.values(translations).some((val: any) => val && val.trim && val.trim())) {
@@ -779,9 +830,34 @@ export function registerRoutes(app: Express): Server {
       const updatedSkill = await storage.updateSkill(skillId, {
         name: skillName,
         categoryId: categoryId ? parseInt(categoryId) : undefined,
-        translations
+        translations,
+        locationBased: typeof locationBased !== 'undefined' ? !!locationBased : skill.locationBased
       });
 
+      res.json(updatedSkill);
+    } catch (error) {
+      console.error('Error updating skill:', error);
+      res.status(500).json({ message: 'Failed to update skill' });
+    }
+  });
+
+  app.patch('/api/skills/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const skillId = parseInt(req.params.id);
+      if (isNaN(skillId)) {
+        return res.status(400).json({ message: 'Invalid skill ID' });
+      }
+
+      const { locationBased } = req.body;
+      const skill = await storage.getSkill(skillId);
+      if (!skill) {
+        return res.status(404).json({ message: 'Skill not found' });
+      }
+      const updatedSkill = await storage.updateSkill(skillId, { locationBased: typeof locationBased !== 'undefined' ? !!locationBased : skill.locationBased });
       res.json(updatedSkill);
     } catch (error) {
       console.error('Error updating skill:', error);
@@ -1202,7 +1278,11 @@ export function registerRoutes(app: Express): Server {
       
       // If accepting a proposal, update project status to in_progress
       if (status === 'accepted') {
-        await storage.updateProjectStatus(proposal.projectId, 'in_progress');
+        // Update project with freelancer ID and status
+        await storage.updateProject(proposal.projectId, {
+          freelancerId: proposal.freelancerId,
+          status: 'in_progress'
+        });
         
         // Reject all other proposals for this project
         const otherProposals = await storage.getProposalsByProject(proposal.projectId);
@@ -3863,6 +3943,178 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error creating project-skill notifications:', error);
       res.status(500).json({ message: 'Failed to create notifications' });
+    }
+  });
+
+  // Badge routes
+  app.get('/api/badges', async (req, res) => {
+    try {
+      const badges = await storage.getBadges();
+      res.json(badges);
+    } catch (error) {
+      console.error('Error fetching badges:', error);
+      res.status(500).json({ message: 'Failed to fetch badges' });
+    }
+  });
+
+  app.get('/api/badges/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const badge = await storage.getBadgeById(id);
+      if (!badge) {
+        return res.status(404).json({ message: 'Badge not found' });
+      }
+      res.json(badge);
+    } catch (error) {
+      console.error('Error fetching badge:', error);
+      res.status(500).json({ message: 'Failed to fetch badge' });
+    }
+  });
+
+  app.post('/api/badges', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const badge = await storage.createBadge(req.body);
+      res.status(201).json(badge);
+    } catch (error) {
+      console.error('Error creating badge:', error);
+      res.status(500).json({ message: 'Failed to create badge' });
+    }
+  });
+
+  app.put('/api/badges/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const id = parseInt(req.params.id);
+      const badge = await storage.updateBadge(id, req.body);
+      if (!badge) {
+        return res.status(404).json({ message: 'Badge not found' });
+      }
+      res.json(badge);
+    } catch (error) {
+      console.error('Error updating badge:', error);
+      res.status(500).json({ message: 'Failed to update badge' });
+    }
+  });
+
+  app.delete('/api/badges/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteBadge(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Badge not found' });
+      }
+      res.json({ message: 'Badge deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting badge:', error);
+      res.status(500).json({ message: 'Failed to delete badge' });
+    }
+  });
+
+  // User Badge routes
+  app.get('/api/users/:id/badges', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const userBadges = await storage.getActiveUserBadges(userId);
+      res.json(userBadges);
+    } catch (error) {
+      console.error('Error fetching user badges:', error);
+      res.status(500).json({ message: 'Failed to fetch user badges' });
+    }
+  });
+
+  app.post('/api/users/:id/badges', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const userId = parseInt(req.params.id);
+      const { badgeId, expiresAt } = req.body;
+      
+      const userBadge = await storage.assignBadgeToUser(
+        userId, 
+        badgeId, 
+        req.user.id, 
+        expiresAt ? new Date(expiresAt) : undefined
+      );
+      
+      res.status(201).json(userBadge);
+    } catch (error) {
+      console.error('Error assigning badge to user:', error);
+      res.status(500).json({ message: 'Failed to assign badge to user' });
+    }
+  });
+
+  app.delete('/api/users/:id/badges/:badgeId', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const userId = parseInt(req.params.id);
+      const badgeId = parseInt(req.params.badgeId);
+      
+      const success = await storage.removeBadgeFromUser(userId, badgeId);
+      if (!success) {
+        return res.status(404).json({ message: 'User badge not found' });
+      }
+      
+      res.json({ message: 'Badge removed from user successfully' });
+    } catch (error) {
+      console.error('Error removing badge from user:', error);
+      res.status(500).json({ message: 'Failed to remove badge from user' });
+    }
+  });
+
+  // Get completed projects count for a user
+  app.get('/api/users/:id/projects/completed', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      // Check if the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Get all projects where the user is the freelancer
+      const userProjects = await storage.getProjectsByFreelancer(userId);
+      
+      // Calculate different project counts
+      const completedProjects = userProjects.filter(project => project.status === 'completed');
+      const inProgressProjects = userProjects.filter(project => project.status === 'in_progress');
+      const totalAssignedProjects = userProjects.length;
+      
+      // Calculate completion rate (only for projects that have been assigned)
+      const completionRate = totalAssignedProjects > 0 
+        ? Math.round((completedProjects.length / totalAssignedProjects) * 100)
+        : 0;
+      
+      // Return comprehensive statistics
+      res.json({
+        completed: completedProjects.length,
+        inProgress: inProgressProjects.length,
+        total: totalAssignedProjects,
+        completionRate: completionRate
+      });
+    } catch (error) {
+      console.error('Error fetching completed projects count:', error);
+      res.status(500).json({ message: 'Failed to fetch completed projects count' });
     }
   });
 

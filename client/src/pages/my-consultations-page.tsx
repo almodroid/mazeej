@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { arSA } from 'date-fns/locale/ar-SA';
-import { AlertCircle, Calendar, Clock, Search, Star, Video } from "lucide-react";
+import { AlertCircle, Calendar, Clock, Search, Star, Video, SaudiRiyal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
@@ -430,13 +430,23 @@ export default function MyConsultationsPage() {
               <div className="flex justify-between items-center p-4 border rounded-md bg-muted/20">
                 <div>
                   <p className="text-sm font-medium">{t("consultation.hourlyRate")}</p>
-                  <p className="text-xl font-bold">${selectedConsultation.hourlyRate}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{t("consultation.hourlyRate")}</span>
+                    <p className="text-xl font-bold flex items-center gap-1">
+                      {selectedConsultation.hourlyRate}
+                      {isRTL ? <SaudiRiyal className="h-5 w-5" /> : " SAR"}
+                    </p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium">{t("consultation.totalCost")}</p>
-                  <p className="text-xl font-bold">
-                    ${Number(selectedConsultation.budget)}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{t("consultation.budget")}</span>
+                    <p className="text-lg font-semibold flex items-center gap-1">
+                      {Number(selectedConsultation.budget)}
+                      {isRTL ? <SaudiRiyal className="h-4 w-4" /> : " SAR"}
                   </p>
+                  </div>
                 </div>
               </div>
             </div>

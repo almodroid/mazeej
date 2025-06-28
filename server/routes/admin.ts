@@ -1,7 +1,7 @@
 import { Express } from 'express';
 import { db } from '../db';
-import { evaluationQuestions, users, projects, categories, payments, pages, insertPageSchema } from '@shared/schema';
-import { and, eq, sql, count, sum, desc, gte, lte } from 'drizzle-orm';
+import { evaluationQuestions, users, projects, categories, payments, pages, insertPageSchema, skills, plans, badges, userBadges, testimonials, insertTestimonialSchema } from '@shared/schema';
+import { and, eq, sql, count, sum, desc, gte, lte, asc, like } from 'drizzle-orm';
 import { isAuthenticated, isAdmin } from './auth';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { z } from 'zod';
@@ -358,6 +358,323 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error('Error deleting page:', error);
       res.status(500).json({ error: 'Failed to delete page' });
+    }
+  });
+
+  // Get all badges
+  app.get('/api/admin/badges', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const allBadges = await db.select().from(badges).orderBy(asc(badges.name));
+      res.json(allBadges);
+    } catch (error) {
+      console.error('Error fetching badges:', error);
+      res.status(500).json({ error: 'Failed to fetch badges' });
+    }
+  });
+
+  // Create a new badge
+  app.post('/api/admin/badges', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, description, icon, color, type, planKey, translations } = req.body;
+      
+      const newBadge = await db.insert(badges).values({
+        name,
+        description,
+        icon,
+        color,
+        type,
+        planKey,
+        translations,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
+      res.status(201).json(newBadge[0]);
+    } catch (error) {
+      console.error('Error creating badge:', error);
+      res.status(500).json({ error: 'Failed to create badge' });
+    }
+  });
+
+  // Update a badge
+  app.put('/api/admin/badges/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description, icon, color, translations } = req.body;
+      
+      const updatedBadge = await db.update(badges).set({
+        name,
+        description,
+        icon,
+        color,
+        translations,
+        updatedAt: new Date()
+      }).where(eq(badges.id, parseInt(id))).returning();
+      
+      if (updatedBadge.length === 0) {
+        return res.status(404).json({ error: 'Badge not found' });
+      }
+      
+      res.json(updatedBadge[0]);
+    } catch (error) {
+      console.error('Error updating badge:', error);
+      res.status(500).json({ error: 'Failed to update badge' });
+    }
+  });
+
+  // Delete a badge
+  app.delete('/api/admin/badges/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if badge is assigned to any users
+      const assignedBadges = await db.select().from(userBadges).where(eq(userBadges.badgeId, parseInt(id)));
+      
+      if (assignedBadges.length > 0) {
+        return res.status(400).json({ error: 'Cannot delete badge that is assigned to users' });
+      }
+      
+      await db.delete(badges).where(eq(badges.id, parseInt(id)));
+      res.json({ message: 'Badge deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting badge:', error);
+      res.status(500).json({ error: 'Failed to delete badge' });
+    }
+  });
+
+  // Get all freelancers for badge assignment
+  app.get('/api/admin/freelancers', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const freelancers = await db.select({
+        id: users.id,
+        fullName: users.fullName,
+        username: users.username,
+        role: users.role
+      }).from(users).where(eq(users.role, 'freelancer')).orderBy(asc(users.fullName));
+      
+      res.json(freelancers);
+    } catch (error) {
+      console.error('Error fetching freelancers:', error);
+      res.status(500).json({ error: 'Failed to fetch freelancers' });
+    }
+  });
+
+  // Assign badge to user
+  app.post('/api/admin/users/:userId/badges', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { badgeId, expiresAt } = req.body;
+      
+      // Check if user already has this badge
+      const existingBadge = await db.select().from(userBadges).where(
+        and(
+          eq(userBadges.userId, parseInt(userId)),
+          eq(userBadges.badgeId, badgeId)
+        )
+      );
+      
+      if (existingBadge.length > 0) {
+        return res.status(400).json({ error: 'User already has this badge' });
+      }
+      
+      const newUserBadge = await db.insert(userBadges).values({
+        userId: parseInt(userId),
+        badgeId,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        assignedAt: new Date()
+      }).returning();
+      
+      res.status(201).json(newUserBadge[0]);
+    } catch (error) {
+      console.error('Error assigning badge:', error);
+      res.status(500).json({ error: 'Failed to assign badge' });
+    }
+  });
+
+  // Remove badge from user
+  app.delete('/api/admin/users/:userId/badges/:badgeId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userId, badgeId } = req.params;
+      
+      await db.delete(userBadges).where(
+        and(
+          eq(userBadges.userId, parseInt(userId)),
+          eq(userBadges.badgeId, parseInt(badgeId))
+        )
+      );
+      
+      res.json({ message: 'Badge removed successfully' });
+    } catch (error) {
+      console.error('Error removing badge:', error);
+      res.status(500).json({ error: 'Failed to remove badge' });
+    }
+  });
+
+  // Get all testimonials
+  app.get('/api/admin/testimonials', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const allTestimonials = await db.select().from(testimonials).orderBy(asc(testimonials.order));
+      res.json(allTestimonials);
+    } catch (error) {
+      console.error('Error fetching testimonials:', error);
+      res.status(500).json({ error: 'Failed to fetch testimonials' });
+    }
+  });
+
+  // Create a new testimonial
+  app.post('/api/admin/testimonials', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const validatedData = insertTestimonialSchema.parse(req.body);
+      const [newTestimonial] = await db.insert(testimonials).values({
+        ...validatedData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
+      res.status(201).json(newTestimonial);
+    } catch (error) {
+      console.error('Error creating testimonial:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: 'Failed to create testimonial' });
+      }
+    }
+  });
+
+  // Update a testimonial
+  app.put('/api/admin/testimonials/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertTestimonialSchema.parse(req.body);
+      const [updatedTestimonial] = await db
+        .update(testimonials)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(testimonials.id, parseInt(id)))
+        .returning();
+      
+      if (!updatedTestimonial) {
+        return res.status(404).json({ error: 'Testimonial not found' });
+      }
+      
+      res.json(updatedTestimonial);
+    } catch (error) {
+      console.error('Error updating testimonial:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: 'Failed to update testimonial' });
+      }
+    }
+  });
+
+  // Delete a testimonial
+  app.delete('/api/admin/testimonials/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [deletedTestimonial] = await db
+        .delete(testimonials)
+        .where(eq(testimonials.id, parseInt(id)))
+        .returning();
+      
+      if (!deletedTestimonial) {
+        return res.status(404).json({ error: 'Testimonial not found' });
+      }
+      
+      res.json(deletedTestimonial);
+    } catch (error) {
+      console.error('Error deleting testimonial:', error);
+      res.status(500).json({ error: 'Failed to delete testimonial' });
+    }
+  });
+
+  // Toggle testimonial active status
+  app.patch('/api/admin/testimonials/:id/toggle', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      const [updatedTestimonial] = await db
+        .update(testimonials)
+        .set({ isActive, updatedAt: new Date() })
+        .where(eq(testimonials.id, parseInt(id)))
+        .returning();
+      
+      if (!updatedTestimonial) {
+        return res.status(404).json({ error: 'Testimonial not found' });
+      }
+      
+      res.json(updatedTestimonial);
+    } catch (error) {
+      console.error('Error toggling testimonial status:', error);
+      res.status(500).json({ error: 'Failed to toggle testimonial status' });
+    }
+  });
+
+  // Reorder testimonials
+  app.patch('/api/admin/testimonials/:id/reorder', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { direction } = req.body;
+      
+      const currentTestimonial = await db
+        .select()
+        .from(testimonials)
+        .where(eq(testimonials.id, parseInt(id)))
+        .limit(1);
+      
+      if (!currentTestimonial[0]) {
+        return res.status(404).json({ error: 'Testimonial not found' });
+      }
+      
+      const currentOrder = currentTestimonial[0].order;
+      let newOrder;
+      
+      if (direction === 'up' && currentOrder > 0) {
+        newOrder = currentOrder - 1;
+        // Swap with the testimonial above
+        const aboveTestimonial = await db
+          .select()
+          .from(testimonials)
+          .where(eq(testimonials.order, newOrder))
+          .limit(1);
+        
+        if (aboveTestimonial[0]) {
+          await db
+            .update(testimonials)
+            .set({ order: currentOrder, updatedAt: new Date() })
+            .where(eq(testimonials.id, aboveTestimonial[0].id));
+        }
+      } else if (direction === 'down') {
+        newOrder = currentOrder + 1;
+        // Swap with the testimonial below
+        const belowTestimonial = await db
+          .select()
+          .from(testimonials)
+          .where(eq(testimonials.order, newOrder))
+          .limit(1);
+        
+        if (belowTestimonial[0]) {
+          await db
+            .update(testimonials)
+            .set({ order: currentOrder, updatedAt: new Date() })
+            .where(eq(testimonials.id, belowTestimonial[0].id));
+        }
+      } else {
+        return res.status(400).json({ error: 'Invalid direction or cannot move further' });
+      }
+      
+      const [updatedTestimonial] = await db
+        .update(testimonials)
+        .set({ order: newOrder, updatedAt: new Date() })
+        .where(eq(testimonials.id, parseInt(id)))
+        .returning();
+      
+      res.json(updatedTestimonial);
+    } catch (error) {
+      console.error('Error reordering testimonial:', error);
+      res.status(500).json({ error: 'Failed to reorder testimonial' });
     }
   });
 } 

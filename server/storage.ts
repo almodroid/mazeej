@@ -4,6 +4,7 @@ import type { Store as SessionStore } from "express-session";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { DatabaseStorage } from "./db-storage";
+import fetch from 'node-fetch';
 
 const MemoryStore = createMemoryStore(session);
 
@@ -198,6 +199,11 @@ export interface IStorage {
   createWithdrawalRequest(params: CreateWithdrawalRequestParams): Promise<WithdrawalRequestData | null>;
   updateWithdrawalRequestStatus(id: number, params: UpdateWithdrawalRequestStatusParams): Promise<WithdrawalRequestData | null>;
   updateWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean>;
+  deleteWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean>;
+  
+  // Online status operations
+  updateUserOnlineStatus(userId: number, isOnline: boolean): Promise<void>;
+  getUserById(userId: number): Promise<User | undefined>;
   
   // Session store
   sessionStore: SessionStore;
@@ -287,47 +293,30 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const now = new Date();
-    
-    // Ensure required fields are provided
-    if (!insertUser.username || !insertUser.password || !insertUser.email || 
-        !insertUser.fullName || !insertUser.role) {
-      throw new Error('Missing required user fields');
-    }
-    
-    // Handle nullable fields
-    const bio = insertUser.bio === undefined ? null : insertUser.bio;
-    const profileImage = insertUser.profileImage === undefined ? null : insertUser.profileImage;
-    const country = insertUser.country === undefined ? null : insertUser.country;
-    const city = insertUser.city === undefined ? null : insertUser.city;
-    const phone = insertUser.phone === undefined ? null : insertUser.phone;
-    const freelancerLevel = insertUser.freelancerLevel === undefined ? null : insertUser.freelancerLevel;
-    const freelancerType = insertUser.freelancerType === undefined ? null : insertUser.freelancerType;
-    const hourlyRate = insertUser.hourlyRate === undefined ? null : insertUser.hourlyRate;
-    
     const user: User = {
-      id,
+      id: this.userId++,
       username: insertUser.username,
       password: insertUser.password,
       email: insertUser.email,
       fullName: insertUser.fullName,
-      role: insertUser.role,
-      bio,
-      profileImage,
-      country,
-      city,
-      phone,
-      createdAt: now,
+      bio: insertUser.bio || null,
+      profileImage: insertUser.profileImage || null,
+      role: insertUser.role || 'client',
+      country: insertUser.country || null,
+      city: insertUser.city || null,
+      phone: insertUser.phone || null,
+      phoneVerified: false,
+      createdAt: new Date(),
       isVerified: false,
       isBlocked: false,
-      freelancerLevel,
-      freelancerType,
-      hourlyRate,
-      phoneVerified: false,
+      freelancerLevel: insertUser.freelancerLevel || null,
+      freelancerType: insertUser.freelancerType || null,
+      hourlyRate: insertUser.hourlyRate || null,
+      isOnline: false,
+      lastSeen: new Date(),
     };
     
-    this.users.set(id, user);
+    this.users.set(user.id, user);
     return user;
   }
 
@@ -520,6 +509,35 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getProjectSkills(projectId: number): Promise<Skill[]> {
+    // Find all projectSkills entries for this project
+    const skillIds = Array.from(this.projectSkills.values())
+      .filter(entry => entry.projectId === projectId)
+      .map(entry => entry.skillId);
+    // Return the corresponding Skill objects
+    return skillIds.map(id => this.skills.get(id)).filter(Boolean) as Skill[];
+  }
+  
+  async addProjectSkill(projectId: number, skillId: number): Promise<boolean> {
+    // Prevent duplicates
+    const exists = Array.from(this.projectSkills.values())
+      .some(entry => entry.projectId === projectId && entry.skillId === skillId);
+    if (exists) return false;
+    const id = this.projectSkillId++;
+    this.projectSkills.set(id, { projectId, skillId });
+    return true;
+  }
+  
+  async removeProjectSkill(projectId: number, skillId: number): Promise<boolean> {
+    for (const [id, entry] of Array.from(this.projectSkills.entries())) {
+      if (entry.projectId === projectId && entry.skillId === skillId) {
+        this.projectSkills.delete(id);
+        return true;
+      }
+    }
+    return false;
+  }
+
   async createProject(project: InsertProject, clientId: number): Promise<Project> {
     const id = this.projectId++;
     const now = new Date();
@@ -543,9 +561,33 @@ export class MemStorage implements IStorage {
       consultationDate: null,
       consultationStartTime: null,
       consultationEndTime: null,
+      featuredImage: project.featuredImage ?? null,
+      city: project.city || null,
     };
     
     this.projects.set(id, newProject);
+
+    // --- Featured Image Fallback Logic ---
+    // 1. If featuredImage is not set, check for image attachments
+    if (!newProject.featuredImage) {
+      // Get all files for this project
+      const projectFiles = Array.from(this.files.values()).filter(f => f.projectId === id);
+      // Find first image file
+      const imageFile = projectFiles.find(f => f.mimeType && f.mimeType.startsWith('image/'));
+      if (imageFile) {
+        newProject.featuredImage = `/uploads/${imageFile.filename}`;
+        this.projects.set(id, newProject);
+      } else {
+        // 2. If no image attachment, fetch from Pexels
+        const pexelsImage = await fetchPexelsImage(newProject.title);
+        if (pexelsImage) {
+          newProject.featuredImage = pexelsImage;
+          this.projects.set(id, newProject);
+        }
+      }
+    }
+    // --- End Featured Image Fallback ---
+
     return newProject;
   }
 
@@ -1055,6 +1097,25 @@ export class MemStorage implements IStorage {
     return false;
   }
 
+  async deleteWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean> {
+    // Implementation needed
+    return false;
+  }
+
+  // Online status operations
+  async updateUserOnlineStatus(userId: number, isOnline: boolean): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.isOnline = isOnline;
+      user.lastSeen = new Date();
+      this.users.set(userId, user);
+    }
+  }
+
+  async getUserById(userId: number): Promise<User | undefined> {
+    return this.users.get(userId);
+  }
+
   // ...
   async getUsersBySkillId(skillId: number): Promise<User[]> {
     // Find all user skills with this skill id
@@ -1072,11 +1133,47 @@ export class MemStorage implements IStorage {
     return usersWithSkill;
   }
 
-  async deleteWithdrawalRequestPayment(id: number, paymentId: number): Promise<boolean> {
-    // Implementation needed
-    return false;
+  async createSkill(skillData: Partial<Skill>): Promise<Skill> {
+    const id = this.skillId++;
+    const newSkill: Skill = {
+      id,
+      name: skillData.name!,
+      categoryId: skillData.categoryId!,
+      translations: skillData.translations || {},
+      locationBased: skillData.locationBased ?? false
+    };
+    this.skills.set(id, newSkill);
+    return newSkill;
+  }
+
+  async updateSkill(id: number, skillData: Partial<Skill>): Promise<Skill | undefined> {
+    const skill = this.skills.get(id);
+    if (!skill) return undefined;
+    const updatedSkill = {
+      ...skill,
+      ...skillData,
+      locationBased: typeof skillData.locationBased !== 'undefined' ? skillData.locationBased : skill.locationBased
+    };
+    this.skills.set(id, updatedSkill);
+    return updatedSkill;
   }
 }
 
 // Use the DatabaseStorage implementation since we have a database
 export const storage = new DatabaseStorage();
+
+// Utility function to fetch an image from Pexels
+async function fetchPexelsImage(query: string): Promise<string | null> {
+  const apiKey = process.env.PEXELS_API_KEY;
+  if (!apiKey) return null;
+  const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1`;
+  const res = await fetch(url, {
+    headers: { Authorization: apiKey }
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.photos && data.photos.length > 0) {
+    return data.photos[0].src.large || data.photos[0].src.original;
+  }
+  return null;
+}

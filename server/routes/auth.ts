@@ -92,8 +92,29 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, email, password, name } = req.body;
-      console.log(`Registration attempt for username: ${username}, email: ${email}`);
+      const { username, email, password, name, role, country, phone } = req.body;
+      console.log(`Registration attempt for username: ${username}, email: ${email}, role: ${role}, country: ${country}`);
+      
+      // Validate freelancer restrictions
+      if (role === "freelancer") {
+        // Freelancers must be from Saudi Arabia
+        if (country !== "SA") {
+          console.log(`Freelancer registration rejected: country ${country} is not Saudi Arabia`);
+          return res.status(400).json({ 
+            message: "يجب أن يكون المستقلون من المملكة العربية السعودية",
+            field: "country"
+          });
+        }
+        
+        // Freelancers must use Saudi phone numbers (+966)
+        if (!phone || !phone.startsWith("966")) {
+          console.log(`Freelancer registration rejected: phone ${phone} is not a Saudi number`);
+          return res.status(400).json({ 
+            message: "يجب أن يستخدم المستقلون رقم هاتف سعودي",
+            field: "phone"
+          });
+        }
+      }
       
       // Check if username already exists
       const existingUserByUsername = await storage.getUserByUsername(username);
@@ -118,6 +139,8 @@ export function setupAuth(app: Express) {
         ...req.body,
         fullName: name || username, // Use name if provided, otherwise use username
         password: hashedPassword,
+        country: country || null,
+        phone: phone || null,
       };
       
       // Remove name if it exists (since it's not in the schema)

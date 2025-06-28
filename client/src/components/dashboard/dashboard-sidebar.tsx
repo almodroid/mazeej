@@ -17,7 +17,8 @@ import {
   ChevronRight,
   ShieldCheck,
   BanknoteIcon,
-  Video
+  Video,
+  BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -112,6 +113,15 @@ export default function DashboardSidebar() {
     },
   ];
 
+  // Add exercises link only for freelancers
+  if (user?.role === "freelancer") {
+    freelancerLinks.push({
+      href: "/exercises",
+      icon: <BookOpen size={18} />,
+      label: t("common.exercises", { defaultValue: i18n.language === "ar" ? "التمارين" : "Exercises" }),
+    });
+  }
+
   // Add consultations link for experts
   if (user?.role === "freelancer" && user?.freelancerType === "expert") {
     freelancerLinks.push({
@@ -188,7 +198,9 @@ export default function DashboardSidebar() {
           label: t("payments.title"),
         },
       ]
-    : [...freelancerLinks, ...remainingFreelancerLinks];
+    : user?.role === "freelancer"
+    ? [...freelancerLinks, ...remainingFreelancerLinks]
+    : []; // For admin users, show only common links
 
   const allLinks = [...commonLinks, ...roleLinks];
 

@@ -34,11 +34,13 @@ export function useFirebasePhoneAuth() {
     error: null,
   });
 
-  // Format phone number to international format for Saudi Arabia
-  const formatPhoneNumber = (phone: string) => {
+  // Format phone number to international format
+  const formatPhoneNumber = (phone: string, userRole: 'client' | 'freelancer' = 'client') => {
     // Remove any non-digit characters
     let cleaned = phone.replace(/\D/g, "");
     
+    // For freelancers, ensure it's a Saudi number
+    if (userRole === 'freelancer') {
     // If it starts with 0, remove the 0 and add +966
     if (cleaned.startsWith("0")) {
       cleaned = cleaned.substring(1);
@@ -51,6 +53,15 @@ export function useFirebasePhoneAuth() {
     
     // Ensure it has the + prefix
     return "+" + cleaned;
+    }
+    
+    // For clients, accept any country code
+    // The phone number should already be in international format from react-phone-input-2
+    if (!phone.startsWith("+")) {
+      return "+" + phone;
+    }
+    
+    return phone;
   };
 
   // Initialize recaptcha verifier
@@ -87,7 +98,7 @@ export function useFirebasePhoneAuth() {
   };
 
   // Send verification code
-  const sendVerificationCode = async (phoneNumber: string, recaptchaContainerId: string) => {
+  const sendVerificationCode = async (phoneNumber: string, recaptchaContainerId: string, userRole: 'client' | 'freelancer' = 'client') => {
     try {
       setState(prev => ({ 
         ...prev, 
@@ -96,7 +107,7 @@ export function useFirebasePhoneAuth() {
         error: null 
       }));
 
-      const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+      const formattedPhoneNumber = formatPhoneNumber(phoneNumber, userRole);
       
       // Initialize recaptcha if not already initialized
       const verifier = initRecaptcha(recaptchaContainerId);

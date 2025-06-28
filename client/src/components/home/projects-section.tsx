@@ -55,18 +55,10 @@ export default function ProjectsSection() {
                 className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm flex flex-col overflow-hidden transform hover:scale-105 transition-transform duration-300 animate-fade-in-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                {/* Placeholder image */}
-                <div className="h-40 bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center group">
-                  <span className="text-neutral-400 dark:text-neutral-500 group-hover:scale-110 transition-transform duration-300">
-                    صورة المشروع
-                  </span>
-                </div>
-                <div className="flex-1 flex flex-col">
                   <ProjectCard 
                     project={project} 
                     proposals={proposalCounts[project.id] || 0} 
                   />
-                </div>
               </div>
             ))}
           </div>

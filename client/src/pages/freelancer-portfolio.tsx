@@ -4,10 +4,26 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Star, StarHalf, MessageCircle, Clock, Award, CheckCircle, Briefcase } from "lucide-react";
+import { 
+  Star, 
+  StarHalf, 
+  MessageCircle, 
+  Clock, 
+  Award, 
+  CheckCircle, 
+  Briefcase, 
+  SaudiRiyal,
+  MapPin,
+  Calendar,
+  Globe,
+  ExternalLink,
+  TrendingUp,
+  Users,
+  Zap
+} from "lucide-react";
 import { StartChatButton } from "@/components/user-actions";
 import { User, Review, Skill, PortfolioProject } from "@shared/schema";
 import { apiRequest } from "@/lib/api";
@@ -17,10 +33,21 @@ import ConsultationForm from "@/components/consultation-form";
 import { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import { useUserOnlineStatus } from "@/hooks/use-online-status";
+import { FreelancerBadges } from "@/components/freelancer/freelancer-badges";
+import { cn } from "@/lib/utils";
 
 // Define a more complete Review interface
 interface ReviewWithoutUser extends Review {
   reviewerId: number;
+}
+
+// Project statistics interface
+interface ProjectStats {
+  completed: number;
+  inProgress: number;
+  total: number;
+  completionRate: number;
 }
 
 export default function FreelancerPortfolioPage() {
@@ -30,6 +57,10 @@ export default function FreelancerPortfolioPage() {
   const { toast } = useToast();
   const [isHireMeOpen, setIsHireMeOpen] = useState(false);
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
+  const isRTL = i18n.language === "ar";
+
+  // Use real online status
+  const { isOnline, lastSeen } = useUserOnlineStatus(parseInt(id || "0"));
 
   // Ensure the document has the correct RTL direction
   useEffect(() => {
@@ -60,6 +91,12 @@ export default function FreelancerPortfolioPage() {
       if (!response.ok) throw new Error(t('common.errorFetchingData'));
       return response.json();
     },
+    enabled: !!freelancer,
+  });
+
+  // Fetch project statistics
+  const { data: projectStats = { completed: 0, inProgress: 0, total: 0, completionRate: 0 } } = useQuery<ProjectStats>({
+    queryKey: [`/api/users/${id}/projects/completed`],
     enabled: !!freelancer,
   });
 
@@ -127,23 +164,57 @@ export default function FreelancerPortfolioPage() {
     return stars;
   };
 
+  // Function to get level label
+  const getLevelLabel = () => {
+    switch (freelancer?.freelancerLevel) {
+      case 'beginner':
+        return t('profile.beginner');
+      case 'intermediate':
+        return t('profile.intermediate');
+      case 'advanced':
+        return t('profile.advanced');
+      default:
+        return t('profile.intermediate');
+    }
+  };
+
+  // Function to format last seen
+  const formatLastSeen = (lastSeen: Date | null) => {
+    if (!lastSeen) return '';
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - lastSeen.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return t('common.justNow');
+    if (diffInMinutes < 60) return t('common.minutesAgo', { minutes: diffInMinutes });
+    if (diffInMinutes < 1440) return t('common.hoursAgo', { hours: Math.floor(diffInMinutes / 60) });
+    return t('common.daysAgo', { days: Math.floor(diffInMinutes / 1440) });
+  };
+
   if (isLoadingFreelancer) {
     return (
-      <div className="container py-8">
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow container py-16 m-auto">
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
   if (!freelancer) {
     return (
-      <div className="container py-8">
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow container py-16 m-auto">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">{t("common.notFound")}</h1>
           <p className="text-muted-foreground">{t("profile.freelancerNotFound")}</p>
         </div>
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -151,10 +222,24 @@ export default function FreelancerPortfolioPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-grow container py-16  m-auto">
+      <main className="flex-grow container py-16 m-auto">
       {/* Header Section */}
       <div className="bg-card rounded-xl border border-border overflow-hidden mb-8">
-        <div className="h-48 bg-gradient-to-r from-primary/20 to-accent/20 relative" />
+          <div className="h-48 bg-gradient-to-r from-primary/20 to-accent/20 relative">
+            {/* Online status indicator */}
+            {isOnline && (
+              <div className="absolute top-4 left-4 flex items-center bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 text-sm z-10">
+                <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                {t('common.online')}
+              </div>
+            )}
+            {!isOnline && lastSeen && (
+              <div className="absolute top-4 left-4 flex items-center bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 text-sm z-10">
+                <span className="h-2 w-2 rounded-full bg-gray-400 mr-2"></span>
+                {t('common.lastSeen')} {formatLastSeen(lastSeen)}
+              </div>
+            )}
+          </div>
         <div className="relative px-6 pb-6">
           {/* Profile Image */}
           <div className="absolute -top-16">
@@ -182,24 +267,42 @@ export default function FreelancerPortfolioPage() {
               {freelancer.isVerified && (
                 <CheckCircle className="h-6 w-6 text-primary" />
               )}
+                <FreelancerBadges userId={freelancer.id} className="ml-2" />
             </div>
-            <p className="text-lg text-muted-foreground mb-4">
+              
+              <div className="flex flex-wrap items-center gap-4 mb-4">
+                <p className="text-lg text-muted-foreground">
               {freelancer.freelancerType === 'content_creator' 
                 ? t('profile.contentCreator') 
                 : t('profile.expert')}
             </p>
+                <Badge variant="outline" className="text-sm">
+                  {getLevelLabel()}
+                </Badge>
+                {freelancer.city && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{freelancer.city}</span>
+                  </div>
+                )}
+              </div>
+
             <div className="flex items-center gap-6 mb-6">
               <div className="flex items-center gap-1">
                 <div className="flex">
                   {renderStars(rating)}
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {rating.toFixed(1)} ({reviews.length})
+                    {rating.toFixed(1)} ({reviews.length} {t('reviews.reviews')})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{t("profile.hourlyRate")}</span>
+                  <span className="flex items-center gap-1 font-semibold">
+                    {freelancer.hourlyRate || 40}
+                    {isRTL ? <SaudiRiyal className="h-4 w-4" /> : " SAR"}
+                    <span className="text-xs text-muted-foreground">/{t('common.hr')}</span>
                 </span>
-              </div>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>${freelancer.hourlyRate || 40}/{t('common.hr')}</span>
               </div>
             </div>
 
@@ -232,13 +335,69 @@ export default function FreelancerPortfolioPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('profile.completed')}</p>
+                  <p className="text-2xl font-bold">{projectStats.completed}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-accent" />
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('profile.inProgress')}</p>
+                  <p className="text-2xl font-bold">{projectStats.inProgress}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-green-500" />
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('profile.total')}</p>
+                  <p className="text-2xl font-bold">{projectStats.total}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-yellow-500" />
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('profile.completion')}</p>
+                  <p className="text-2xl font-bold">{projectStats.completionRate}%</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column */}
         <div className="space-y-6">
           {/* About Section */}
           <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">{t('profile.about')}</h2>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  {t('profile.about')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
               <p className="text-muted-foreground whitespace-pre-wrap">
                 {freelancer.bio || t('profile.defaultBio')}
               </p>
@@ -247,29 +406,69 @@ export default function FreelancerPortfolioPage() {
 
           {/* Skills Section */}
           <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">{t('profile.skills')}</h2>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  {t('profile.skills')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
               <div className="flex flex-wrap gap-2">
                 {skills.map((skill) => (
                   <Badge key={skill.id} variant="outline" className="bg-primary/5 hover:bg-primary/10">
                     {skill.name}
                   </Badge>
                 ))}
+                  {skills.length === 0 && (
+                    <p className="text-muted-foreground text-sm">{t('profile.noSkills')}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5" />
+                  {t('profile.contactInfo')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {freelancer.city && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span>{freelancer.city}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>{t('profile.memberSince')} {freelancer.createdAt ? new Date(freelancer.createdAt).getFullYear() : 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <span>{t('profile.availability')}: {isOnline ? t('common.online') : t('common.offline')}</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Right Column */}
-        <div className="md:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
           {/* Portfolio Projects Section */}
           <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">{t('portfolio.title')}</h2>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Briefcase className="h-5 w-5" />
+                  {t('portfolio.title')} ({projects.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
               {projects.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  {t('portfolio.noProjects')}
-                </p>
+                  <div className="text-center py-8">
+                    <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">{t('portfolio.noProjects')}</p>
+                  </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {projects.map((project) => (
@@ -288,20 +487,28 @@ export default function FreelancerPortfolioPage() {
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-semibold">{project.title}</h3>
-                        <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                          <h3 className="font-semibold mb-2">{project.title}</h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                           {project.description}
                         </p>
+                          <div className="flex items-center justify-between">
+                            {project.date && (
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(project.date).toLocaleDateString()}
+                              </span>
+                            )}
                         {project.link && (
                           <a
                             href={project.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-2 inline-block text-sm text-primary hover:underline"
+                                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                           >
                             {t('portfolio.viewProject')}
+                                <ExternalLink className="h-3 w-3" />
                           </a>
                         )}
+                          </div>
                       </div>
                     </div>
                   ))}
@@ -312,14 +519,18 @@ export default function FreelancerPortfolioPage() {
 
           {/* Reviews Section */}
           <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5" />
                 {t('reviews.title')} ({reviews.length})
-              </h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
               {reviews.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  {t('reviews.noReviews')}
-                </p>
+                  <div className="text-center py-8">
+                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">{t('reviews.noReviews')}</p>
+                  </div>
               ) : (
                 <div className="space-y-4">
                   {reviews.map((review) => (
@@ -329,8 +540,8 @@ export default function FreelancerPortfolioPage() {
                           <AvatarImage src={review.reviewer?.profileImage || undefined} />
                           <AvatarFallback>{review.reviewer?.fullName?.charAt(0) || review.reviewer?.username?.charAt(0) || '?'}</AvatarFallback>
                         </Avatar>
-                        <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
                             <span className="font-semibold">{review.reviewer?.fullName || review.reviewer?.username || t('common.anonymous')}</span>
                             <div className="flex">
                               {[...Array(review.rating)].map((_, i) => (
@@ -338,8 +549,8 @@ export default function FreelancerPortfolioPage() {
                               ))}
                             </div>
                           </div>
-                          <p className="mt-1 text-muted-foreground">{review.comment}</p>
-                          <span className="mt-2 text-xs text-muted-foreground">
+                            <p className="text-muted-foreground mb-2">{review.comment}</p>
+                            <span className="text-xs text-muted-foreground">
                             {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
                           </span>
                         </div>

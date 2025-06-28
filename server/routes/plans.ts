@@ -4,6 +4,7 @@ import { plans, userPlans, payments, transactions, notifications, settings } fro
 import { eq, and } from "drizzle-orm";
 import axios from 'axios';
 import { isAuthenticated } from "./auth";
+import { BadgeService } from '../services/badge-service';
 
 const router = Router();
 
@@ -204,6 +205,9 @@ router.post("/callback", async (req, res) => {
           endDate,
           isActive: true
         }).returning();
+
+        // Assign plan badge to user
+        await BadgeService.assignPlanBadge(userId, plan.key);
 
         console.log('[Plans] Subscription created successfully:', {
           subscriptionId: subscription.id,

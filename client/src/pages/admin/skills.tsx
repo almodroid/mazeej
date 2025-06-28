@@ -26,11 +26,12 @@ import {
   Loader2,
   Settings,
   X,
-  Pencil
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { 
@@ -72,6 +73,7 @@ interface Skill {
   name: string;
   categoryId: string;
   translations?: Record<string, string>;
+  locationBased?: boolean;
 }
 
 interface NewSkill {
@@ -81,6 +83,7 @@ interface NewSkill {
     en: string;
     ar: string;
   };
+  locationBased: boolean;
 }
 
 export default function AdminSkillsPage() {
@@ -96,7 +99,8 @@ export default function AdminSkillsPage() {
   const [newSkill, setNewSkill] = useState<NewSkill>({ 
     name: "", 
     categoryId: "", 
-    translations: { en: "", ar: "" } 
+    translations: { en: "", ar: "" },
+    locationBased: false
   });
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -149,7 +153,8 @@ export default function AdminSkillsPage() {
       // Use Arabic if available, otherwise use English
       const skillToSubmit = {
         ...newSkill,
-        name: newSkill.translations.ar.trim() || newSkill.translations.en.trim()
+        name: newSkill.translations.ar.trim() || newSkill.translations.en.trim(),
+        locationBased: newSkill.locationBased
       };
       
       // Make API request to add the skill
@@ -167,7 +172,8 @@ export default function AdminSkillsPage() {
       setNewSkill({ 
         name: "", 
         categoryId: "", 
-        translations: { en: "", ar: "" } 
+        translations: { en: "", ar: "" },
+        locationBased: false
       });
       setIsDialogOpen(false);
       
@@ -204,7 +210,8 @@ export default function AdminSkillsPage() {
       // Set the main name field based on translations
       const skillToUpdate = {
         ...editingSkill,
-        name: editingSkill.translations?.ar?.trim() || editingSkill.translations?.en?.trim() || editingSkill.name
+        name: editingSkill.translations?.ar?.trim() || editingSkill.translations?.en?.trim() || editingSkill.name,
+        locationBased: editingSkill.locationBased
       };
       
       // Make API request to update the skill
@@ -383,6 +390,14 @@ export default function AdminSkillsPage() {
                       </div>
                     </div>
                     
+                    <div className="flex items-center gap-2 mt-2">
+                      <Checkbox
+                        checked={newSkill.locationBased}
+                        onCheckedChange={(checked) => setNewSkill({ ...newSkill, locationBased: checked === true })}
+                      />
+                      <Label>{t("admin.locationBased", { defaultValue: "Location-Based" })}</Label>
+                    </div>
+                    
                     <DialogFooter>
                       <Button 
                         type="submit" 
@@ -428,17 +443,18 @@ export default function AdminSkillsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className={cn(isRTL && "text-right")}>{t("common.name")}</TableHead>
-                      <TableHead className={cn(isRTL && "text-right")}>{t("common.category")}</TableHead>
-                      <TableHead className={cn("text-right", isRTL && "text-right")}>{t("common.actions")}</TableHead>
+                      <TableHead>{t("admin.skillName", { defaultValue: "Skill Name" })}</TableHead>
+                      <TableHead>{t("admin.category", { defaultValue: "Category" })}</TableHead>
+                      <TableHead>{t("admin.actions", { defaultValue: "Actions" })}</TableHead>
+                      <TableHead>{t("admin.locationBased", { defaultValue: "Location-Based" })}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(skills as Skill[]).map((skill: Skill) => (
+                    {skills.map((skill: Skill) => (
                       <TableRow key={skill.id}>
-                        <TableCell className="font-medium">{skill.name}</TableCell>
+                        <TableCell>{skill.name}</TableCell>
                         <TableCell>{getCategoryName(skill.categoryId)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -464,6 +480,15 @@ export default function AdminSkillsPage() {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
+                        </TableCell>
+                        <TableCell>
+                          <Checkbox
+                            checked={!!skill.locationBased}
+                            onCheckedChange={async (checked) => {
+                              await apiRequest("PATCH", `/api/skills/${skill.id}`, { locationBased: checked });
+                              queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -560,6 +585,14 @@ export default function AdminSkillsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              
+              <div className="flex items-center gap-2 mt-2">
+                <Checkbox
+                  checked={editingSkill.locationBased}
+                  onCheckedChange={(checked) => setEditingSkill({ ...editingSkill, locationBased: checked === true })}
+                />
+                <Label>{t("admin.locationBased", { defaultValue: "Location-Based" })}</Label>
               </div>
             </>
           )}
