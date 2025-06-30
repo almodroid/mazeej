@@ -12,6 +12,7 @@ vite.config.ts.*
 .env.test
 .env
 server\.env
+client\.env
 
 # Firebase config
 firebase-config.json
