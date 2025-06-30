@@ -46,6 +46,7 @@ import AdminBadgesPage from "./pages/admin/badges";
 import AdminTestimonialsPage from "./pages/admin/testimonials";
 import AdminExercisesPage from "./pages/admin/exercises";
 import ExercisesPage from "./pages/exercises-page";
+import { TranslationManager } from './pages/admin/translation-manager';
 
 // Lazy load admin components
 const AdminDashboard = lazy(() => import('./pages/admin/dashboard'));
@@ -312,6 +313,11 @@ function Router() {
         <Suspense fallback={<div>Loading...</div>}>
           <PublicPage />
         </Suspense>
+      </Route>
+      <Route path="/admin/translation-manager">
+        <ProtectedRoute>
+          <TranslationManager />
+        </ProtectedRoute>
       </Route>
       <Route>
         <NotFound />

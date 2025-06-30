@@ -82,6 +82,7 @@ export const users = pgTable("users", {
   hourlyRate: integer("hourly_rate"),
   isOnline: boolean("is_online").default(false),
   lastSeen: timestamp("last_seen").defaultNow(),
+  settings: jsonb("settings"), // User-specific settings
 });
 
 // Categories table

@@ -38,6 +38,11 @@ export default function AboutSection() {
     },
   ];
 
+  const providerSteps = t('common.journeyProviderSteps', { returnObjects: true });
+  const providerStepsArray = Array.isArray(providerSteps) ? providerSteps : [];
+  const clientSteps = t('common.journeyClientSteps', { returnObjects: true });
+  const clientStepsArray = Array.isArray(clientSteps) ? clientSteps : [];
+
   return (
     <section className="py-8 md:py-12 bg-white dark:bg-background px-4 md:px-0 animate-fade-in" dir={isRTL ? "rtl" : "ltr"}>
       {/* Chunk 1: About Section */}
@@ -46,7 +51,6 @@ export default function AboutSection() {
         {/* About Content */}
         <div className="flex-1 w-full">
           <p className="text-xl md:text-2xl mb-4 md:mb-2 dark:text-gray-100 max-w-xl pb-4 md:pb-8 text-center md:text-left md:rtl:text-right px-4 md:px-0 animate-fade-in-up" style={{ lineHeight: "2.5" }}>
-            <span className="text-primary dark:text-primary font-bold animate-fade-in-up-delayed">{t('common.appName')} </span>
             <span className="animate-fade-in-up-delayed-2">{t('about.subtitle')}</span>
           </p>
           {/* Stats */}
@@ -125,6 +129,70 @@ export default function AboutSection() {
                 <div className="text-right text-[10px] md:text-xs">100%</div>
               </li>
             </ul>
+          </div>
+        </div>
+      </div>
+      <div className="container mx-auto py-8 md:py-16 px-4 md:px-0">
+        <h1 className=" text-primary font-extrabold text-2xl mb-3">{t('about.why')}</h1>
+        <p className="mb-3">لأننا نعرف السوق، ونفهمك، ونشتغل معك على نفس الموجة</p>
+        <ul className="list-disc ps-6 md:ps-8">
+          {(t('about.whyBullets', { returnObjects: true }) as string[]).map((item, idx) => (
+            <li key={idx}>{item}</li>
+          ))}
+        </ul>
+      </div>
+      {/* Journey Section - Animated Experience Bubbles as Grid with Numbers */}
+      <div className="container mx-auto py-8 md:py-16 px-4 md:px-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Provider Experience Bubbles as Grid */}
+          <div className="flex flex-col items-center">
+            <h3 className="text-lg md:text-xl font-bold text-primary mb-6 flex items-center gap-2">
+              <User className="inline-block w-6 h-6 md:w-7 md:h-7 text-primary" />
+              {t('common.journeyProviderTitle')}
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full max-w-md">
+              {providerStepsArray.map((exp, idx) => (
+                <div
+                  key={idx}
+                  className={`flex flex-col items-center justify-center animate-bubble-float${idx % 3} group transition-transform duration-300`}
+                >
+                  <div className="relative flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary/20 shadow-lg border-2 border-primary text-primary text-2xl md:text-3xl mb-2 group-hover:scale-110 transition-transform duration-300">
+                    {/* Number */}
+                    <span className="absolute top-1 left-1 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-base font-bold shadow-md border-2 border-white">{idx + 1}</span>
+                    {/* Icon */}
+                    {idx === 0 ? <Edit className="w-8 h-8" /> : idx === 1 ? <Folder className="w-8 h-8" /> : idx === 2 ? <User className="w-8 h-8" /> : idx === 3 ? <Handshake className="w-8 h-8" /> : idx === 4 ? <CheckCircle className="w-8 h-8" /> : <User className="w-8 h-8" />}
+                  </div>
+                  <span className="text-center text-xs md:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white/80 dark:bg-zinc-900/80 rounded-lg px-3 py-2 shadow-md max-w-[140px] md:max-w-[180px]">
+                    {exp}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Client Experience Bubbles as Grid */}
+          <div className="flex flex-col items-center">
+            <h3 className="text-lg md:text-xl font-bold text-secondary mb-6 flex items-center gap-2">
+              <Briefcase className="inline-block w-6 h-6 md:w-7 md:h-7 text-secondary" />
+              {t('common.journeyClientTitle')}
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full max-w-md">
+              {clientStepsArray.map((exp, idx) => (
+                <div
+                  key={idx}
+                  className={`flex flex-col items-center justify-center animate-bubble-float${(idx + 2) % 3} group transition-transform duration-300`}
+                >
+                  <div className="relative flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-full bg-secondary/20 shadow-lg border-2 border-secondary text-secondary text-2xl md:text-3xl mb-2 group-hover:scale-110 transition-transform duration-300">
+                    {/* Number */}
+                    <span className="absolute top-1 left-1 bg-secondary text-white rounded-full w-6 h-6 flex items-center justify-center text-base font-bold shadow-md border-2 border-white">{idx + 1}</span>
+                    {/* Icon */}
+                    {idx === 0 ? <MessageSquare className="w-8 h-8" /> : idx === 1 ? <Handshake className="w-8 h-8" /> : idx === 2 ? <Folder className="w-8 h-8" /> : idx === 3 ? <CheckCircle className="w-8 h-8" /> : <Briefcase className="w-8 h-8" />}
+                  </div>
+                  <span className="text-center text-xs md:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white/80 dark:bg-zinc-900/80 rounded-lg px-3 py-2 shadow-md max-w-[140px] md:max-w-[180px]">
+                    {exp}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -42,6 +42,7 @@ import AdminLayout from "@/components/layouts/admin-layout";
 import { cn } from "@/lib/utils";
 import ImageUpload from "@/components/ui/image-upload";
 
+
 const pageSchema = z.object({
   slug: z.string().min(1, "Slug is required"),
   title: z.string().min(1, "Title is required"),

@@ -23,7 +23,8 @@ import {
   ListFilter,
   ClipboardCheck,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -57,55 +58,51 @@ const adminNavItems = [
     icon: Home
   },
   {
-    title: "users",
-    href: "/admin/users",
-    icon: Users
-  },
-  {
-    title: "verification",
-    href: "/admin/verification",
-    icon: Shield
-  },
-  {
-    title: "projects",
-    href: "/admin/projects",
-    icon: Folder
-  },
-  {
-    title: "classification",
-    icon: ListFilter,
+    title: "usersGroup",
+    icon: Users,
+    groupLabel: "users",
     children: [
-      {
-        title: "categories",
-        href: "/admin/categories",
-        icon: Layers
-      },
-      {
-        title: "skills",
-        href: "/admin/skills",
-        icon: BarChart4
-      },
-      {
-        title: "questions",
-        href: "/admin/questions",
-        icon: ClipboardCheck
-      }
+      { title: "users", href: "/admin/users", icon: Users },
+      { title: "verification", href: "/admin/verification", icon: Shield }
     ]
   },
   {
-    title: "subscriptions",
-    icon: CreditCard,
+    title: "projectsGroup",
+    icon: Folder,
+    groupLabel: "projects",
     children: [
-      {
-        title: "plans",
-        href: "/admin/plans",
-        icon: Layers
-      },
-      {
-        title: "badges",
-        href: "/admin/badges",
-        icon: Shield
-      }
+      { title: "projects", href: "/admin/projects", icon: Folder },
+      { title: "categories", href: "/admin/categories", icon: Layers },
+      { title: "skills", href: "/admin/skills", icon: BarChart4 },
+      { title: "questions", href: "/admin/questions", icon: ClipboardCheck }
+    ]
+  },
+  {
+    title: "subscriptionsGroup",
+    icon: CreditCard,
+    groupLabel: "subscriptions",
+    children: [
+      { title: "plans", href: "/admin/plans", icon: Layers },
+      { title: "badges", href: "/admin/badges", icon: Shield }
+    ]
+  },
+  {
+    title: "contentGroup",
+    icon: FileText,
+    groupLabel: "content",
+    children: [
+      { title: "pages", href: "/admin/pages", icon: FileText },
+      { title: "testimonials", href: "/admin/testimonials", icon: MessageSquare },
+      { title: "exercises", href: "/admin/exercises", icon: FileText }
+    ]
+  },
+  {
+    title: "toolsGroup",
+    icon: Wrench,
+    groupLabel: "tools",
+    children: [
+      { title: "translationManager", href: "/admin/translation-manager", icon: Wrench },
+      { title: "settings", href: "/admin/settings", icon: Settings }
     ]
   },
   {
@@ -117,32 +114,6 @@ const adminNavItems = [
     title: "payments",
     href: "/admin/payments",
     icon: CreditCard
-  },
-  {
-    title: "pages",
-    href: "/admin/pages",
-    icon: FileText
-  },
-  {
-    title: "settings",
-    icon: Settings,
-    children: [
-      {
-        title: "settings",
-        href: "/admin/settings",
-        icon: Settings
-      },
-      {
-        title: "testimonials",
-        href: "/admin/testimonials",
-        icon: MessageSquare
-      },
-      {
-        title: "exercises",
-        href: "/admin/exercises",
-        icon: FileText
-      }
-    ]
   }
 ];
 
@@ -353,7 +324,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         )}
                       >
                         <item.icon className="h-4 w-4" />
-                        {t(`auth.admin.${item.title}`)}
+                        <span
+                          className={cn(
+                            "hidden lg:inline",
+                            isGroupActive(item) && "inline"
+                          )}
+                        >
+                          {t(`auth.admin.${item.title}`)}
+                        </span>
                         <ChevronDown className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -365,7 +343,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           className={cn(isPathActive(child.href) && "bg-secondary")}
                         >
                           <child.icon className="h-4 w-4 mr-2" />
-                          {t(`auth.admin.${child.title}`)}
+                          <span
+                            className={cn(
+                              "hidden lg:inline",
+                              isPathActive(child.href) && "inline"
+                            )}
+                          >
+                            {t(`auth.admin.${child.title}`)}
+                          </span>
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
@@ -382,7 +367,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     onClick={() => handleNavigation(item.href as string)}
                   >
                     <item.icon className="h-4 w-4" />
-                    {t(`auth.admin.${item.title}`)}
+                    <span
+                      className={cn(
+                        "hidden lg:inline",
+                        isPathActive(item.href as string) && "inline"
+                      )}
+                    >
+                      {t(`auth.admin.${item.title}`)}
+                    </span>
                   </Button>
                 )
               ))}

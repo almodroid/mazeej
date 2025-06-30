@@ -15,6 +15,7 @@ import { registerEvaluationRoutes } from './routes/evaluations';
 import { registerAdminRoutes } from './routes/admin';
 import { registerPublicRoutes } from "./routes/public";
 import { registerUploadRoutes } from "./routes/uploads";
+import userSettingsRoutes from "./routes/user-settings";
 
 import { insertProjectSchema, insertProposalSchema, insertReviewSchema, insertNotificationSchema, insertVerificationRequestSchema } from "@shared/schema";
 import { generateZoomToken, createZoomMeeting, type ZoomMeetingOptions } from "./routes/zoom";
@@ -24,7 +25,9 @@ import crypto from "crypto";
 import { eq, and, or, desc } from "drizzle-orm";
 import { useTranslation } from "react-i18next";   
 import { t } from "i18next";
-
+import { db } from "./db";
+import { settings } from "@shared/schema";
+import adminTranslationRoutes from './routes/admin-translation';
 
 // Configure multer for file uploads
 const upload = multer({
@@ -45,6 +48,12 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   }
 });
+
+// Helper function to get platform fee from settings
+async function getPlatformFee() {
+  const feeSetting = await db.select().from(settings).where(eq(settings.key, "platformFee")).limit(1);
+  return feeSetting.length > 0 ? Number(feeSetting[0].value) : 5; // Default to 5% if not set
+}
 
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes (/api/register, /api/login, /api/logout, /api/user)
@@ -79,6 +88,9 @@ export function registerRoutes(app: Express): Server {
   
   // Register admin routes
   registerAdminRoutes(app);
+  
+  // Setup user settings routes
+  app.use('/api/users/settings', userSettingsRoutes);
   
   // Online Status API Routes
   app.post('/api/users/online-status', async (req, res) => {
@@ -2430,8 +2442,8 @@ export function registerRoutes(app: Express): Server {
       
       // If payment is completed, create a transaction record for platform fee
       if (status === 'completed' && payment) {
-        const platformFee = amount * 0.05; // 5% platform fee
-        
+        const platformFeePercent = await getPlatformFee();
+        const platformFee = amount * (platformFeePercent / 100);
         await storage.createTransaction({
           paymentId: payment.id,
           userId: parseInt(userId),
@@ -2837,39 +2849,20 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: 'You must be logged in to view earnings' });
     }
-    
     try {
       const userId = req.user.id;
-      
-      // Get all accepted proposals for this freelancer
-      const proposals = await storage.getProposalsByFreelancer(userId);
-      const acceptedProposals = proposals.filter(p => p.status === 'accepted');
-      
-      // Calculate total earnings
-      const total = acceptedProposals.reduce((sum, proposal) => sum + proposal.price, 0);
-      
-      // Calculate pending earnings (projects still in progress)
-      // First get all related projects
-      const projectIds = acceptedProposals.map(p => p.projectId);
-      const projects = await Promise.all(projectIds.map(id => storage.getProjectById(id)));
-      
-      // Now filter for in-progress projects and calculate pending earnings
-      const pendingProposals = acceptedProposals.filter(proposal => 
-        projects.some(p => p && p.id === proposal.projectId && p.status === 'in_progress')
-      );
-      const pending = pendingProposals.reduce((sum, proposal) => sum + proposal.price, 0);
-      
-      // Get recent transactions
+      // Use backend balance logic for accuracy
+      const balance = await storage.getUserBalance(userId);
+      // Optionally, fetch recent transactions as before
       const recentTransactions = await storage.getUserTransactions(userId);
       const lastFiveTransactions = recentTransactions.slice(0, 5);
-      
       res.json({
-        total,
-        pending,
-        available: total - pending,
+        total: balance.totalEarnings,
+        pending: balance.pendingWithdrawals,
+        available: balance.totalEarnings - balance.pendingWithdrawals,
         recentTransactions: lastFiveTransactions
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching earnings:', error);
       res.status(500).json({ message: 'Failed to fetch earnings data' });
     }
@@ -4117,6 +4110,9 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: 'Failed to fetch completed projects count' });
     }
   });
+
+  // Setup admin translation routes
+  app.use('/api/admin/translations', adminTranslationRoutes);
 
   return httpServer;
 }

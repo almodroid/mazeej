@@ -99,10 +99,12 @@ export default function AdminSettingsPage() {
   const { settings: adminSettings, isLoading: settingsLoading, saveSettings } = useAdminSettings();
   
   // State for general settings
-  const [generalSettings, setGeneralSettings] = useState({
-    platformName: "Mazeej Platform",
-    platformFee: 5
-  });
+  const [generalSettings, setGeneralSettings] = useState(() =>
+    adminSettings?.generalSettings || {
+      platformName: "Mazeej Platform",
+      platformFee: 5
+    }
+  );
   
   // New states for pixel/API settings
   const [facebookPixel, setFacebookPixel] = useState("");
@@ -155,7 +157,10 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (adminSettings) {
       // Update all state from loaded settings
-      setGeneralSettings(adminSettings.generalSettings || generalSettings);
+      setGeneralSettings(adminSettings.generalSettings || {
+        platformName: "Mazeej Platform",
+        platformFee: 5
+      });
       setSeoSettings(adminSettings.seoSettings || seoSettings);
       setAnalyticsSettings(adminSettings.analyticsSettings || analyticsSettings);
       setSearchConsoleSettings(adminSettings.searchConsoleSettings || searchConsoleSettings);

@@ -218,7 +218,22 @@
     "errorFetchingData": "Error fetching data",
     "reviews": "reviews",
     "tracks": "Tracks",
-    "exercises": "Exercises"
+    "exercises": "Exercises",
+    "journeyProviderTitle": "Your Journey as a Service Provider with Us",
+    "journeyProviderSteps": [
+      "Define your creative field.",
+      "Subscribe to the most suitable plan for you.",
+      "Set up your profile.",
+      "Look for opportunities and nominate yourself.",
+      "Receive your work and celebrate your success."
+    ],
+    "journeyClientTitle": "Your Journey as a Client on Mazeej Platform",
+    "journeyClientSteps": [
+      "Share your request details.",
+      "Choose your success partner.",
+      "Communicate and receive your project.",
+      "Rate your experience with us."
+    ]
   },
   "auth": {
     "login": "Login",
@@ -549,7 +564,15 @@
     "feature4": {
       "title": "Earnings",
       "description": "Sustainable for content makers"
-    }
+    },
+    "why": "Why choose Mazeej platform?",
+    "whyBullets": [
+      "Comprehensive professional services: writing, design, editing, account management, and more",
+      "Saudi content creators who understand your audience and deliver quality",
+      "Secure and flexible payment methods that protect both parties",
+      "We guarantee a satisfying experience and high quality",
+      "Technical support that follows up with you"
+    ]
   },
   "chat": {
     "title": "Conversations",
@@ -963,7 +986,10 @@
       "submissionReviewed": "Submission reviewed successfully",
       "accessDenied": "Access Denied",
       "freelancersOnly": "This page is only available for freelancers."
-    }
+    },
+    "translationManager": "Translation Manager",
+    "tools": "Tools",
+    "content": "Content"
   },
   "verification": {
     "title": "Account Verification",

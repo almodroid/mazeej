@@ -161,12 +161,17 @@ export default function EarningsPage() {
       setIsWithdrawDialogOpen(false);
       form.reset();
       refetchWithdrawals();
+      queryClient.invalidateQueries({ queryKey: ["/api/earnings"] });
     },
     onError: (error: Error) => {
+      let errorMessage = error.message;
+      if (errorMessage.toLowerCase().includes('insufficient')) {
+        errorMessage = t('earnings.withdraw.insufficient', { defaultValue: 'Insufficient funds. Please refresh the page or try a lower amount.' });
+      }
       toast({
         variant: "destructive",
         title: t("earnings.withdraw.error"),
-        description: error.message,
+        description: errorMessage,
       });
     }
   });

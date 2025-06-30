@@ -169,6 +169,13 @@
       "when": 1751103896623,
       "tag": "0023_mean_ender_wiggin",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1751289271260,
+      "tag": "0024_modern_yellow_claw",
+      "breakpoints": true
     }
   ]
 }
