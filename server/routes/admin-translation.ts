@@ -2,8 +2,12 @@ import { Router } from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
+import { fileURLToPath } from 'url';
 
 const router = Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const EN_PATH = path.join(__dirname, '../../shared/locales/en.json');
 const AR_PATH = path.join(__dirname, '../../shared/locales/ar.json');
