@@ -2529,22 +2529,29 @@ export function registerRoutes(app: Express): Server {
       }
 
       const projectId = parseInt(req.params.id);
+      // Log the incoming data for debugging
+      console.log('PATCH /api/projects/:id body:', req.body);
+
       const { title, description, budget, category, deadline, featuredImage } = req.body;
-      
+      // Check for required fields
+      if (!title || !description || !budget || !category || !deadline) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
       // Get the project to make sure it exists
       const project = await storage.getProjectById(projectId);
       if (!project) {
         return res.status(404).json({ message: 'Project not found' });
       }
-      
+
       // Check if user is admin, project owner, or if there are proposals
       const isAdmin = req.user.role === 'admin';
       const isProjectOwner = project.clientId === req.user.id;
-      
+
       if (!isAdmin && !isProjectOwner) {
         return res.status(403).json({ message: 'You do not have permission to edit this project' });
       }
-      
+
       // If not admin, check if project has proposals and is not in 'open' status
       if (!isAdmin && isProjectOwner) {
         // Only restrict editing if the project is not in 'open' status
@@ -2556,17 +2563,11 @@ export function registerRoutes(app: Express): Server {
           }
         }
       }
-      
+
       // Update project
-      const updatedProject = await storage.updateProject(projectId, {
-        title,
-        description,
-        budget,
-        category,
-        deadline,
-        featuredImage
-      });
-      
+      const updateData = { title, description, budget, category, deadline };
+      if (featuredImage) updateData.featuredImage = featuredImage;
+      const updatedProject = await storage.updateProject(projectId, updateData);
       res.json(updatedProject);
     } catch (error) {
       res.status(500).json({ message: 'Failed to update project' });

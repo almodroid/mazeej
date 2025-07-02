@@ -176,7 +176,14 @@ export default function CreateProjectPage() {
         const uploadData = await uploadRes.json();
         if (uploadData.url) {
           // Save the featured image URL to the project
-          await apiRequest("PATCH", `/api/projects/${projectResult.id}`, { featuredImage: uploadData.url });
+          await apiRequest("PATCH", `/api/projects/${projectResult.id}`, {
+            title: projectResult.title,
+            description: projectResult.description,
+            budget: projectResult.budget,
+            category: projectResult.category,
+            deadline: projectResult.deadline,
+            featuredImage: uploadData.url
+          });
         }
       }
       
