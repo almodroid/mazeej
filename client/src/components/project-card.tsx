@@ -9,6 +9,7 @@ import { ar, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
+import { useEffect, useState } from 'react';
 
 type ProjectCardProps = {
   project: Project;
@@ -19,6 +20,22 @@ type ProjectCardProps = {
 interface Skill {
   id: number;
   name: string;
+}
+
+const PEXELS_API_KEY = import.meta.env.VITE_PEXELS_API_KEY || '';
+
+async function fetchPexelsImage(query: string): Promise<string | null> {
+  if (!PEXELS_API_KEY) return null;
+  const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1`;
+  const res = await fetch(url, {
+    headers: { Authorization: PEXELS_API_KEY }
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.photos && data.photos.length > 0) {
+    return data.photos[0].src.large || data.photos[0].src.original;
+  }
+  return null;
 }
 
 export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps) {
@@ -72,13 +89,43 @@ export default function ProjectCard({ project, proposals = 0 }: ProjectCardProps
     enabled: !!project.id,
   });
 
+  // State for fallback image
+  const [fallbackImage, setFallbackImage] = useState<string | null>(null);
+
+  // Fetch project files for fallback image
+  useEffect(() => {
+    if (!project.featuredImage && project.id) {
+      apiRequest("GET", `/api/projects/${project.id}/files`).then(async (res) => {
+        if (!res.ok) return;
+        const files = await res.json();
+        const imageFile = files.find((f: any) => f.mimeType && f.mimeType.startsWith('image/'));
+        if (imageFile) {
+          setFallbackImage(`/uploads/${imageFile.filename}`);
+        } else {
+          // Use Pexels image based on title or first skill
+          let query = project.title;
+          if ((!query || query.length < 2) && projectSkills.length > 0) {
+            query = projectSkills[0].name;
+          }
+          if (query && query.length > 1) {
+            fetchPexelsImage(query).then((pexelsUrl) => {
+              setFallbackImage(pexelsUrl || 'https://images.pexels.com/photos/3184436/pexels-photo-3184436.jpeg?auto=compress&w=600&h=400&fit=crop');
+            });
+          } else {
+            setFallbackImage('https://images.pexels.com/photos/3184436/pexels-photo-3184436.jpeg?auto=compress&w=600&h=400&fit=crop');
+          }
+        }
+      });
+    }
+  }, [project.featuredImage, project.id, project.title, projectSkills]);
+
   return (
     <div className="bg-neutral-50 dark:bg-gray-800 p-6 shadow-sm hover:shadow-md transition-shadow duration-200 h-full flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
-      {/* Featured Image */}
-      {project.featuredImage && (
+      {/* Featured Image or Fallback */}
+      {(project.featuredImage || fallbackImage) && (
         <div className="mb-4 rounded-lg overflow-hidden aspect-[16/9] bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
           <img
-            src={project.featuredImage}
+            src={project.featuredImage || fallbackImage || ''}
             alt={project.title}
             className="object-cover w-full h-full"
             loading="lazy"

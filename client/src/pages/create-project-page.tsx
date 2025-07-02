@@ -39,10 +39,18 @@ import { apiRequest } from "@/lib/queryClient";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import { Badge } from "@/components/ui/badge";
 
-const projectFormSchema = insertProjectSchema.extend({
-  deadlineDate: z.date().optional(),
+// Use only string messages in Zod schema
+const projectFormSchema = z.object({
+  title: z.string().min(3, 'Title is required and must be at least 3 characters'),
+  description: z.string().min(10, 'Description is required and must be at least 10 characters'),
+  budget: z.number().min(1, 'Budget is required and must be a positive number'),
+  category: z.number().min(1, 'Category is required'),
+  deadlineDate: z.date({ required_error: 'Deadline is required' }),
   selectedSkills: z.array(z.number()).default([]),
-}).omit({ deadline: true });
+  city: z.string().optional(),
+}).refine((data) => !!data.title && !!data.description && !!data.budget && !!data.category && !!data.deadlineDate, {
+  message: 'All fields are required',
+});
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
@@ -322,6 +330,18 @@ export default function CreateProjectPage() {
     try {
       // Ensure we're not already submitting
       if (isLoading || createProjectMutation.isPending) {
+        return;
+      }
+      
+      // If there are errors, scroll to the first invalid field
+      const errors = form.formState.errors;
+      if (Object.keys(errors).length > 0) {
+        const firstErrorField = Object.keys(errors)[0];
+        const el = document.querySelector(`[name="${firstErrorField}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          (el as HTMLElement).focus();
+        }
         return;
       }
       
