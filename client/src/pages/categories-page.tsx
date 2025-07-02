@@ -30,6 +30,9 @@ export default function CategoriesPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+      <div className="w-full py-8 text-center">
+        <h2 className="text-2xl md:text-3xl font-bold text-primary dark:text-primary font-cairo">خدمات رقمية متكاملة تلبي احتياجك</h2>
+      </div>
       <main className="flex-grow py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">

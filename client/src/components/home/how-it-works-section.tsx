@@ -1,87 +1,86 @@
-import { CircleCheck, ListTodo, Mail, NotebookPen, Speech } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Edit, Handshake, CheckCircle, User, Briefcase, Folder, MessageSquare } from "lucide-react";
+import { motion } from "framer-motion";
 
 const HowItWorksSection: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
-  const steps = [
-    {
-      icon: (
-        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
-          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <ListTodo className="text-primary"/>
-          </svg>
-        </div>
-      ),
-      title: t('howItWorks.step1Title'),
-      subtitle: "",
-    },
-    {
-      icon: (
-        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
-          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <Mail className="text-primary"/>
-          </svg>
-        </div>
-      ),
-      title: t('howItWorks.step2Title'),
-      subtitle: "",
-    },
-    {
-      icon: (
-        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
-          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <Speech className="text-primary"/>
-          </svg>
-        </div>
-      ),
-      title: t('howItWorks.step3Title'),
-      subtitle: "",
-    },
-    {
-      icon: (
-        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
-          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <CircleCheck className="text-primary" /> 
-          </svg>
-        </div>
-      ),
-      title: t('howItWorks.step4Title'),
-      subtitle: "",
-    },
-  ];
+  const providerStepsArray = t('common.journeyProviderSteps', { returnObjects: true }) as string[];
+  const clientStepsArray = t('common.journeyClientSteps', { returnObjects: true }) as string[];
+
   return (
-    <section className="py-20 bg-gray-50 dark:bg-gray-900 animate-fade-in">
+    <section className="py-20 bg-gray-50 dark:bg-gray-900 animate-fade-in" dir={isRTL ? "rtl" : "ltr"}>
       <div className="max-w-5xl mx-auto px-4">
-        <h2 className="text-center text-2xl md:text-3xl font-bold text-primary dark:text-primary mb-20 animate-fade-in-up">{t('howItWorks.title')}</h2>
-        <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-0 z-10">
-          {steps.map((step, idx) => (
-            <div key={idx} className="flex flex-col items-center flex-1 relative group">
-              <div className="mb-4 animate-fade-in-up" style={{ animationDelay: `${idx * 0.2}s` }}>
-                {step.icon}
-              </div>
-              <div className="text-center transform group-hover:scale-105 transition-transform duration-300">
-                <div className="text-primary dark:text-primary font-extrabold text-lg mb-2 animate-fade-in-up" style={{ animationDelay: `${idx * 0.2 + 0.1}s` }}>
-                  {step.title}
-                </div>
-                {step.subtitle && (
-                  <div className="text-primary dark:text-primary text-sm animate-fade-in-up" style={{ animationDelay: `${idx * 0.2 + 0.2}s` }}>
-                    {step.subtitle}
-                  </div>
-                )}
-              </div>
-              {idx < steps.length - 1 && (
-                <span 
-                  className="hidden md:block absolute top-8 rtl:right-40 left-40 w-full max-w-[175px] h-0.5 border-dashed border-t-2 border-primary animate-progress" 
-                  style={{
-                    left: isRTL ? '100%' : '100%',
-                    animationDelay: `${idx * 0.2 + 0.3}s`
-                  }}
-                ></span>
-              )}
-            </div>
+        {/* Provider Journey Stepper */}
+        <h3 className="text-lg md:text-xl font-bold text-primary mb-8 flex items-center gap-2 justify-center">
+          <User className="inline-block w-6 h-6 md:w-7 md:h-7 text-primary" />
+          {t('common.journeyProviderTitle')}
+        </h3>
+        <div className="relative flex flex-wrap items-center justify-center w-full gap-y-8 py-4">
+          {providerStepsArray.map((exp, idx) => (
+            <React.Fragment key={idx}>
+              <motion.div
+                className="relative z-10 flex flex-col items-center basis-1/4 sm:min-w-[100px] md:min-w-[160px] min-h-[100px] sm:min-h-[120px] md:min-h-[180px] group px-1 sm:px-2"
+                whileHover={{ y: -8 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
+                {/* Step Circle */}
+                <motion.div
+                  className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-20 md:h-20 rounded-full border-4 ${
+                    idx === 0
+                      ? 'border-primary bg-primary/90 dark:bg-primary/80 text-white shadow-lg'
+                      : 'border-primary/40 bg-white dark:bg-zinc-900 text-primary dark:text-primary shadow'
+                  } group-hover:border-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 relative`}
+                  whileHover={{ scale: 1.1 }}
+                >
+                  <span className="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center text-base font-bold bg-white dark:bg-zinc-900 border-2 border-primary/30 shadow-md pointer-events-none select-none rounded-full group-hover:bg-primary group-hover:text-white transition-colors duration-200">
+                    {idx + 1}
+                  </span>
+                  {idx === 0 ? <Edit className="w-6 h-6 md:w-8 md:h-8" /> : idx === 1 ? <Folder className="w-6 h-6 md:w-8 md:h-8" /> : idx === 2 ? <User className="w-6 h-6 md:w-8 md:h-8" /> : idx === 3 ? <Handshake className="w-6 h-6 md:w-8 md:h-8" /> : idx === 4 ? <CheckCircle className="w-6 h-6 md:w-8 md:h-8" /> : <User className="w-6 h-6 md:w-8 md:h-8" />}
+                </motion.div>
+                {/* Step Label */}
+                <span className="mt-2 sm:mt-4 text-[10px] sm:text-xs md:text-sm font-medium text-gray-800 dark:text-gray-100 text-center max-w-[80px] sm:max-w-[120px] md:max-w-[160px]">
+                  {exp}
+                </span>
+              </motion.div>
+            </React.Fragment>
+          ))}
+        </div>
+        {/* Client Journey Stepper */}
+        <h3 className="text-lg md:text-xl font-bold text-secondary mb-8 flex items-center gap-2 justify-center mt-16">
+          <Briefcase className="inline-block w-6 h-6 md:w-7 md:h-7 text-secondary" />
+          {t('common.journeyClientTitle')}
+        </h3>
+        <div className="relative flex flex-wrap items-center justify-center w-full gap-y-8 py-4">
+          {clientStepsArray.map((exp, idx) => (
+            <React.Fragment key={idx}>
+              <motion.div
+                className="relative z-10 flex flex-col items-center basis-1/4 sm:min-w-[100px] md:min-w-[160px] min-h-[100px] sm:min-h-[120px] md:min-h-[180px] group px-1 sm:px-2"
+                whileHover={{ y: -8 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
+                {/* Step Circle */}
+                <motion.div
+                  className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-20 md:h-20 rounded-full border-4 ${
+                    idx === 0
+                      ? 'border-secondary bg-secondary/90 dark:bg-secondary/80 text-white shadow-lg'
+                      : 'border-secondary/40 bg-white dark:bg-zinc-900 text-secondary dark:text-secondary shadow'
+                  } group-hover:border-secondary group-hover:bg-secondary group-hover:text-white transition-colors duration-300 relative`}
+                  whileHover={{ scale: 1.1 }}
+                >
+                  <span className="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center text-base font-bold bg-white dark:bg-zinc-900 border-2 border-secondary/30 shadow-md pointer-events-none select-none rounded-full group-hover:bg-secondary group-hover:text-white transition-colors duration-200">
+                    {idx + 1}
+                  </span>
+                  {idx === 0 ? <MessageSquare className="w-6 h-6 md:w-8 md:h-8" /> : idx === 1 ? <Handshake className="w-6 h-6 md:w-8 md:h-8" /> : idx === 2 ? <Folder className="w-6 h-6 md:w-8 md:h-8" /> : idx === 3 ? <CheckCircle className="w-6 h-6 md:w-8 md:h-8" /> : <Briefcase className="w-6 h-6 md:w-8 md:h-8" />}
+                </motion.div>
+                {/* Step Label */}
+                <span className="mt-2 sm:mt-4 text-[10px] sm:text-xs md:text-sm font-medium text-gray-800 dark:text-gray-100 text-center max-w-[80px] sm:max-w-[120px] md:max-w-[160px]">
+                  {exp}
+                </span>
+              </motion.div>
+            </React.Fragment>
           ))}
         </div>
       </div>

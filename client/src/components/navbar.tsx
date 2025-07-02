@@ -81,6 +81,11 @@ export default function Navbar() {
       label: t("common.tracks", { defaultValue: isRTL ? "باقات مزيج" : "Tracks" }),
       icon: <Sparkles className="h-4 w-4" />,
     },
+    {
+      href: "/categories-page",
+      label: isRTL ? "مجالات الخدمات" : "Service Categories",
+      icon: <List className="h-4 w-4" />,
+    },
   ];
 
   const handleLogout = () => {

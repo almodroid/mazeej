@@ -4,6 +4,7 @@ import { Search, Users, Briefcase, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import SearchBar from '../search/search-bar';
 import SaudiVisionImg from '../../assets/images/6220cdc14c59b7594a409444.webp';
+import SaudiVisionImg2 from '../../assets/images/firstplace.jpeg';
 
 const images = [
   {
@@ -11,8 +12,8 @@ const images = [
     quote: 'طموحنا ان نبني وطنا اكثر ازدهارا, لن نقبل الا ان نجعله في مقدمة دول العالم.',
   },
   {
-    src: 'https://placehold.co/400x500?text=Image+1',
-    quote: 'Creativity is intelligence having fun.',
+    src: SaudiVisionImg2,
+    quote: 'المركز الاول في SAUDI MIB',
   },
   
 ];
@@ -151,7 +152,7 @@ export default function HeroModern() {
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 40, opacity: 0 }}
                   transition={{ duration: 0.5, ease: 'easeInOut' }}
-                  className="absolute left-0 bottom-4 md:bottom-6 bg-white/90 dark:bg-zinc-900/90 text-primary dark:text-primary px-4 py-2 rounded-lg text-sm md:text-base font-semibold max-w-[80%]"
+                  className="absolute left-12 bottom-4 md:bottom-6 bg-white/90 dark:bg-zinc-900/90 text-primary dark:text-primary px-4 py-2 rounded-lg text-sm md:text-base font-semibold max-w-[80%]"
                 >
                   {images[current].quote}
                 </motion.div>
