@@ -152,21 +152,6 @@ export default function ProjectsPage() {
     });
   };
 
-  const getActiveFiltersCount = () => {
-    let count = 0;
-    if (filters.category && filters.category !== "all") count++;
-    if (filters.status && filters.status !== "all") count++;
-    if (filters.postedDate && filters.postedDate !== "all") count++;
-    if (filters.projectType && filters.projectType !== "all") count++;
-    if (filters.skills.length > 0) count++;
-    if (filters.budgetRange[0] > 0 || filters.budgetRange[1] < 10000) count++;
-    if (showCityFilter && filters.city && filters.city !== "all") count++;
-    return count;
-  };
-
-  const activeFiltersCount = getActiveFiltersCount();
-
-  // Determine if any selected skill is location-based
   const selectedLocationBased = filters.skills
     .map(id => skills.find(s => s.id.toString() === id))
     .some(skill => skill?.locationBased);
@@ -182,6 +167,20 @@ export default function ProjectsPage() {
 
   // Show city filter if any selected skill is location-based, or if freelancer has any location-based skill
   const showCityFilter = selectedLocationBased || (user?.role === 'freelancer' && userHasLocationBased);
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.category && filters.category !== "all") count++;
+    if (filters.status && filters.status !== "all") count++;
+    if (filters.postedDate && filters.postedDate !== "all") count++;
+    if (filters.projectType && filters.projectType !== "all") count++;
+    if (filters.skills.length > 0) count++;
+    if (filters.budgetRange[0] > 0 || filters.budgetRange[1] < 10000) count++;
+    if (showCityFilter && filters.city && filters.city !== "all") count++;
+    return count;
+  };
+
+  const activeFiltersCount = getActiveFiltersCount();
 
   // Filter content component
   const FilterContent = () => (

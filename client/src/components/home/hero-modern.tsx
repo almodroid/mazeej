@@ -1,22 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Users, Briefcase, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import SearchBar from '../search/search-bar';
+import SaudiVisionImg from '../../assets/images/6220cdc14c59b7594a409444.webp';
 
 const images = [
+  {
+    src: SaudiVisionImg,
+    quote: 'طموحنا ان نبني وطنا اكثر ازدهارا, لن نقبل الا ان نجعله في مقدمة دول العالم.',
+  },
   {
     src: 'https://placehold.co/400x500?text=Image+1',
     quote: 'Creativity is intelligence having fun.',
   },
-  {
-    src: 'https://placehold.co/400x500?text=Image+2',
-    quote: 'Collaboration breeds innovation.',
-  },
-  {
-    src: 'https://placehold.co/400x500?text=Image+3',
-    quote: 'Quality is not an act, it is a habit.',
-  },
+  
 ];
 
 const stats = [
@@ -25,12 +23,32 @@ const stats = [
   { icon: <Star className="w-5 h-5 inline-block mr-1 text-primary" />, value: '90%', label: 'Satisfaction' },
 ];
 
+// Add user avatar images (Arab/regionally appropriate, all ages)
+const userAvatars = [
+  'https://randomuser.me/api/portraits/men/75.jpg', // Adult male
+  'https://randomuser.me/api/portraits/women/25.jpg', // Adult female
+  'https://randomuser.me/api/portraits/men/85.jpg', // Elderly male
+  'https://randomuser.me/api/portraits/women/65.jpg', // Elderly female
+  'https://randomuser.me/api/portraits/men/34.jpg', // Young male
+  'https://randomuser.me/api/portraits/women/15.jpg', // Young female
+  'https://randomuser.me/api/portraits/men/12.jpg', // Child male
+  'https://randomuser.me/api/portraits/women/8.jpg', // Child female
+];
+
 export default function HeroModern() {
   const [current, setCurrent] = useState(0);
   const { t, i18n } = useTranslation();
   const nextSlide = () => setCurrent((prev) => (prev + 1) % images.length);
   const prevSlide = () => setCurrent((prev) => (prev - 1 + images.length) % images.length);
   const isRTL = i18n.language === 'ar';
+
+  // Auto-rotate carousel every 7 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [current]);
 
   return (
     <section className="w-full bg-[#f8fafc] dark:bg-background py-8 md:py-16 px-2 md:px-0 animate-fade-in relative overflow-hidden">
@@ -57,7 +75,7 @@ export default function HeroModern() {
           </linearGradient>
         </defs>
       </svg>
-      <div className="container mx-auto flex flex-col md:flex-row items-center gap-8 md:gap-12">
+      <div className="container mx-auto flex flex-col md:flex-row items-center gap-8 md:gap-12 p-12">
         {/* Left: Hero Content */}
         <div className="flex-1 w-full max-w-xl">
           <h1 className="text-3xl md:text-5xl font-extrabold text-primary mb-4 leading-tight">
@@ -78,12 +96,27 @@ export default function HeroModern() {
               </>
             )}
           </p>
-          <div className="w-full max-w-2xl mx-auto mb-4">
+          {/* User Avatars Row */}
+          <div className="flex items-center mb-6">
+            <span className="text-xs font-semibold text-primary mr-3">Our Community</span>
+            <div className="flex -space-x-4">
+              {userAvatars.map((src, idx) => (
+                <img
+                  key={idx}
+                  src={src}
+                  alt="User avatar"
+                  className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover hover:z-10 transition-transform hover:scale-110"
+                  style={{ zIndex: userAvatars.length - idx }}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="w-full max-w-2xl mx-auto mb-4 justify-start">
             <div className="w-full">
               <SearchBar />
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md mx-auto m-4">
+          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mx-auto m-4 justify-start">
             <button className="flex-1 py-3 px-5 rounded-md bg-primary text-white hover:bg-secondary hover:shadow-lg hover:transition-shadow transition-colors text-md shadow-lg">
               <a href="/auth?register=true">{t('hero.clientButton')}</a>
             </button>
@@ -93,13 +126,10 @@ export default function HeroModern() {
           </div>
         </div>
         {/* Right: 3D Carousel Card */}
-        <div className="flex-1 w-full flex justify-center items-center">
-          <div className="relative rounded-2xl shadow-2xl p-4 md:p-8 flex flex-col items-center min-h-[420px] min-w-[320px] max-w-[420px] overflow-hidden">
-            {/* Carousel Controls */}
-            <button onClick={prevSlide} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow transition"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg></button>
-            <button onClick={nextSlide} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow transition"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg></button>
+        <div className="flex-1 w-full flex justify-center items-center container">
+          <div className="relative rounded-2xl flex flex-col items-center min-h-[420px] min-w-[320px] max-w-[420px] overflow-hidden">
             {/* 3D Rotating Image (now fade left) */}
-            <div className="relative w-[260px] h-[340px] md:w-[320px] md:h-[400px] flex items-center justify-center">
+            <div className="relative w-[340px] h-[400px] md:w-[420px] md:h-[500px] flex items-center justify-center">
               <AnimatePresence mode="wait">
                 <motion.img
                   key={images[current].src}
@@ -109,7 +139,7 @@ export default function HeroModern() {
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: 60, opacity: 0 }}
                   transition={{ duration: 0.7, ease: 'easeInOut' }}
-                  className="rounded-xl shadow-xl object-cover w-full h-full"
+                  className="rounded-xl object-cover w-full h-full"
                   style={{ backfaceVisibility: 'hidden' }}
                 />
               </AnimatePresence>
@@ -121,19 +151,13 @@ export default function HeroModern() {
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 40, opacity: 0 }}
                   transition={{ duration: 0.5, ease: 'easeInOut' }}
-                  className="absolute left-0 bottom-4 md:bottom-6 bg-white/90 dark:bg-zinc-900/90 text-primary dark:text-primary px-4 py-2 rounded-lg shadow-lg text-sm md:text-base font-semibold max-w-[80%]"
+                  className="absolute left-0 bottom-4 md:bottom-6 bg-white/90 dark:bg-zinc-900/90 text-primary dark:text-primary px-4 py-2 rounded-lg text-sm md:text-base font-semibold max-w-[80%]"
                 >
                   {images[current].quote}
                 </motion.div>
               </AnimatePresence>
             </div>
-            {/* Floating Info Badges */}
-            <div className="absolute top-6 right-6 bg-white/90 dark:bg-zinc-900/90 px-4 py-2 rounded-lg shadow text-primary text-xs font-semibold flex items-center gap-2">
-              <Briefcase className="w-4 h-4" /> 500+ Job Vacancy
-            </div>
-            <div className="absolute bottom-6 right-6 bg-white/90 dark:bg-zinc-900/90 px-4 py-2 rounded-lg shadow text-primary text-xs font-semibold flex items-center gap-2">
-              <Users className="w-4 h-4" /> 50k+ Member Active
-            </div>
+            
           </div>
         </div>
       </div>

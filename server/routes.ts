@@ -28,6 +28,7 @@ import { t } from "i18next";
 import { db } from "./db";
 import { settings } from "@shared/schema";
 import adminTranslationRoutes from './routes/admin-translation';
+import projectImagesRoutes from './routes/project-images';
 
 // Configure multer for file uploads
 const upload = multer({
@@ -2528,7 +2529,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       const projectId = parseInt(req.params.id);
-      const { title, description, budget, category, deadline } = req.body;
+      const { title, description, budget, category, deadline, featuredImage } = req.body;
       
       // Get the project to make sure it exists
       const project = await storage.getProjectById(projectId);
@@ -2562,7 +2563,8 @@ export function registerRoutes(app: Express): Server {
         description,
         budget,
         category,
-        deadline
+        deadline,
+        featuredImage
       });
       
       res.json(updatedProject);
@@ -4113,6 +4115,9 @@ export function registerRoutes(app: Express): Server {
 
   // Setup admin translation routes
   app.use('/api/admin/translations', adminTranslationRoutes);
+
+  // Register project images upload routes
+  app.use(projectImagesRoutes);
 
   return httpServer;
 }
